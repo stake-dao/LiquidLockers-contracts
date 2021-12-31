@@ -1,0 +1,9 @@
+.env
+node_modules
+artifacts
+cache
+deployments
+yarn.lock
+yarn-error.log
+coverage.json
+coverage/
