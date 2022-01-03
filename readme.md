@@ -35,4 +35,4 @@ For first release of new arch, Strategies and VLS are focused on Frax. In the ne
 
 `npx hardhat coverage --testfiles "test/*.ts"`
 
-![Screenshot 2021-12-08 at 9 24 47 PM](https://user-images.githubusercontent.com/22425782/145239916-621d60b0-c71f-47cc-bacd-28391eda955e.png)
+![Screenshot 2021-12-08 at 9 24 47 PM](https://user-images.githubusercontent.com/2848253/147950748-619d5d8e-e6ee-48b8-ab77-5b886011043a.png)
