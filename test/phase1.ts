@@ -54,6 +54,7 @@ describe("FXS Depositor", function () {
   let sdt: Contract;
   let sushi: Contract;
   let fxsDepositor: Contract;
+  let sushiDepositor: Contract;
   let accumulator: Contract;
   let sdFXSToken: Contract;
   let claimContract: Contract;
@@ -111,6 +112,7 @@ describe("FXS Depositor", function () {
     const GaugeProxy = await ethers.getContractFactory("GaugeProxy");
     const VeSDT = await ethers.getContractFactory("veSDT");
     const FxsDepositor = await ethers.getContractFactory("FxsDepositor");
+    const SushiDepositor = await ethers.getContractFactory("SushiDepositor");
     const FXSAccumulator = await ethers.getContractFactory("FXSAccumulator");
     const GaugeMultiRewardsPPS = await ethers.getContractFactory("GaugeMultiRewards");
     const SdFXSToken = await ethers.getContractFactory("sdFXSToken");
@@ -142,6 +144,7 @@ describe("FXS Depositor", function () {
     randomLocker1 = await FraxLocker.deploy(accumulator.address);
     randomLocker2 = await FraxLocker.deploy(accumulator.address);
     fxsDepositor = await FxsDepositor.deploy(locker.address, sdFXSToken.address);
+    sushiDepositor = await SushiDepositor.deploy(); // Only to mockup the depositFor call 
     gaugeProxyPPS = await GaugeProxy.deploy(MASTERCHEF, SDT, veSDT.address);
     gaugeMultiRewardsPPS = await GaugeMultiRewardsPPS.deploy(sdFXSToken.address, SDT, veSDT.address);
     claimContract = await ClaimContract.deploy();
@@ -170,9 +173,12 @@ describe("FXS Depositor", function () {
 
     /** Fxs Depositor */
     await fxsDepositor.setGauge(gaugeMultiRewardsPPS.address);
+    await sushiDepositor.setGauge(gaugeMultiRewardsPPS.address);
 
     /** Gauges */
     await gaugeProxyPPS.addGauge(sdFXSToken.address, gaugeMultiRewardsPPS.address);
+    const gaugeTokens = await gaugeProxyPPS.tokens();
+    expect(gaugeTokens.length).to.be.eq(1);
     const gaugeSdFXSToken = await gaugeProxyPPS.getGauge(sdFXSToken.address);
     expect(gaugeSdFXSToken).to.be.eq(gaugeMultiRewardsPPS.address);
     await gaugeMultiRewardsPPS.addReward(SDT, gaugeProxyPPS.address, 604800);
@@ -181,7 +187,6 @@ describe("FXS Depositor", function () {
     await gaugeMultiRewardsPPS.setClaimContract(claimContract.address);
     await gaugeMultiRewardsPPS.setRewardsDistributor(fxs.address, accumulator.address);
     await gaugeMultiRewardsPPS.setGovernance(deployer.address);
-    await gaugeMultiRewardsPPS.setClaimContract(claimContract.address);
     await gaugeProxyPPS.setGovernance(deployer.address);
     const rewardsLenght = await gaugeMultiRewardsPPS.getRewardTokensLength();
     expect(rewardsLenght).to.be.eq(3);
@@ -473,6 +478,15 @@ describe("FXS Depositor", function () {
       await locker.voteGaugeWeight(GAUGE, 0);
     });
 
+    it("Should execute any call via locker", async function() {
+      const data = "0x" // empty
+      const response = await locker.execute(
+        accumulator.address,
+        0,
+        data 
+      );
+    });
+
     it("Should claim rewards", async function () {
       await network.provider.send("evm_increaseTime", [604800]); // 1 week
       await network.provider.send("evm_mine", []);
@@ -657,7 +671,8 @@ describe("FXS Depositor", function () {
     });
 
     it("user should be able to reset their vote", async function () {
-      await gaugeProxyPPS.poke(sdtWhaleSigner._address);
+      //await gaugeProxyPPS.poke(sdtWhaleSigner._address);
+      await gaugeProxyPPS.poke(deployer.address);
     });
   });
 
@@ -763,7 +778,8 @@ describe("FXS Depositor", function () {
       var locks: any[] = [
         { locked: [false, true, false], tokens: [SDT, FXS, SUSHI] }
       ];
-      
+      await claimContract.setDepositor(SUSHI, sushiDepositor.address);
+      await sushi.connect(sushiHolder).transfer(claimContract.address, parseEther("1"))
       await claimContract.claimAndLock([ gaugeMultiRewardsPPS.address], locks, [SUSHI]);
       var fxsBalanceAfter = await fxs.balanceOf(deployer.address);
       var afterSDT = await sdt.balanceOf(deployer.address);
@@ -867,6 +883,6 @@ describe("FXS Depositor", function () {
   })
 
   it("user should be able to reset their vote", async function () {
-      await gaugeProxyPPS.connect(sdtWhaleSigner).reset();
+      await gaugeProxyPPS.reset();
     });
 });
