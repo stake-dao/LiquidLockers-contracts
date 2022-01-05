@@ -21,8 +21,16 @@ Stake DAO will allow users to lock their FXS in Frax, and they will obtain sdFXS
 
 For first release of new arch, Strategies and VLS are focused on Frax. In the next release, we’ll probably focus on Curve.
 
-## Smart Contracts (written in vyper and not covered by the plugin)
-1. veSDT: allows users to lock their SDT for a specified amount of time (max 4 years). Also allows them to increase their locked SDT amount and lock time. Additional function on top of Curve's original veCRV contract is the `deposit_for_sd()` method, which allows any address (contract or EOA) to lock more SDT for an existing address with a lock, by itself supplying those SDT. [Diffchecker](https://www.diffchecker.com/KlfDdLCk) with veCRV
+## Smart Contracts
+1. veSDT.vy (not covered by plugin): allows users to lock their SDT for a specified amount of time (max 4 years). Also allows them to increase their locked SDT amount and lock time. Additional function on top of Curve's original veCRV contract is the `deposit_for_sd()` method, which allows any address (contract or EOA) to lock more SDT for an existing address with a lock, by itself supplying those SDT. [Diffchecker](https://www.diffchecker.com/KlfDdLCk) with veCRV
+2. FeeDistributor.sol
+2. FxsDepositor.sol
+3. sdFXSToken.sol
+4. FraxLocker.sol
+5. FXSAccumulator.sol
+6. GaugeMultiRewards.sol
+7. GaugeProxy.sol
+9. ClaimContract.sol
 
 ## Setup
 
