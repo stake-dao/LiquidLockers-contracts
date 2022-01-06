@@ -2,7 +2,7 @@
 
 ## General Understanding
 
-Stake DAO will allow users to lock their FXS in Frax, and they will obtain sdFXS. Users, staking them into a gauge multi rewards, will earn FXS (From the Fxs Accumulator) and SDT ().
+Release of phase 1 will allow Stake DAO users to lock their FXS in Frax finance, getting sdFXS tokens in return. Users staking these sdFXS into gauge multi rewards, will earn FXS (as incentive from frax to lock FXS) and SDT (from Stake DAO's Masterchef, proportional to weights as voted upon by veSDT holders on all gauges).
 
 #### 2 Core Components:
 
@@ -21,7 +21,7 @@ Stake DAO will allow users to lock their FXS in Frax, and they will obtain sdFXS
 
 For first release of new arch, Strategies and VLS are focused on Frax. In the next release, we’ll probably focus on Curve.
 
-## Smart Contracts
+## Smart Contracts (general intended behaviour)
 1. **veSDT.vy** (not covered by coverage plugin): allows users to lock their SDT for a specified amount of time (max 4 years). Also allows them to increase their locked SDT amount and lock time. Additional function on top of Curve's original veCRV contract is the `deposit_for_sd()` method, which allows any address (contract or EOA) to lock more SDT for an existing address with a lock, by itself supplying those SDT. [Diffchecker](https://www.diffchecker.com/KlfDdLCk) with veCRV
 2. **FeeDistributor.vy** (not covered by coverage plugin): contract that distributes sd3CRV (Stake DAO stable) to all SDT lockers in veSDT. These sd3CRV are supposed to be automatically received on harvests from all strategies built on this new architecture, but they can also be manually ERC20 transferred, until the strategies are live. [Diffchecker](https://www.diffchecker.com/0lNYRgKh) with Curve's FeeDistributor.
 2. **FxsDepositor.sol**: contract responsible for collecting FXS from users and locking them in frax. [Diffchecker](https://www.diffchecker.com/5Kr3DfGS) with Convex's CrvDepositor.
