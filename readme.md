@@ -31,6 +31,7 @@ For first release of new arch, Strategies and VLS are focused on Frax. In the ne
 6. **GaugeMultiRewards.sol**: contract responsible for providing FXS, SDT rewards to FXS lockers (and also to strategy depositors planned to be released in phase 2). [Diffchecker](https://www.diffchecker.com/v63pVADq) with Curve's MultiRewards.
 7. **GaugeProxy.sol**: contract responsible for distributing SDT to all GaugeMultiRewards contracts based on votes from veSDT lockers. Voting to decide proportion of SDT to each GaugeMultiRewards also happens via this contract. There will be 1 GaugeProxy contract for FXS locking system and 1 GaugeProxy contract for the strategies system (to be released in phase 2). [Diffchecker](https://diffnow.com/report/iuqjz) with Pickle's GaugeProxy.
 9. **ClaimContract.sol**: to allow users to claim all reward tokens i.e. FXS, SDT from all GaugeMultiRewards in 1 txn (because there will be 1 GaugeMultiRewards per vote locking system i.e. Frax for this release and Curve, Sushi for future releases and 1 GaugeMultiRewards per strategy on each system i.e. there will be 5 strategies on frax and each will have 1 GaugeMultiRewards, then in the future, there can be 7 strategies on Curve and each of them will have 1 GaugeMultiRewards)
+10. SushiDepositor.sol: a mock contract to achieve 100% test coverage and out of the scope of audit
 
 ## Setup
 
