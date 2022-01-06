@@ -2,7 +2,7 @@
 
 ## General Understanding
 
-Release of phase 1 will allow Stake DAO users to lock their FXS in Frax finance, getting sdFXS tokens in return. Users staking these sdFXS into gauge multi rewards, will earn FXS (as incentive from frax to lock FXS) and SDT (from Stake DAO's Masterchef, proportional to weights as voted upon by veSDT holders on all gauges).
+Release of phase 1 will allow Stake DAO users to lock their FXS in Frax finance via Stake DAO, getting sdFXS tokens in return. Users staking these sdFXS into gauge multi rewards contract, will earn FXS (as incentive from frax to lock FXS) and SDT (from Stake DAO's Masterchef, proportional to weights as voted upon by veSDT holders on all gauges). This release will also enable Stake DAO users to lock their SDT in the veSDT contract, to get non-transferrable veSDT tokens in return.
 
 #### 2 Core Components:
 
