@@ -736,18 +736,23 @@ describe("FXS Depositor", function () {
       var beforeSDT = await sdt.balanceOf(deployer.address);
       var beforeSUSHI = await sushi.balanceOf(deployer.address);
       var locks: any[] = [
-        { locked: [true, true, true], tokens: [SUSHI] }
+        { locked: [true, true, true], tokens: [FXS, SUSHI] }
       ];
-      await claimContract.claimAndLock([gaugeMultiRewardsPPS.address], locks, [SUSHI]);
+      // simulate a sushi yield by the claim contract
+      await sushi.connect(sushiHolder).transfer(claimContract.address, parseEther("1"))
+      //await claimContract.setDepositor(SUSHI, sushiDepositor.address);
+      await claimContract.claimAndLock([gaugeMultiRewardsPPS.address], locks, [FXS, SUSHI]);
       var fxsBalanceAfter = await fxs.balanceOf(deployer.address);
       var afterSDT = await sdt.balanceOf(deployer.address);
       var afterSUSHI = await sushi.balanceOf(deployer.address);
-      //SDT was claimed and deposited
+      //SDT was claimed and locked
       expect(beforeSDT).to.be.eq(afterSDT);
-      //FXS was claimed and deposited
+      //FXS was claimed and locked
       expect(fxsBalanceBefore).to.be.eq(fxsBalanceAfter);
-      //SUSHI was claimed and deposited
+      //SUSHI was claimed and locked
       expect(beforeSUSHI).to.be.lt(afterSUSHI);
+      const fxsClaimAmount = await fxs.balanceOf(claimContract.address);
+      expect(fxsClaimAmount).to.be.eq(0);
     });
 
     it("User could claim and deposit some rewards", async function () {
@@ -778,18 +783,20 @@ describe("FXS Depositor", function () {
       var locks: any[] = [
         { locked: [false, true, false], tokens: [SDT, FXS, SUSHI] }
       ];
-      await claimContract.setDepositor(SUSHI, sushiDepositor.address);
+      // simulate a sushi yield by the claim contract
       await sushi.connect(sushiHolder).transfer(claimContract.address, parseEther("1"))
-      await claimContract.claimAndLock([ gaugeMultiRewardsPPS.address], locks, [SUSHI]);
+      await claimContract.claimAndLock([ gaugeMultiRewardsPPS.address], locks, [FXS, SUSHI]);
       var fxsBalanceAfter = await fxs.balanceOf(deployer.address);
       var afterSDT = await sdt.balanceOf(deployer.address);
       var afterSUSHI = await sushi.balanceOf(deployer.address);
-      //SDT was claimed and deposited
+      //SDT was claimed and sent to user
       expect(beforeSDT).to.be.lt(afterSDT);
-      //FXS was claimed
+      //FXS was claimed and locked
       expect(fxsBalanceBefore).to.be.eq(fxsBalanceAfter);
-      //SUSHI was claimed
+      //SUSHI was claimed and sent to user
       expect(beforeSUSHI).to.be.lt(afterSUSHI);
+      const fxsClaimAmount = await fxs.balanceOf(claimContract.address);
+      expect(fxsClaimAmount).to.be.eq(0);
     });
 
     it("Apart from depositorProxy no one can call ClaimAndSend", async function () {
