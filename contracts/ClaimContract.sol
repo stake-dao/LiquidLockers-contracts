@@ -76,15 +76,13 @@ contract ClaimContract {
 	) public {
 		require(_gauges.length == _locks.length, "gauges & locks count diff");
 
-		uint256 balance = IERC20(SDT).balanceOf(msg.sender);
-
 		// Claim not locked to the user & the locked to contract & user(SDT)
 		for (uint256 index = 0; index < _gauges.length; index++) {
 			GaugeMultiRewards(_gauges[index]).claimReward(msg.sender, _locks[index].locked);
 		}
 
 		// Lock the SDT to the veSDT if any
-		balance = IERC20(SDT).balanceOf(address(this));
+		uint256 balance = IERC20(SDT).balanceOf(address(this));
 		if (balance > 0) {
 			IERC20(SDT).approve(depositors[SDT], balance);
 			IVeSDT(depositors[SDT]).deposit_for_sd(msg.sender, balance);
