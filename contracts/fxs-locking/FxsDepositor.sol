@@ -21,7 +21,7 @@ contract FxsDepositor {
 
   /* ========== STATE VARIABLES ========== */
 	address public constant fxs = address(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
-	uint256 private constant MAXTIME = 4 * 364 * 86400;
+	uint256 private constant MAXTIME = 4 * 364 * 86400; //364 days is divisible by 7 (week) to max precision
 	uint256 private constant WEEK = 7 * 86400;
 
 	uint256 public lockIncentive = 10; //incentive to users who spend gas to lock fxs
