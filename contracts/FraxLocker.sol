@@ -111,19 +111,6 @@ contract FraxLocker {
 		emit Released(_recipient, balance);
 	}
 
-	/// @notice Vote on the FraxGaugeController
-	/// @param _voteId Id to vote on
-	/// @param _votingAddress GaugeController address to vote on
-	/// @param _support Whether to support or not
-	//function vote(
-	//	uint256 _voteId,
-	//	address _votingAddress,
-	//	bool _support
-	//) external onlyGovernance {
-		//IFraxGaugeController(_votingAddress).vote(_voteId, _support, false);
-		//emit Voted(_voteId, _votingAddress, _support);
-	//}
-
 	/// @notice Vote on Frax Gauge Controller for a gauge with a given weight
 	/// @param _gauge The gauge address to vote for
 	/// @param _weight The weight with which to vote
