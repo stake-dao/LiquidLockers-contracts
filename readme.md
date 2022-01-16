@@ -6,18 +6,15 @@ Step 1, users can start to lock their FXS in Frax finance via Stake DAO, getting
 
 #### 2 Core Components:
 
+![Step1](https://user-images.githubusercontent.com/2848253/149667286-cf0e2e7f-c325-4919-95b5-45b8880eee37.png)
+
 1. FXS Locker - FXS holders can now lock their FXS via StakedDAO, via the depositor (`FxsDepositor.sol`). The DAO will create a 4 years lock, for obtaining the max veFXS amount, and the unlock time will be increased during the weeks:
 
    1. Users can lock FXS via the depositor, choosing if locking or not directly them through the locker (`FraxLocker.sol`).
    2. The locker can increse its unclock time.
    3. sdFXS holders can vote 
-   
-      ![Screenshot 2021-12-08 at 9 17 11 PM](https://user-images.githubusercontent.com/22425782/145238612-22e9374d-baf0-4c07-8543-b1aab536ffb8.png)
-      </br></br>
 
 2. sdFXS - FXS lockers will obtain sdFXS with 1:1 rate, they can be used to vote, once per week, about the FXS rewards allocation on frax gauges.
-   1. ![Screenshot 2021-12-08 at 9 21 02 PM](https://user-images.githubusercontent.com/22425782/145239266-d4e52cfe-62d6-4626-a0a9-516e40e060b3.png)
-
 
 ## Smart Contracts (general intended behaviour)
 1. **FxsDepositor.sol**: contract responsible for collecting FXS from users and locking them in frax. [Diffchecker](https://www.diffchecker.com/5Kr3DfGS) with Convex's FxsDepositor.
@@ -34,5 +31,4 @@ Step 1, users can start to lock their FXS in Frax finance via Stake DAO, getting
 ## Check Test Coverage
 
 `npx hardhat coverage --testfiles "test/*.ts"`
-
-![Screenshot 2021-12-08 at 9 24 47 PM](https://user-images.githubusercontent.com/2848253/147950748-619d5d8e-e6ee-48b8-ab77-5b886011043a.png)
+![Coverage_step1](https://user-images.githubusercontent.com/2848253/149667184-8a6661d6-5777-4dbb-9e4a-1caa22608991.png)
