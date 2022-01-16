@@ -24,6 +24,11 @@ const VE_FXS = "0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0";
 const WALLET_CHECKER = "0x53c13BA8834a1567474b19822aAD85c6F90D9f9F";
 const WALLET_CHECKER_OWNER = "0xb1748c79709f4ba2dd82834b8c82d4a505003f27";
 
+const YIELD_DISTRIBUTOR = "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872";
+const FRAX_GAUGE_CONTROLLER = "0x44ade9AA409B0C29463fF7fcf07c9d3c939166ce";
+
+const GAUGE = "0xEB81b86248d3C2b618CcB071ADB122109DA96Da2"; // sdFRAX3CRV LP gauge
+
 const ACC = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0"; // StakeDAO multisig
 
 const getNow = async function() {
@@ -183,6 +188,30 @@ describe("FXS Depositor", function () {
       expect(veFXSBalance).to.be.gt(lockingAmount.mul(323).div(100));
       expect(veFXSBalance).to.be.lt(lockingAmount.mul(363).div(100));
     });
+
+    it("should check if all setters work correctly", async function () {
+      this.enableTimeouts(false);
+
+      await (await locker.setGovernance(FXS_HOLDER)).wait();
+      expect(await locker.governance()).to.be.equal(FXS_HOLDER);
+      await (await locker.connect(fxsHolder).setGovernance(baseOwner.address)).wait();
+
+      await (await locker.setYieldDistributor(FXS_HOLDER)).wait();
+      expect(await locker.yieldDistributor()).to.be.equal(FXS_HOLDER);
+      await (await locker.setYieldDistributor(YIELD_DISTRIBUTOR)).wait();
+
+      await (await locker.setFxsDepositor(FXS_HOLDER)).wait();
+      expect(await locker.fxsDepositor()).to.be.equal(FXS_HOLDER);
+      await (await locker.setFxsDepositor(fxsDepositor.address)).wait();
+
+      await (await locker.setGaugeController(FXS_HOLDER)).wait();
+      expect(await locker.gaugeController()).to.be.equal(FXS_HOLDER);
+      await (await locker.setGaugeController(FRAX_GAUGE_CONTROLLER)).wait();
+
+      await (await locker.setAccumulator(FXS_HOLDER)).wait();
+      expect(await locker.accumulator()).to.be.equal(FXS_HOLDER);
+      await (await locker.setAccumulator(ACC)).wait();
+    });
   });
 
   describe("FxsDepositor", function () {
@@ -226,7 +255,6 @@ describe("FXS Depositor", function () {
       const addedLockingAmount = parseEther("1000");
       await fxs.connect(fxsHolder).approve(fxsDepositor.address, addedLockingAmount);
       await fxsDepositor.connect(fxsHolder).deposit(addedLockingAmount, true);
-      //await fxsDepositor.connect(fxsHolder).deposit(addedLockingAmount.div(2), true);
 
       const veFXSLockedAfter = await veFXS.locked(locker.address);
       const userFxsBalanceAfter = await fxs.balanceOf(fxsHolder._address);
@@ -287,8 +315,10 @@ describe("FXS Depositor", function () {
       this.enableTimeouts(false);
 
       // Lock FXS already deposited into the Depositor if there is any
-      const addedLockingAmount = parseEther("1000");
-      await fxs.connect(fxsHolder).approve(fxsDepositor.address, addedLockingAmount);
+      const addedLockingAmount = parseEther("100");
+      await fxs.connect(fxsHolder).approve(fxsDepositor.address, addedLockingAmount.mul(2));
+      await fxsDepositor.connect(fxsHolder).deposit(addedLockingAmount, false);
+      await fxsDepositor.lockFXS();
       await fxsDepositor.connect(fxsHolder).deposit(addedLockingAmount, true);
       await fxsDepositor.lockFXS();
       const fxsBalance = await fxs.balanceOf(fxsDepositor.address);
@@ -297,6 +327,11 @@ describe("FXS Depositor", function () {
   });
 
   describe("Lock Final Actions", function () {
+    it("Should vote for a gauge via locker", async function () {
+      this.enableTimeouts(0);
+      await locker.voteGaugeWeight(GAUGE, 10000); // 100% vote for this gauge
+    });
+
     it("Should claim rewards", async function () {
       this.enableTimeouts(false);
       await network.provider.send("evm_increaseTime", [604800]); // 1 week
@@ -324,6 +359,16 @@ describe("FXS Depositor", function () {
       await (await locker.release(deployer.address, { gasLimit: "25000000" })).wait();
       const fxsBalance = await fxs.balanceOf(locker.address);
       expect(fxsBalance).to.be.equal(0);
+    });
+
+    it("Should execute any function", async function () {
+      this.enableTimeouts(false);
+      const data = "0x" // empty
+      const response = await locker.execute(
+        fxsDepositor.address,
+        0,
+        data 
+      );
     });
   });
 });
