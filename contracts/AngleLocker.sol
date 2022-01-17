@@ -6,27 +6,27 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/IVeToken.sol";
-import "./interfaces/IYieldDistributor.sol";
-import "./interfaces/ITokenGaugeController.sol";
+import "./interfaces/IVeANGLE.sol";
+import "./interfaces/IFeeDistributor.sol";
+import "./interfaces/IAngleGaugeController.sol";
 
-/// @title Locker
+/// @title AngleLocker
 /// @author StakeDAO
-/// @notice Locks the tokens to veToken contract
-contract Locker {
+/// @notice Locks the ANGLE tokens to veANGLE contract
+contract AngleLocker {
 	using SafeERC20 for IERC20;
 	using Address for address;
 	using SafeMath for uint256;
 
 	/* ========== STATE VARIABLES ========== */
 	address public governance;
-	address public tokenDepositor;
+	address public angleDepositor;
 	address public accumulator;
 
-    address public token;
-    address public veToken;
-    address public yieldDistributor;
-    address public gaugeController;
+	address public constant angle = address(0x31429d1856aD1377A8A0079410B297e1a9e214c2);
+	address public constant veAngle = address(0x0C462Dbb9EC8cD1630f1728B2CFD2769d09f0dd5);
+	address public feeDistributor = address(0x7F82ff050128e29Fd89D85d01b93246F744E62A0);
+	address public gaugeController = address(0x9aD7e7b0877582E14c17702EecF49018DD6f2367);
 
 	/* ========== EVENTS ========== */
 	event LockCreated(address indexed user, uint256 value, uint256 duration);
@@ -35,26 +35,16 @@ contract Locker {
 	event VotedOnGaugeWeight(address indexed _gauge, uint256 _weight);
 	event Released(address indexed user, uint256 value);
 	event GovernanceChanged(address indexed newGovernance);
-	event TokenDepositorChanged(address indexed newTokenDepositor);
+	event AngleDepositorChanged(address indexed newAngleDepositor);
 	event AccumulatorChanged(address indexed newAccumulator);
-	event YieldDistributorChanged(address indexed newYieldDistributor);
+	event FeeDistributorChanged(address indexed newFeeDistributor);
 	event GaugeControllerChanged(address indexed newGaugeController);
   
 	/* ========== CONSTRUCTOR ========== */
-	constructor(
-        address _token, 
-        address _veToken,
-        address _gaugeController,
-        address _yieldDistributor,
-        address _accumulator
-    ) public {
+	constructor(address _accumulator) public {
 		governance = msg.sender;
 		accumulator = _accumulator;
-        token = _token;
-        veToken = _veToken;
-        gaugeController = _gaugeController;
-        yieldDistributor = _yieldDistributor;
-		IERC20(token).approve(veToken, type(uint256).max);
+		IERC20(angle).approve(veAngle, type(uint256).max);
 	}
 
 	/* ========== MODIFIERS ========== */
@@ -70,62 +60,59 @@ contract Locker {
 
 	modifier onlyGovernanceOrDepositor() {
 		require(
-			msg.sender == governance || msg.sender == tokenDepositor,
-			"!(gov||proxy||tokenDepositor)"
+			msg.sender == governance || msg.sender == angleDepositor,
+			"!(gov||proxy||AngleDepositor)"
 		);
 		_;
 	}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
-	/// @notice Creates a lock by locking token in the veToken contract for the specified time
+	/// @notice Creates a lock by locking ANGLE token in the veAngle contract for the specified time
 	/// @dev Can only be called by governance or proxy
 	/// @param _value The amount of token to be locked
 	/// @param _unlockTime The duration for which the token is to be locked
 	function createLock(uint256 _value, uint256 _unlockTime) external onlyGovernanceOrDepositor {
-		IVeToken(veToken).create_lock(_value, _unlockTime);
-		IYieldDistributor(yieldDistributor).checkpoint();
+		IVeANGLE(veAngle).create_lock(_value, _unlockTime);
 		emit LockCreated(msg.sender, _value, _unlockTime);
 	}
 
-	/// @notice Increases the amount of tokken locked in veToken
-	/// @dev The tokens needs to be transferred to this contract before calling
+	/// @notice Increases the amount of ANGLE locked in veANGLE
+	/// @dev The ANGLE needs to be transferred to this contract before calling
 	/// @param _value The amount by which the lock amount is to be increased
 	function increaseAmount(uint256 _value) external onlyGovernanceOrDepositor {
-		IVeToken(veToken).increase_amount(_value);
-		IYieldDistributor(yieldDistributor).checkpoint();
+		IVeANGLE(veAngle).increase_amount(_value);
 	}
 
-	/// @notice Increases the duration for which token is locked in veToken contract for the user calling the function
+	/// @notice Increases the duration for which ANGLE is locked in veANGLE for the user calling the function
 	/// @param _unlockTime The duration in seconds for which the token is to be locked
 	function increaseUnlockTime(uint256 _unlockTime) external onlyGovernanceOrDepositor {
-		IVeToken(veToken).increase_unlock_time(_unlockTime);
-		IYieldDistributor(yieldDistributor).checkpoint();
+		IVeANGLE(veAngle).increase_unlock_time(_unlockTime);
 	}
 
-	/// @notice Claim the token reward from the token Yield Distributor
-	/// @param _recipient The address which will receive the claimed tokens reward
-	function claimTokenRewards(address _recipient) external onlyGovernanceOrAcc {
-		IYieldDistributor(yieldDistributor).getYield();
-		emit TokenClaimed(_recipient, IERC20(token).balanceOf(address(this)));
-		IERC20(token).safeTransfer(_recipient, IERC20(token).balanceOf(address(this)));
+	/// @notice Claim the token reward from the ANGLE fee Distributor passing the token as input parameter
+	/// @param _recipient The address which will receive the claimed token reward
+	function claimRewards(address _token, address _recipient) external onlyGovernanceOrAcc {
+		uint256 claimed = IFeeDistributor(feeDistributor).claim();
+		emit TokenClaimed(_recipient, claimed);
+		IERC20(_token).safeTransfer(_recipient, claimed);
 	}
 
-	/// @notice Withdraw the tokens from veToken contract
+	/// @notice Withdraw the ANGLE from veANGLE
 	/// @dev call only after lock time expires
-	/// @param _recipient The address which will receive the released tokens
+	/// @param _recipient The address which will receive the released ANGLE
 	function release(address _recipient) external onlyGovernanceOrDepositor {
-		IVeToken(veToken).withdraw();
-		uint balance = IERC20(token).balanceOf(address(this));
+		IVeANGLE(veAngle).withdraw();
+		uint balance = IERC20(angle).balanceOf(address(this));
 		
-		IERC20(token).safeTransfer(_recipient, balance);
+		IERC20(angle).safeTransfer(_recipient, balance);
 		emit Released(_recipient, balance);
 	}
 
-	/// @notice Vote on Token Gauge Controller for a gauge with a given weight
+	/// @notice Vote on Angle Gauge Controller for a gauge with a given weight
 	/// @param _gauge The gauge address to vote for
 	/// @param _weight The weight with which to vote
 	function voteGaugeWeight(address _gauge, uint256 _weight) external onlyGovernance {
-		ITokenGaugeController(gaugeController).vote_for_gauge_weights(_gauge, _weight);
+		IAngleGaugeController(gaugeController).vote_for_gauge_weights(_gauge, _weight);
 		emit VotedOnGaugeWeight(_gauge, _weight);
 	}
 	
@@ -134,14 +121,14 @@ contract Locker {
 		emit GovernanceChanged(_governance);
 	}
 
-	function setTokenDepositor(address _tokenDepositor) external onlyGovernance {
-		tokenDepositor = _tokenDepositor;
-		emit TokenDepositorChanged(_tokenDepositor);
+	function setAngleDepositor(address _angleDepositor) external onlyGovernance {
+		angleDepositor = _angleDepositor;
+		emit AngleDepositorChanged(_angleDepositor);
 	}
 
-	function setYieldDistributor(address _newYD) external onlyGovernance {
-		yieldDistributor = _newYD;
-		emit YieldDistributorChanged(_newYD);
+	function setFeeDistributor(address _newYD) external onlyGovernance {
+		feeDistributor = _newYD;
+		emit FeeDistributorChanged(_newYD);
 	}
 
 	function setGaugeController(address _gaugeController) external onlyGovernance {

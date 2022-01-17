@@ -78,8 +78,8 @@ describe("FXS Depositor", function () {
     });
 
     const FraxLocker = await ethers.getContractFactory("FraxLocker");
-    const FxsDepositor = await ethers.getContractFactory("FxsDepositor");
-    const SdFXSToken = await ethers.getContractFactory("sdFXSToken");
+    const FxsDepositor = await ethers.getContractFactory("Depositor");
+    const SdFXSToken = await ethers.getContractFactory("sdToken");
 
     fxsHolder = ethers.provider.getSigner(FXS_HOLDER);
     fxsHolder2 = ethers.provider.getSigner(FXS_HOLDER_2);
@@ -92,14 +92,14 @@ describe("FXS Depositor", function () {
     await network.provider.send("hardhat_setBalance", [FXS_HOLDER, ETH_100]);
 
     /**DEPLOYMENTS GLOBAL */
-    sdFXSToken = await SdFXSToken.deploy();
+    sdFXSToken = await SdFXSToken.deploy("Stake DAO FXS", "sdFXS");
 
     locker = await FraxLocker.deploy(ACC);
     //random locker used to simulate other locks
     randomLocker1 = await FraxLocker.deploy(ACC);
     randomLocker2 = await FraxLocker.deploy(ACC);
 
-    fxsDepositor = await FxsDepositor.deploy(locker.address, sdFXSToken.address);
+    fxsDepositor = await FxsDepositor.deploy(fxs.address, locker.address, sdFXSToken.address);
     
     // Set FxsDepositor on lockers
     await locker.setFxsDepositor(fxsDepositor.address);
