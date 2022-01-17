@@ -127,7 +127,7 @@ describe("FXS Depositor", function () {
     it("should change sdFXS operator via FxsDepositor", async function () {
       this.enableTimeouts(false);
 
-      await fxsDepositor.setSdFXSOperator(fxsHolder._address);
+      await fxsDepositor.setSdTokenOperator(fxsHolder._address);
       const operator = await sdFXSToken.operator();
 
       expect(operator).to.be.equal(fxsHolder._address);
@@ -237,7 +237,7 @@ describe("FXS Depositor", function () {
       const lockingAmount = parseEther("1");
       await (await fxs.connect(fxsHolder).transfer(locker.address, lockingAmount)).wait();
       // Lock FXS already deposited into the Depositor if there is any
-      await fxsDepositor.lockFXS();
+      await fxsDepositor.lockToken();
       const fxsBalance = await fxs.balanceOf(fxsDepositor.address);
       expect(fxsBalance).to.be.equal(0);
     });
@@ -318,9 +318,9 @@ describe("FXS Depositor", function () {
       const addedLockingAmount = parseEther("100");
       await fxs.connect(fxsHolder).approve(fxsDepositor.address, addedLockingAmount.mul(2));
       await fxsDepositor.connect(fxsHolder).deposit(addedLockingAmount, false);
-      await fxsDepositor.lockFXS();
+      await fxsDepositor.lockToken();
       await fxsDepositor.connect(fxsHolder).deposit(addedLockingAmount, true);
-      await fxsDepositor.lockFXS();
+      await fxsDepositor.lockToken();
       const fxsBalance = await fxs.balanceOf(fxsDepositor.address);
       expect(fxsBalance).to.be.equal(0);
     });
