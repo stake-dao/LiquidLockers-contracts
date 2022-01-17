@@ -52,8 +52,8 @@ describe("Edge cases", () => {
       params: [WALLET_CHECKER_OWNER]
     });
 
-    const SdFXSToken = await ethers.getContractFactory("sdFXSToken");
-    const FxsDepositor = await ethers.getContractFactory("FxsDepositor");
+    const SdFXSToken = await ethers.getContractFactory("sdToken");
+    const FxsDepositor = await ethers.getContractFactory("Depositor");
     const FxsLocker = await ethers.getContractFactory("FxsLocker");
 
     sdFXSToken = await SdFXSToken.deploy("Stake DAO FXS", "sdFXS");
@@ -81,7 +81,7 @@ describe("Edge cases", () => {
 
   describe("Edge Cases", async () => {
     it("Unable to deposit FXS if the operator has been changed", async () => {
-      await fxsDepositor.setSdFXSOperator(secondAccount.address);
+      await fxsDepositor.setSdTokenOperator(secondAccount.address);
       const lockingAmount = parseEther("1");
       await fxs.connect(fxsHolder).approve(fxsDepositor.address, lockingAmount);
       await expect(fxsDepositor.connect(fxsHolder).deposit(lockingAmount, false)).to.be.revertedWith("!authorized");
