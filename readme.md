@@ -17,7 +17,7 @@ Step 1, users can start to lock their FXS in Frax finance via Stake DAO, getting
 2. sdFXS - FXS lockers will obtain sdFXS with 1:1 rate, they can be used to vote, once per week, about the FXS rewards allocation on frax gauges.
 
 ## Smart Contracts (general intended behaviour)
-1. **FxsDepositor.sol**: contract responsible for collecting FXS from users and locking them in frax. [Diffchecker](https://www.diffchecker.com/5Kr3DfGS) with Convex's FxsDepositor.
+1. **FxsDepositor.sol**: contract responsible for collecting FXS from users and locking them in frax. [Diffchecker](https://www.diffnow.com/report/5apbh) with Convex's FxsDepositor.
 2. **sdFXSToken.sol**: resultant token received by users, on locking FXS via FxsDepositor. [Diffchecker](https://www.diffchecker.com/QFoCaRAo) with Convex's cvxFXSToken.
 3. **FraxLocker.sol**: contract that directly interacts with frax's protocol contracts to lock FXS and also claim FXS rewards for FXS lockers. Basically manages Stake DAO's FXS lock in frax (increasing lock amount, time, etc). FxsDepositor locks FXS from users using this contract. [Diffchecker](https://www.diffchecker.com/lfcaYnlL) with Stake DAO's CRV locker [here](https://etherscan.io/address/0x52f541764E6e90eeBc5c21Ff570De0e2D63766B6#code)
 
