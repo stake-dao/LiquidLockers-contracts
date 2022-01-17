@@ -34,11 +34,11 @@ const ACC = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0"; // StakeDAO multisig
 
 const SAN_USDC_EUR = "0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad"; // sanUSDC_EUR
 
-const SAN_USDC_EUR_HOLDER = "0xaC149daC01C4D5f6f5dB88AEC053a88fe958cB8B"; 
+const SAN_USDC_EUR_HOLDER = "0xaC149daC01C4D5f6f5dB88AEC053a88fe958cB8B";
 
 const FEE_D_ADMIN = "0xdC4e6DFe07EFCa50a197DF15D9200883eF4Eb1c8";
 
-const getNow = async function() {
+const getNow = async function () {
   let blockNum = await ethers.provider.getBlockNumber();
   let block = await ethers.provider.getBlock(blockNum);
   var time = block.timestamp;
@@ -127,12 +127,12 @@ describe("ANGLE Depositor", function () {
     randomLocker2 = await AngleLocker.deploy(ACC);
 
     angleDepositor = await AngleDepositor.deploy(angle.address, locker.address, sdANGLEToken.address);
-    
+
     // Set AngleDepositor on lockers
     await locker.setAngleDepositor(angleDepositor.address);
     await randomLocker1.setAngleDepositor(angleDepositor.address);
     await randomLocker2.setAngleDepositor(angleDepositor.address);
-    // Set the sdAngle token minter operator to the depositor 
+    // Set the sdAngle token minter operator to the depositor
     await sdANGLEToken.setOperator(angleDepositor.address);
 
     //Should be done by Angle team (whitelist the stakeDAO locker contract for locking ANGLE)
@@ -146,8 +146,8 @@ describe("ANGLE Depositor", function () {
     await angle.connect(angleHolder).transfer(randomLocker2.address, angleTolock);
 
     // Create Lock
-    await randomLocker1.createLock(angleTolock, await getNow() + ONE_YEAR_IN_SECONDS * 1.5);
-    await randomLocker2.createLock(angleTolock, await getNow() + ONE_YEAR_IN_SECONDS * 3);
+    await randomLocker1.createLock(angleTolock, (await getNow()) + ONE_YEAR_IN_SECONDS * 1.5);
+    await randomLocker2.createLock(angleTolock, (await getNow()) + ONE_YEAR_IN_SECONDS * 3);
   });
 
   describe("sdANGLE", function () {
@@ -201,7 +201,7 @@ describe("ANGLE Depositor", function () {
     it("Should create a lock", async function () {
       this.enableTimeouts(false);
       const lockingAmount = parseEther("1");
-      const lockEnd = await getNow() + ONE_YEAR_IN_SECONDS * 3;
+      const lockEnd = (await getNow()) + ONE_YEAR_IN_SECONDS * 3;
 
       await angle.connect(angleHolder).transfer(locker.address, lockingAmount);
       await locker.createLock(lockingAmount, lockEnd);
@@ -361,46 +361,56 @@ describe("ANGLE Depositor", function () {
 
     it("Should claim rewards", async function () {
       this.enableTimeouts(false);
+
+      const ETH_100 = BigNumber.from(10).mul(BigNumber.from(10).pow(18)).toHexString();
+      await network.provider.send("hardhat_setBalance", [FEE_D_ADMIN, ETH_100]);
+
       await sanUsdcEur.connect(sanLPHolder).transfer(FEE_DISTRIBUTOR, parseUnits("1", "6"));
-      await feeDistributor.connect(feeDAdmin).checkpoint_token();
-      await network.provider.send("evm_increaseTime", [604800]); // 1 week
+
+      await network.provider.send("evm_increaseTime", [86401 * 7]); // 1 week
       await network.provider.send("evm_mine", []);
 
-      // const sanLPBalanceBefore = await sanUsdcEur.balanceOf(locker.address);
-      // expect(sanLPBalanceBefore).to.be.equal(0);
-      // await locker.claimRewards(sanUsdcEur.address, locker.governance());
-      // const sanLPBalanceAfter = await sanUsdcEur.balanceOf(locker.address);
-      // expect(sanLPBalanceAfter).to.be.equal(0);
-      // //const feeDB = await sanUsdcEur.balanceOf(locker.address);
-      // const sanLPBalanceGovernance = await sanUsdcEur.balanceOf(locker.governance());
-      // expect(sanLPBalanceGovernance).to.be.gt(0);
+      await feeDistributor.connect(feeDAdmin).checkpoint_token();
+      await feeDistributor.connect(feeDAdmin).toggle_allow_checkpoint_token();
+
+      await network.provider.send("evm_increaseTime", [86401 * 7]); // 1 week
+      await network.provider.send("evm_mine", []);
+
+      await feeDistributor.checkpoint_token();
+
+      await network.provider.send("evm_mine", []);
+
+      const sanLPBalanceBefore = await sanUsdcEur.balanceOf(locker.address);
+      expect(sanLPBalanceBefore).to.be.equal(0);
+      await locker.claimRewards(sanUsdcEur.address, locker.governance());
+      const sanLPBalanceAfter = await sanUsdcEur.balanceOf(locker.address);
+      expect(sanLPBalanceAfter).to.be.equal(0);
+      const sanLPBalanceGovernance = await sanUsdcEur.balanceOf(locker.governance());
+
+      expect(sanLPBalanceGovernance).to.be.gt(0);
     });
 
-    // it("Should release locked ANGLE", async function () {
-    //   this.enableTimeouts(false);
-    //   /* random release*/
-    //   await network.provider.send("evm_increaseTime", [ONE_YEAR_IN_SECONDS * 1.6]);
-    //   await network.provider.send("evm_mine", []);
-    //   await randomLocker1.release(deployer.address);
-    //   await network.provider.send("evm_increaseTime", [ONE_YEAR_IN_SECONDS * 1.5]);
-    //   await network.provider.send("evm_mine", []);
-    //   await randomLocker2.release(deployer.address);
-    //   /* end random release*/
-    //   await network.provider.send("evm_increaseTime", [ONE_YEAR_IN_SECONDS * 1]);
-    //   await network.provider.send("evm_mine", []);
-    //   await (await locker.release(deployer.address, { gasLimit: "25000000" })).wait();
-    //   const angleBalance = await angle.balanceOf(locker.address);
-    //   expect(angleBalance).to.be.equal(0);
-    // });
+    it("Should release locked ANGLE", async function () {
+      this.enableTimeouts(false);
+      /* random release*/
+      await network.provider.send("evm_increaseTime", [ONE_YEAR_IN_SECONDS * 1.6]);
+      await network.provider.send("evm_mine", []);
+      await randomLocker1.release(deployer.address);
+      await network.provider.send("evm_increaseTime", [ONE_YEAR_IN_SECONDS * 1.5]);
+      await network.provider.send("evm_mine", []);
+      await randomLocker2.release(deployer.address);
+      /* end random release*/
+      await network.provider.send("evm_increaseTime", [ONE_YEAR_IN_SECONDS * 1]);
+      await network.provider.send("evm_mine", []);
+      await (await locker.release(deployer.address, { gasLimit: "25000000" })).wait();
+      const angleBalance = await angle.balanceOf(locker.address);
+      expect(angleBalance).to.be.equal(0);
+    });
 
     it("Should execute any function", async function () {
       this.enableTimeouts(false);
-      const data = "0x" // empty
-      const response = await locker.execute(
-        angleDepositor.address,
-        0,
-        data 
-      );
+      const data = "0x"; // empty
+      const response = await locker.execute(angleDepositor.address, 0, data);
     });
   });
 });

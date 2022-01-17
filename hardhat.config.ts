@@ -7,8 +7,8 @@ import "hardhat-deploy";
 import "hardhat-deploy-ethers";
 import "@nomiclabs/hardhat-solhint";
 import "hardhat-contract-sizer";
-import "hardhat-gas-reporter"
-import "solidity-coverage"
+import "hardhat-gas-reporter";
+import "solidity-coverage";
 //import "./tasks/global";
 
 require("dotenv").config();
@@ -21,7 +21,7 @@ export default {
         url: process.env.MAINNET
         // blockNumber: 13510000
       }
-    },
+    }
   },
   namedAccounts: {
     deployer: 0
@@ -30,7 +30,7 @@ export default {
     version: "0.2.7"
   },
   solidity: {
-    compilers: [{ version: "0.8.0" }, { version: "0.7.4" }, { version: "0.6.12" }, { version: "0.5.17" }],
+    compilers: [{ version: "0.8.7" }],
     settings: {
       optimizer: {
         enabled: true,
