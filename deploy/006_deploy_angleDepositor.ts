@@ -6,13 +6,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy("sdFXS", {
-    contract: "sdToken",
-    args: ["Stake DAO FXS", "sdFXS"],
+  const ANGLE = "0x31429d1856ad1377a8a0079410b297e1a9e214c2";
+  const locker = await deployments.get("ANGLELocker");
+  const minter = await deployments.get("sdANGLE");
+
+  await deploy("ANGLEDepositor", {
+    contract: "Depositor",
     from: deployer,
+    args: [ANGLE, locker.address, minter.address],
     log: true
   });
 };
 export default func;
 
-func.tags = ["sdToken"];
+func.tags = ["Depositor"];
+func.dependencies = ["ANGLELocker", "sdANGLE"];

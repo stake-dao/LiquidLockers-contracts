@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.8.7;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "../interfaces/ITokenMinter.sol";
 import "../interfaces/ILocker.sol";
@@ -16,10 +15,9 @@ import "../interfaces/ISdToken.sol";
 contract Depositor {
 	using SafeERC20 for IERC20;
 	using Address for address;
-	using SafeMath for uint256;
 
-  /* ========== STATE VARIABLES ========== */
-    address public token;
+	/* ========== STATE VARIABLES ========== */
+	address public token;
 	uint256 private constant MAXTIME = 4 * 364 * 86400;
 	uint256 private constant WEEK = 7 * 86400;
 
@@ -41,24 +39,24 @@ contract Depositor {
 	event GovernanceChanged(address indexed newGovernance);
 	event SdTokenOperatorChanged(address indexed newSdToken);
 	event FeesChanged(uint256 newFee);
-  /* ========== CONSTRUCTOR ========== */
+
+	/* ========== CONSTRUCTOR ========== */
 	constructor(
-    address _token,
-    address _locker, 
-    address _minter
-    ) public {
+		address _token,
+		address _locker,
+		address _minter
+	) {
 		governance = msg.sender;
-        token = _token;
+		token = _token;
 		locker = _locker;
 		minter = _minter;
 	}
 
-  /* ========== RESTRICTED FUNCTIONS ========== */
+	/* ========== RESTRICTED FUNCTIONS ========== */
 	function setGovernance(address _governance) external {
 		require(msg.sender == governance, "!auth");
 		governance = _governance;
 		emit GovernanceChanged(_governance);
-
 	}
 
 	function setSdTokenOperator(address _operator) external {
@@ -81,7 +79,7 @@ contract Depositor {
 		}
 	}
 
-  /* ========== MUTATIVE FUNCTIONS ========== */
+	/* ========== MUTATIVE FUNCTIONS ========== */
 
 	/// @notice Locks the tokens held by the contract
 	/// @dev The contract must have tokens to lock
@@ -106,7 +104,7 @@ contract Depositor {
 			uint256 unlockAt = block.timestamp + MAXTIME;
 			uint256 unlockInWeeks = (unlockAt / WEEK) * WEEK;
 
-			if (unlockInWeeks.sub(unlockTime) > 2) {
+			if (unlockInWeeks - unlockTime > 2) {
 				ILocker(locker).increaseUnlockTime(unlockAt);
 				unlockTime = unlockInWeeks;
 			}
@@ -130,10 +128,7 @@ contract Depositor {
 	/// @dev User needs to approve the contract to transfer the token
 	/// @param _amount The amount of token to deposit
 	/// @param _lock Whether to lock the token
-	function deposit(
-		uint256 _amount,
-		bool _lock
-	) public {
+	function deposit(uint256 _amount, bool _lock) public {
 		require(_amount > 0, "!>0");
 
 		// If User chooses to lock Token
@@ -142,7 +137,7 @@ contract Depositor {
 			_lockToken();
 
 			if (incentiveToken > 0) {
-				_amount = _amount.add(incentiveToken);
+				_amount = _amount + incentiveToken;
 				emit IncentiveReceived(msg.sender, incentiveToken);
 				incentiveToken = 0;
 			}
@@ -150,9 +145,9 @@ contract Depositor {
 			//move tokens here
 			IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
 			//defer lock cost to another user
-			uint256 callIncentive = _amount.mul(lockIncentive).div(FEE_DENOMINATOR);
-			_amount = _amount.sub(callIncentive);
-			incentiveToken = incentiveToken.add(callIncentive);
+			uint256 callIncentive = (_amount * lockIncentive) / FEE_DENOMINATOR;
+			_amount = _amount - callIncentive;
+			incentiveToken = incentiveToken + callIncentive;
 		}
 
 		ITokenMinter(minter).mint(msg.sender, _amount);

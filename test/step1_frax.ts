@@ -31,7 +31,7 @@ const GAUGE = "0xEB81b86248d3C2b618CcB071ADB122109DA96Da2"; // sdFRAX3CRV LP gau
 
 const ACC = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0"; // StakeDAO multisig
 
-const getNow = async function() {
+const getNow = async function () {
   let blockNum = await ethers.provider.getBlockNumber();
   let block = await ethers.provider.getBlock(blockNum);
   var time = block.timestamp;
@@ -77,7 +77,7 @@ describe("FXS Depositor", function () {
       params: [WALLET_CHECKER_OWNER]
     });
 
-    const FraxLocker = await ethers.getContractFactory("FraxLocker");
+    const FxsLocker = await ethers.getContractFactory("FxsLocker");
     const FxsDepositor = await ethers.getContractFactory("Depositor");
     const SdFXSToken = await ethers.getContractFactory("sdToken");
 
@@ -94,18 +94,18 @@ describe("FXS Depositor", function () {
     /**DEPLOYMENTS GLOBAL */
     sdFXSToken = await SdFXSToken.deploy("Stake DAO FXS", "sdFXS");
 
-    locker = await FraxLocker.deploy(ACC);
+    locker = await FxsLocker.deploy(ACC);
     //random locker used to simulate other locks
-    randomLocker1 = await FraxLocker.deploy(ACC);
-    randomLocker2 = await FraxLocker.deploy(ACC);
+    randomLocker1 = await FxsLocker.deploy(ACC);
+    randomLocker2 = await FxsLocker.deploy(ACC);
 
     fxsDepositor = await FxsDepositor.deploy(fxs.address, locker.address, sdFXSToken.address);
-    
+
     // Set FxsDepositor on lockers
     await locker.setFxsDepositor(fxsDepositor.address);
     await randomLocker1.setFxsDepositor(fxsDepositor.address);
     await randomLocker2.setFxsDepositor(fxsDepositor.address);
-    // Set the sdFxsToken minter operator to the depositor 
+    // Set the sdFxsToken minter operator to the depositor
     await sdFXSToken.setOperator(fxsDepositor.address);
 
     //Should be done by FRAX team (whitelist the stakeDAO locker contract for locking FXS)
@@ -119,8 +119,8 @@ describe("FXS Depositor", function () {
     await fxs.connect(fxsHolder).transfer(randomLocker2.address, fxsTolock);
 
     // Create Lock
-    await randomLocker1.createLock(fxsTolock, await getNow() + ONE_YEAR_IN_SECONDS * 1.5);
-    await randomLocker2.createLock(fxsTolock, await getNow() + ONE_YEAR_IN_SECONDS * 3);
+    await randomLocker1.createLock(fxsTolock, (await getNow()) + ONE_YEAR_IN_SECONDS * 1.5);
+    await randomLocker2.createLock(fxsTolock, (await getNow()) + ONE_YEAR_IN_SECONDS * 3);
   });
 
   describe("sdFXS", function () {
@@ -174,7 +174,7 @@ describe("FXS Depositor", function () {
     it("Should create a lock", async function () {
       this.enableTimeouts(false);
       const lockingAmount = parseEther("1");
-      const lockEnd = await getNow() + ONE_YEAR_IN_SECONDS * 3;
+      const lockEnd = (await getNow()) + ONE_YEAR_IN_SECONDS * 3;
 
       await fxs.connect(fxsHolder).transfer(locker.address, lockingAmount);
       await locker.createLock(lockingAmount, lockEnd);
@@ -363,12 +363,8 @@ describe("FXS Depositor", function () {
 
     it("Should execute any function", async function () {
       this.enableTimeouts(false);
-      const data = "0x" // empty
-      const response = await locker.execute(
-        fxsDepositor.address,
-        0,
-        data 
-      );
+      const data = "0x"; // empty
+      const response = await locker.execute(fxsDepositor.address, 0, data);
     });
   });
 });

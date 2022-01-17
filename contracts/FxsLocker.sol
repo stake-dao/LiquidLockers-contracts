@@ -1,22 +1,19 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
-pragma experimental ABIEncoderV2;
+pragma solidity 0.8.7;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVeFXS.sol";
 import "./interfaces/IYieldDistributor.sol";
 import "./interfaces/IFraxGaugeController.sol";
 
-/// @title FraxLocker
+/// @title FxsLocker
 /// @author StakeDAO
 /// @notice Locks the FXS tokens to veFXS contract
-contract FraxLocker {
+contract FxsLocker {
 	using SafeERC20 for IERC20;
 	using Address for address;
-	using SafeMath for uint256;
 
 	/* ========== STATE VARIABLES ========== */
 	address public governance;
@@ -39,9 +36,9 @@ contract FraxLocker {
 	event AccumulatorChanged(address indexed newAccumulator);
 	event YieldDistributorChanged(address indexed newYieldDistributor);
 	event GaugeControllerChanged(address indexed newGaugeController);
-  
+
 	/* ========== CONSTRUCTOR ========== */
-	constructor(address _accumulator) public {
+	constructor(address _accumulator) {
 		governance = msg.sender;
 		accumulator = _accumulator;
 		IERC20(fxs).approve(veFXS, type(uint256).max);
@@ -59,10 +56,7 @@ contract FraxLocker {
 	}
 
 	modifier onlyGovernanceOrDepositor() {
-		require(
-			msg.sender == governance || msg.sender == fxsDepositor,
-			"!(gov||proxy||fxsDepositor)"
-		);
+		require(msg.sender == governance || msg.sender == fxsDepositor, "!(gov||proxy||fxsDepositor)");
 		_;
 	}
 
@@ -105,8 +99,8 @@ contract FraxLocker {
 	/// @param _recipient The address which will receive the released FXS
 	function release(address _recipient) external onlyGovernanceOrDepositor {
 		IveFXS(veFXS).withdraw();
-		uint balance = IERC20(fxs).balanceOf(address(this));
-		
+		uint256 balance = IERC20(fxs).balanceOf(address(this));
+
 		IERC20(fxs).safeTransfer(_recipient, balance);
 		emit Released(_recipient, balance);
 	}
@@ -118,7 +112,7 @@ contract FraxLocker {
 		IFraxGaugeController(gaugeController).vote_for_gauge_weights(_gauge, _weight);
 		emit VotedOnGaugeWeight(_gauge, _weight);
 	}
-	
+
 	function setGovernance(address _governance) external onlyGovernance {
 		governance = _governance;
 		emit GovernanceChanged(_governance);

@@ -6,9 +6,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy("sdFXS", {
+  await deploy("sdANGLE", {
     contract: "sdToken",
-    args: ["Stake DAO FXS", "sdFXS"],
+    args: ["Stake DAO ANGLE", "sdANGLE"],
     from: deployer,
     log: true
   });

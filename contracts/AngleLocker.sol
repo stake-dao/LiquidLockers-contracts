@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
-pragma experimental ABIEncoderV2;
+pragma solidity 0.8.7;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVeANGLE.sol";
 import "./interfaces/IFeeDistributor.sol";
@@ -16,7 +14,6 @@ import "./interfaces/IAngleGaugeController.sol";
 contract AngleLocker {
 	using SafeERC20 for IERC20;
 	using Address for address;
-	using SafeMath for uint256;
 
 	/* ========== STATE VARIABLES ========== */
 	address public governance;
@@ -39,9 +36,9 @@ contract AngleLocker {
 	event AccumulatorChanged(address indexed newAccumulator);
 	event FeeDistributorChanged(address indexed newFeeDistributor);
 	event GaugeControllerChanged(address indexed newGaugeController);
-  
+
 	/* ========== CONSTRUCTOR ========== */
-	constructor(address _accumulator) public {
+	constructor(address _accumulator) {
 		governance = msg.sender;
 		accumulator = _accumulator;
 		IERC20(angle).approve(veAngle, type(uint256).max);
@@ -59,10 +56,7 @@ contract AngleLocker {
 	}
 
 	modifier onlyGovernanceOrDepositor() {
-		require(
-			msg.sender == governance || msg.sender == angleDepositor,
-			"!(gov||proxy||AngleDepositor)"
-		);
+		require(msg.sender == governance || msg.sender == angleDepositor, "!(gov||proxy||AngleDepositor)");
 		_;
 	}
 
@@ -102,8 +96,8 @@ contract AngleLocker {
 	/// @param _recipient The address which will receive the released ANGLE
 	function release(address _recipient) external onlyGovernanceOrDepositor {
 		IVeANGLE(veAngle).withdraw();
-		uint balance = IERC20(angle).balanceOf(address(this));
-		
+		uint256 balance = IERC20(angle).balanceOf(address(this));
+
 		IERC20(angle).safeTransfer(_recipient, balance);
 		emit Released(_recipient, balance);
 	}
@@ -115,7 +109,7 @@ contract AngleLocker {
 		IAngleGaugeController(gaugeController).vote_for_gauge_weights(_gauge, _weight);
 		emit VotedOnGaugeWeight(_gauge, _weight);
 	}
-	
+
 	function setGovernance(address _governance) external onlyGovernance {
 		governance = _governance;
 		emit GovernanceChanged(_governance);

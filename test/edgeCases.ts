@@ -54,17 +54,17 @@ describe("Edge cases", () => {
 
     const SdFXSToken = await ethers.getContractFactory("sdFXSToken");
     const FxsDepositor = await ethers.getContractFactory("FxsDepositor");
-    const FraxLocker = await ethers.getContractFactory("FraxLocker");
+    const FxsLocker = await ethers.getContractFactory("FxsLocker");
 
-    sdFXSToken = await SdFXSToken.deploy();
-    locker = await FraxLocker.deploy(ACC);
-    fxsDepositor = await FxsDepositor.deploy(locker.address, sdFXSToken.address);
+    sdFXSToken = await SdFXSToken.deploy("Stake DAO FXS", "sdFXS");
+    locker = await FxsLocker.deploy(ACC);
+    fxsDepositor = await FxsDepositor.deploy(FXS, locker.address, sdFXSToken.address);
     walletChecker = await ethers.getContractAt(WalletCheckerABI, WALLET_CHECKER);
     walletCheckerOwner = ethers.provider.getSigner(WALLET_CHECKER_OWNER);
     fxs = await ethers.getContractAt(ERC20ABI, FXS);
 
     await sdFXSToken.setOperator(fxsDepositor.address);
-    await walletChecker.connect(walletCheckerOwner).approveWallet(locker.address);  
+    await walletChecker.connect(walletCheckerOwner).approveWallet(locker.address);
 
     const lockingAmount = parseEther("1");
 
