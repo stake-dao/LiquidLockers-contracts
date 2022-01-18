@@ -8,8 +8,8 @@ interface SmartWalletChecker {
 }
 
 /// @title SmartWalletWhitelist
-/// @author Curve Finance and adapted by Angle Core Team (https://etherscan.io/address/0xca719728ef172d0961768581fdf35cb116e0b7a4#code)
-/// @notice Provides functions to check whether a wallet has been verified or not to own veANGLE
+/// @author Curve Finance and adapted by Stake DAO Core Team (https://etherscan.io/address/0xca719728ef172d0961768581fdf35cb116e0b7a4#code)
+/// @notice Provides functions to check whether a wallet has been verified or not to own veSDT
 contract SmartWalletWhitelist {
 	/// @notice Mapping between addresses and whether they are whitelisted or not
 	mapping(address => bool) public wallets;
