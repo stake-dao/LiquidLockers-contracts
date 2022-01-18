@@ -31,7 +31,7 @@ export default {
     deployer: 0
   },
   vyper: {
-    version: "0.2.7"
+    version: "0.2.16"
   },
   solidity: {
     compilers: [{ version: "0.8.7" }],
