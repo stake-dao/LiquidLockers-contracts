@@ -7,8 +7,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
 
   const veSDT = await deployments.get("veSDT");
-  const TOKEN = ""; //TBD
-  const startTime = ""; // TBD
+  const TOKEN = "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7"; // sdFRAX3CRV-f
+  const startTime = "1642512051";
   const admin = deployer;
   const emergencyReturn = "0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063"; // multisig
 
@@ -20,5 +20,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 export default func;
 
-func.tags = ["veSDT"];
+func.tags = ["FeeDistributor"];
 func.dependencies = ["veSDT"];

@@ -6,9 +6,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
+  const admin = deployer;
+
   await deploy("SmartWalletWhitelist", {
     from: deployer,
-    args: [],
+    args: [admin],
     log: true
   });
 };
