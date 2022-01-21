@@ -126,9 +126,8 @@ def __init__():
     @notice Contract constructor
     @dev The contract has an initializer to prevent the take over of the implementation
     """
-    ## TODO: below should be uncommented upon deployment
-    # assert self.initialized == False #dev: contract is already initialized
-    # self.initialized = True
+    assert self.initialized == False #dev: contract is already initialized
+    self.initialized = True
 
 @external
 def initialize(_admin: address, token_addr: address, _smart_wallet_checker: address, _name: String[64], _symbol: String[32]):

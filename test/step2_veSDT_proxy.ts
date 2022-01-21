@@ -32,7 +32,7 @@ describe("veSDT", () => {
     [owner] = await ethers.getSigners();
 
     sdt = await ethers.getContractAt(ERC20, SDT);
-    
+
     await network.provider.request({
       method: "hardhat_impersonateAccount",
       params: [SDTWHALE]
@@ -57,9 +57,11 @@ describe("veSDT", () => {
     // smartWalletWhitelist address
     // name string
     // symbol string
-    let ABI = ["function initialize(address _admin, address token_addr, address _smart_wallet_checker, string _name, string _symbol)"]
-    let iface = new ethers.utils.Interface(ABI)
-    const data = iface.encodeFunctionData("initialize", [proxyAdmin.address, veSdt.address, sww.address, "Nae", "Syp"]) 
+    let ABI = [
+      "function initialize(address _admin, address token_addr, address _smart_wallet_checker, string _name, string _symbol)"
+    ];
+    let iface = new ethers.utils.Interface(ABI);
+    const data = iface.encodeFunctionData("initialize", [proxyAdmin.address, veSdt.address, sww.address, "Nae", "Syp"]);
     proxy = await Proxy.connect(owner).deploy(veSdt.address, proxyAdmin.address, data);
   });
 
