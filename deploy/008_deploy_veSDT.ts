@@ -39,14 +39,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true
   });
 
-  const veSDT = await deployments.get("veSDT");
-  const veSDTContract = await hre.ethers.getContractAt(veSDTImplementation.abi, veSDT.address);
-  const initialized = await veSDTContract.initialized();
-  const admin = await veSDTContract.admin();
+  // const veSDT = await deployments.get("veSDT");
+  // const veSDTContract = await hre.ethers.getContractAt(veSDTImplementation.abi, veSDT.address);
+  // const initialized = await veSDTContract.initialized();
+  // const admin = await veSDTContract.admin();
 
-  if (initialized) {
-    console.log(`veSDT initialized with admin : ${admin}`);
-  }
+  // if (initialized) {
+  //   console.log(`veSDT initialized with admin : ${admin}`);
+  // }
 };
 
 export default func;
