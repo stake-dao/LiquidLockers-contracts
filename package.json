@@ -28,6 +28,7 @@
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-vyper": "^2.0.1",
     "@openzeppelin/contracts": "^4.4.2",
+    "@openzeppelin/contracts-upgradeable": "^4.4.2",
     "aigle": "^1.14.1",
     "dotenv": "^8.2.0",
     "hardhat-contract-sizer": "^2.1.1",
