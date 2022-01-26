@@ -10,5 +10,11 @@ interface IGaugeController {
     function gauge_relative_weight_write(address addr, uint256 timestamp) external returns (uint256);
 
     //solhint-disable-next-line
+    function gauge_relative_weight(address addr) external view returns (uint256);
+
+    //solhint-disable-next-line
     function gauge_relative_weight(address addr, uint256 timestamp) external view returns (uint256);
+
+    //solhint-disable-next-line
+    function get_total_weight() external view returns (uint256);
 }

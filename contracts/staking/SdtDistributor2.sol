@@ -2,9 +2,17 @@
 
 pragma solidity 0.8.7;
 
-import "../interfaces/IMasterchef.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "../external/AccessControlUpgradeable.sol";
 
-contract SdtDistributor is ReentrancyGuardUpgradeable, AccessControlUpgradeable {
+import "../interfaces/IMasterchef.sol";
+import "../interfaces/IGaugeController.sol";
+import "../interfaces/ILiquidityGauge.sol";
+import "../interfaces/IStakingRewards.sol";
+
+contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable {
 	using SafeERC20 for IERC20;
 
 	event RewardDistributed(address indexed gaugeAddr, uint256 sdtDistributed);
@@ -57,7 +65,7 @@ contract SdtDistributor is ReentrancyGuardUpgradeable, AccessControlUpgradeable 
 		rewardToken = IERC20(_rewardToken);
 		controller = IGaugeController(_controller);
 		delegateGauge = _delegateGauge;
-		masterchef = _masterchef;
+		masterchef = IMasterchef(_masterchef);
 		distributionsOn = false;
 
 		//todo mint ONE  masterchefToken + save the address
