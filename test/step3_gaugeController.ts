@@ -4,6 +4,7 @@ import { parseEther } from "@ethersproject/units";
 import { JsonRpcSigner } from "@ethersproject/providers";
 
 import ERC20 from "./fixtures/ERC20.json";
+import MASTERCHEFABI from "./fixtures/Masterchef.json";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 
@@ -17,6 +18,8 @@ const sdANGLE = "0x752B4c6e92d96467fE9b9a2522EF07228E00F87c"; // sdANGLE
 const MASTERCHEF = "0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c";
 const SWW = "0x37E8386602d9EBEa2c56dd11d8E142290595f1b5"; // SmartWalletWhitelist 
 
+const TIMELOCK = "0xD3cFc4E65a73BB6C482383EB38f5C3E1d1411616";
+
 const getNow = async function () {
   let blockNum = await ethers.provider.getBlockNumber();
   let block = await ethers.provider.getBlock(blockNum);
@@ -29,15 +32,17 @@ describe("veSDT voting", () => {
   let veSDTProxy: Contract;
   let gc: Contract;
   let lgv4FXSLogic: Contract;
-  let fxsPPSGauge: Contract;
+  let fxsPPSGaugeProxy: Contract;
   let lgv4ANGLELogic: Contract;
-  let anglePPSGauge: Contract;
+  let anglePPSGaugeProxy: Contract;
   let proxyAdmin: Contract;
   let sww: Contract;
   let sdtDistributor: Contract;
   let sdtDProxy: Contract;
   let veBoost: Contract;
   let veBoostProxy: Contract;
+  let masterchef: Contract;
+  let timelock: JsonRpcSigner;
   let sdtWhaleSigner: JsonRpcSigner;
   let deployer: SignerWithAddress;
 
@@ -49,14 +54,22 @@ describe("veSDT voting", () => {
     sdt = await ethers.getContractAt(ERC20, SDT);
     sww = await ethers.getContractAt("SmartWalletWhitelist", SWW);
     veSDTProxy = await ethers.getContractAt("veSDT", VESDTP);
+    masterchef = await ethers.getContractAt(MASTERCHEFABI, MASTERCHEF);
 
     await network.provider.request({
       method: "hardhat_impersonateAccount",
       params: [SDTWHALE]
     });
 
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [TIMELOCK]
+    });
+
     sdtWhaleSigner = await ethers.provider.getSigner(SDTWHALE);
+    timelock = await ethers.provider.getSigner(TIMELOCK);
     await network.provider.send("hardhat_setBalance", [sdtWhaleSigner._address, parseEther("10").toHexString()]);
+    await network.provider.send("hardhat_setBalance", [timelock._address, parseEther("10").toHexString()]);
 
     const GaugeController = await ethers.getContractFactory("GaugeController");
     const LiquidityGaugeV4 = await ethers.getContractFactory("LiquidityGaugeV4");
@@ -78,35 +91,45 @@ describe("veSDT voting", () => {
     veBoostProxy = await VeBoostProxy.deploy(veSDTProxy.address, deployer.address, deployer.address);
     veBoost = await VeBoost.deploy(deployer.address, veSDTProxy.address, "veboost delegation", "veBoost", "ipfs://")
 
-    let ABI_LGV4 = [
-      "function initialize(address _staking_token, address _admin, address _SDT, address _voting_escrow, address _veBoost_proxy, address _distributor)"
-    ];
-    let iface_gv4 = new ethers.utils.Interface(ABI_LGV4);
-    const dataFxsGauge = iface_gv4.encodeFunctionData("initialize", [sdFXS, proxyAdmin.address, sdt.address, veSDTProxy.address, veBoostProxy.address, deployer.address]);
-    const dataAngleGauge = iface_gv4.encodeFunctionData("initialize", [sdANGLE, proxyAdmin.address, sdt.address, veSDTProxy.address, veBoostProxy.address, deployer.address]);
-
     let ABI_SDTD = [
       "function initialize(address _rewardToken, address _controller, address _masterchef, address governor, address guardian, address _delegate_gauge)"
     ];
     let iface = new ethers.utils.Interface(ABI_SDTD);
-    const dataSdtD = iface.encodeFunctionData("initialize", [sdt.address,  gc.address,  MASTERCHEF, deployer.address, deployer.address, deployer.address]);
+    const dataSdtD = iface.encodeFunctionData("initialize", [sdt.address,  gc.address,  masterchef.address, deployer.address, deployer.address, deployer.address]);
 
-    fxsPPSGauge = await Proxy.connect(deployer).deploy(lgv4FXSLogic.address, proxyAdmin.address, dataFxsGauge);
-    anglePPSGauge = await Proxy.connect(deployer).deploy(lgv4ANGLELogic.address, proxyAdmin.address, dataAngleGauge);
     sdtDProxy = await Proxy.connect(deployer).deploy(sdtDistributor.address, proxyAdmin.address, dataSdtD);
+    sdtDProxy = await ethers.getContractAt("SdtDistributor2", sdtDProxy.address);
 
+    let ABI_LGV4 = [
+      "function initialize(address _staking_token, address _admin, address _SDT, address _voting_escrow, address _veBoost_proxy, address _distributor)"
+    ];
+    let iface_gv4 = new ethers.utils.Interface(ABI_LGV4);
+    const dataFxsGauge = iface_gv4.encodeFunctionData("initialize", [sdFXS, proxyAdmin.address, sdt.address, veSDTProxy.address, veBoostProxy.address, sdtDProxy.address]);
+    const dataAngleGauge = iface_gv4.encodeFunctionData("initialize", [sdANGLE, proxyAdmin.address, sdt.address, veSDTProxy.address, veBoostProxy.address, sdtDProxy.address]);
+
+    fxsPPSGaugeProxy = await Proxy.connect(deployer).deploy(lgv4FXSLogic.address, proxyAdmin.address, dataFxsGauge);
+    anglePPSGaugeProxy = await Proxy.connect(deployer).deploy(lgv4ANGLELogic.address, proxyAdmin.address, dataAngleGauge);
+    
     // Add gauge types
     await gc.connect(deployer)["add_type(string,uint256)"]("Mainnet staking", parseEther("1")); // 0
 
     // add FXS and ANGLE gauges into gaugeController
-    await gc.connect(deployer)["add_gauge(address,int128,uint256)"](fxsPPSGauge.address, 0, 0);
-    await gc.connect(deployer)["add_gauge(address,int128,uint256)"](anglePPSGauge.address, 0, 0);
+    await gc.connect(deployer)["add_gauge(address,int128,uint256)"](fxsPPSGaugeProxy.address, 0, 0);
+    await gc.connect(deployer)["add_gauge(address,int128,uint256)"](anglePPSGaugeProxy.address, 0, 0);
 
     // Lock SDT for 4 years
     const sdtToLock = parseEther("10");
     const unlockTime = 60 * 60 * 24 * 365 * 4; // 4 years
     await sdt.connect(sdtWhaleSigner).approve(veSDTProxy.address, sdtToLock);
     await veSDTProxy.connect(sdtWhaleSigner).create_lock(sdtToLock, await getNow() + unlockTime);
+
+    /** Masterchef <> SdtDistributor setup */
+    const masterToken = await sdtDProxy.masterchefToken();
+    await masterchef.connect(timelock).add(1000, masterToken, false);
+    const poolsLength = await masterchef.poolLength();
+    const pidSdtD = poolsLength - 1;
+    await sdtDProxy.connect(deployer).initializeMasterchef(pidSdtD);
+    await sdtDProxy.connect(deployer).setDistribution(true);
   });
 
   describe("voting", async () => {
@@ -114,18 +137,33 @@ describe("veSDT voting", () => {
       const wholePercent = 10000;
       const veSDTBalance = await veSDTProxy["balanceOf(address)"](sdtWhaleSigner._address);
       // vote
-      await gc.connect(sdtWhaleSigner).vote_for_gauge_weights(anglePPSGauge.address, wholePercent / 2);
-      await gc.connect(sdtWhaleSigner).vote_for_gauge_weights(fxsPPSGauge.address, wholePercent / 2 );
+      await gc.connect(sdtWhaleSigner).vote_for_gauge_weights(anglePPSGaugeProxy.address, wholePercent / 2);
+      await gc.connect(sdtWhaleSigner).vote_for_gauge_weights(fxsPPSGaugeProxy.address, wholePercent / 2 );
       // check vote correctness
-      const angleGW = await gc.get_gauge_weight(anglePPSGauge.address);
-      const fxsGW = await gc.get_gauge_weight(fxsPPSGauge.address);
+      const angleGW = await gc.get_gauge_weight(anglePPSGaugeProxy.address);
+      console.log(angleGW.toString())
+      const fxsGW = await gc.get_gauge_weight(fxsPPSGaugeProxy.address);
+      console.log(fxsGW.toString())
       expect(angleGW).to.be.eq(fxsGW);
     });
   });
 
   describe("SdtDistributor", async () => {
-    it("should distribute reward", async () => {
+    it("should distribute rewards", async () => {
 
+      // await network.provider.send("evm_increaseTime", [86401 * 10]); // 10 days
+      // await network.provider.send("evm_mine", []);
+      console.log(await gc.get_gauge_weight(fxsPPSGaugeProxy.address))
+      console.log(await gc.get_total_weight())
+      await sdtDProxy.distributeMulti([fxsPPSGaugeProxy.address]);
+      const sdtAmount = await sdt.balanceOf(fxsPPSGaugeProxy.address);
+      console.log(sdtAmount.toString());
+      const sdtA = await sdt.balanceOf(sdtDProxy.address);
+      console.log(sdtA);
+      const te1 = await sdtDProxy.gaugeRelativeWeight();
+      console.log(te1);
+      const te2 = await sdtDProxy.totalWeight();
+      console.log(te2)
     });
   });
 });

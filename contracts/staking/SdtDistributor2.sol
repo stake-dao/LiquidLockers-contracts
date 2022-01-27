@@ -12,6 +12,8 @@ import "../interfaces/IGaugeController.sol";
 import "../interfaces/ILiquidityGauge.sol";
 import "../interfaces/IStakingRewards.sol";
 
+import "./MasterchefMasterToken.sol";
+
 contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable {
 	using SafeERC20 for IERC20;
 
@@ -46,7 +48,7 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 	/// @notice masterchef pid
 	uint256 public masterchefPID;
 
-	uint256 public lastMasterchefPull = 0;
+	uint256 public lastMasterchefPull;
 
 	mapping(uint256 => uint256) public pulls; // day => SDT amount
 
@@ -66,9 +68,8 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 		controller = IGaugeController(_controller);
 		delegateGauge = _delegateGauge;
 		masterchef = IMasterchef(_masterchef);
+		masterchefToken = IERC20(address(new MasterchefMasterToken()));
 		distributionsOn = false;
-
-		//todo mint ONE  masterchefToken + save the address
 
 		_setRoleAdmin(GOVERNOR_ROLE, GOVERNOR_ROLE);
 		_setRoleAdmin(GUARDIAN_ROLE, GOVERNOR_ROLE);
@@ -82,17 +83,17 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 
 	function initializeMasterchef(uint256 _pid) external onlyRole(GOVERNOR_ROLE) {
 		masterchefPID = _pid;
-		masterchefToken.approve(address(this), 1e18);
+		masterchefToken.approve(address(masterchef), 1e18);
 		masterchef.deposit(_pid, 1e18);
 	}
 
 	function distributeMulti(address[] memory gauges) external nonReentrant {
-		require(distributionsOn == true, "!");
+		require(distributionsOn == true, "not allowed");
 
 		if (block.timestamp > lastMasterchefPull + DAY) {
 			uint256 sdtBefore = rewardToken.balanceOf(address(this));
 			_pullSDT();
-			pulls[lastMasterchefPull] = rewardToken.balanceOf(address(this)) - sdtBefore;
+			pulls[block.timestamp] = rewardToken.balanceOf(address(this)) - sdtBefore;
 			lastMasterchefPull = block.timestamp;
 		}
 
@@ -115,10 +116,10 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 		int128 gaugeType = controller.gauge_types(gaugeAddr);
 		uint256 sdtBalance = pulls[lastMasterchefPull];
 
-		uint256 gaugeRelativeWeight = controller.gauge_relative_weight(gaugeAddr);
+		uint256 gaugeRelativeWeight = controller.get_gauge_weight(gaugeAddr);
 		uint256 totalWeight = controller.get_total_weight();
 
-		uint256 sdtDistributed = sdtBalance * (gaugeRelativeWeight / totalWeight);
+		uint256 sdtDistributed = sdtBalance * (gaugeRelativeWeight * 1e18 / totalWeight);
 
 		if (gaugeType == 1) {
 			rewardToken.safeTransfer(gaugeAddr, sdtDistributed);
@@ -126,7 +127,9 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 		} else if (gaugeType >= 2) {
 			// TODO need to be implemented
 		} else {
-			rewardToken.safeApprove(gaugeAddr, type(uint256).max); // todo maybe move it somewhere ?
+			if (IERC20(rewardToken).allowance(address(this), gaugeAddr) == 0) {
+				rewardToken.safeApprove(gaugeAddr, type(uint256).max);
+			}
 			ILiquidityGauge(gaugeAddr).deposit_reward_token(address(rewardToken), sdtDistributed);
 		}
 
@@ -135,5 +138,9 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 
 	function _pullSDT() internal {
 		masterchef.withdraw(masterchefPID, 0);
+	}
+
+	function setDistribution(bool _state) external onlyRole(GOVERNOR_ROLE) {
+		distributionsOn = _state;
 	}
 }

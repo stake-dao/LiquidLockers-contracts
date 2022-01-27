@@ -17,4 +17,7 @@ interface IGaugeController {
 
     //solhint-disable-next-line
     function get_total_weight() external view returns (uint256);
+
+    //solhint-disable-next-line
+    function get_gauge_weight(address addr) external view returns (uint256);
 }
