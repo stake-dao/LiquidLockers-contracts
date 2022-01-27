@@ -118,7 +118,8 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 		console.log("gaugeRelativeWeight", gaugeRelativeWeight);
 		console.log("totalWeight", totalWeight);
 
-		uint256 sdtDistributed = (sdtBalance * ((gaugeRelativeWeight * 1e36) / totalWeight)) / 1e18;
+		//uint256 sdtDistributed = (sdtBalance * ((gaugeRelativeWeight * 1e36) / totalWeight)) / 1e18;
+		uint256 sdtDistributed = sdtBalance * gaugeRelativeWeight / 1e18;
 
 		console.log("sdtDistributed", sdtDistributed);
 

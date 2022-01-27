@@ -166,17 +166,18 @@ describe("veSDT voting", () => {
       await gc.connect(sdtWhaleSigner).vote_for_gauge_weights(fxsPPSGaugeProxy.address, 2000);
       // check vote correctness
       const angleGW = await gc.get_gauge_weight(anglePPSGaugeProxy.address);
-      console.log(angleGW.toString());
       const fxsGW = await gc.get_gauge_weight(fxsPPSGaugeProxy.address);
-      console.log(fxsGW.toString());
       //expect(angleGW).to.be.eq(fxsGW);
     });
   });
 
   describe("SdtDistributor", async () => {
     it("should distribute rewards", async () => {
-      await gc.checkpoint_gauge(fxsPPSGaugeProxy.address);
-      await gc.checkpoint_gauge(anglePPSGaugeProxy.address);
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]); // 1 week
+      await network.provider.send("evm_mine", []);
+
+      // await gc.checkpoint_gauge(fxsPPSGaugeProxy.address);
+      // await gc.checkpoint_gauge(anglePPSGaugeProxy.address);
 
       await gc["gauge_relative_weight_write(address)"](fxsPPSGaugeProxy.address);
       await gc["gauge_relative_weight_write(address)"](anglePPSGaugeProxy.address);
