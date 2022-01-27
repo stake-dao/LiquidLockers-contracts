@@ -13,6 +13,7 @@ import "../interfaces/ILiquidityGauge.sol";
 import "../interfaces/IStakingRewards.sol";
 
 import "./MasterchefMasterToken.sol";
+import "hardhat/console.sol";
 
 contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable {
 	using SafeERC20 for IERC20;
@@ -91,6 +92,8 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 		require(distributionsOn == true, "not allowed");
 
 		if (block.timestamp > lastMasterchefPull + DAY) {
+			console.log("DISTRIBUTION");
+
 			uint256 sdtBefore = rewardToken.balanceOf(address(this));
 			_pullSDT();
 			pulls[block.timestamp] = rewardToken.balanceOf(address(this)) - sdtBefore;
@@ -102,24 +105,22 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 		}
 	}
 
-	// A, B, C, D => 20, 30, 40, 10
-	// total weight = 100
-	/// sdt available = 1000
-
-	// distributeMulti([A, B]) = pull 200 / 300 => remaining = 500SDT
-
-	// sdt available = 15 more SDT = 515 SDT
-
-	// distributeMulti([C, D]) // 206 / 51 = WRONG / 412 + 102 = correct
-
 	function _distributeReward(address gaugeAddr) internal {
 		int128 gaugeType = controller.gauge_types(gaugeAddr);
 		uint256 sdtBalance = pulls[lastMasterchefPull];
 
-		uint256 gaugeRelativeWeight = controller.get_gauge_weight(gaugeAddr);
+		console.log("sdtBalance", sdtBalance);
+
+		uint256 gaugeRelativeWeight = controller.gauge_relative_weight(gaugeAddr);
 		uint256 totalWeight = controller.get_total_weight();
 
-		uint256 sdtDistributed = sdtBalance * (gaugeRelativeWeight * 1e18 / totalWeight);
+		console.log("gaugeAddr", gaugeAddr);
+		console.log("gaugeRelativeWeight", gaugeRelativeWeight);
+		console.log("totalWeight", totalWeight);
+
+		uint256 sdtDistributed = (sdtBalance * ((gaugeRelativeWeight * 1e36) / totalWeight)) / 1e18;
+
+		console.log("sdtDistributed", sdtDistributed);
 
 		if (gaugeType == 1) {
 			rewardToken.safeTransfer(gaugeAddr, sdtDistributed);
