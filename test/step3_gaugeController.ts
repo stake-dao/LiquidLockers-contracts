@@ -20,6 +20,9 @@ const SWW = "0x37E8386602d9EBEa2c56dd11d8E142290595f1b5"; // SmartWalletWhitelis
 
 const TIMELOCK = "0xD3cFc4E65a73BB6C482383EB38f5C3E1d1411616";
 
+const sdFXSWHALE = "0xbd2471b4150619a42093ffba3a7af35335cec5b6";
+const sdANGLEWHALE = "0xb36a0671b3d49587236d7833b01e79798175875f";
+
 const getNow = async function () {
   let blockNum = await ethers.provider.getBlockNumber();
   let block = await ethers.provider.getBlock(blockNum);
@@ -29,6 +32,8 @@ const getNow = async function () {
 
 describe("veSDT voting", () => {
   let sdt: Contract;
+  let sdfxs: Contract;
+  let sdangle: Contract;
   let veSDTProxy: Contract;
   let gc: Contract;
   let lgv4FXSLogic: Contract;
@@ -44,6 +49,8 @@ describe("veSDT voting", () => {
   let masterchef: Contract;
   let timelock: JsonRpcSigner;
   let sdtWhaleSigner: JsonRpcSigner;
+  let sdFXSWhaleSigner: JsonRpcSigner;
+  let sdAngleWhaleSigner: JsonRpcSigner;
   let deployer: SignerWithAddress;
 
   before(async function () {
@@ -52,6 +59,8 @@ describe("veSDT voting", () => {
     [deployer] = await ethers.getSigners();
 
     sdt = await ethers.getContractAt(ERC20, SDT);
+    sdfxs = await ethers.getContractAt(ERC20, sdFXS);
+    sdangle = await ethers.getContractAt(ERC20, sdANGLE);
     sww = await ethers.getContractAt("SmartWalletWhitelist", SWW);
     veSDTProxy = await ethers.getContractAt("veSDT", VESDTP);
     masterchef = await ethers.getContractAt(MASTERCHEFABI, MASTERCHEF);
@@ -63,10 +72,22 @@ describe("veSDT voting", () => {
 
     await network.provider.request({
       method: "hardhat_impersonateAccount",
+      params: [sdFXSWHALE]
+    });
+
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [sdANGLEWHALE]
+    });
+
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
       params: [TIMELOCK]
     });
 
     sdtWhaleSigner = await ethers.provider.getSigner(SDTWHALE);
+    sdFXSWhaleSigner = await ethers.provider.getSigner(sdFXSWHALE);
+    sdAngleWhaleSigner = await ethers.provider.getSigner(sdANGLEWHALE);
     timelock = await ethers.provider.getSigner(TIMELOCK);
     await network.provider.send("hardhat_setBalance", [sdtWhaleSigner._address, parseEther("10").toHexString()]);
     await network.provider.send("hardhat_setBalance", [timelock._address, parseEther("10").toHexString()]);
@@ -155,6 +176,8 @@ describe("veSDT voting", () => {
     const pidSdtD = poolsLength - 1;
     await sdtDProxy.connect(deployer).initializeMasterchef(pidSdtD);
     await sdtDProxy.connect(deployer).setDistribution(true);
+
+    await sdfxs.connect(sdFXSWhaleSigner).transfer(SDTWHALE, parseEther("1"));
   });
 
   describe("voting", async () => {
@@ -207,6 +230,20 @@ describe("veSDT voting", () => {
 
       const sdtA2 = await sdt.balanceOf(sdtDProxy.address);
       console.log("sdt doistributor bamance2", sdtA2.toString());
+    });
+
+    it("user should be able to claim correct amount of rewards", async () => {
+      // Users claim from frax, gauges, they should receive correct amount of SDT
+
+      const fxsGauge = await ethers.getContractAt("LiquidityGaugeV4", fxsPPSGaugeProxy.address);
+
+      console.log(await sdt.balanceOf(SDTWHALE));
+      await sdfxs.connect(sdtWhaleSigner).approve(fxsGauge.address, parseEther("1"));
+
+      await fxsGauge.connect(sdtWhaleSigner)["deposit(uint256)"](parseEther("1"));
+
+      await fxsGauge.connect(sdtWhaleSigner)["claim_rewards()"]();
+      console.log(await sdt.balanceOf(SDTWHALE));
     });
   });
 });
