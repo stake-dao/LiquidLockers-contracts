@@ -23,6 +23,8 @@ const TIMELOCK = "0xD3cFc4E65a73BB6C482383EB38f5C3E1d1411616";
 const sdFXSWHALE = "0xbd2471b4150619a42093ffba3a7af35335cec5b6";
 const sdANGLEWHALE = "0xb36a0671b3d49587236d7833b01e79798175875f";
 
+const DUMMYUSER = "0xf9E58B35310430C7894742000cF670062CADeF70";
+
 const getNow = async function () {
   let blockNum = await ethers.provider.getBlockNumber();
   let block = await ethers.provider.getBlock(blockNum);
@@ -52,6 +54,7 @@ describe("veSDT voting", () => {
   let sdFXSWhaleSigner: JsonRpcSigner;
   let sdAngleWhaleSigner: JsonRpcSigner;
   let deployer: SignerWithAddress;
+  let dummyUser: JsonRpcSigner;
 
   before(async function () {
     this.enableTimeouts(false);
@@ -85,10 +88,22 @@ describe("veSDT voting", () => {
       params: [TIMELOCK]
     });
 
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [DUMMYUSER]
+    });
+
+    await deployer.sendTransaction({
+      to: DUMMYUSER,
+      value: ethers.utils.parseEther("100") // 1 ether
+    });
+
     sdtWhaleSigner = await ethers.provider.getSigner(SDTWHALE);
     sdFXSWhaleSigner = await ethers.provider.getSigner(sdFXSWHALE);
     sdAngleWhaleSigner = await ethers.provider.getSigner(sdANGLEWHALE);
     timelock = await ethers.provider.getSigner(TIMELOCK);
+    dummyUser = await ethers.provider.getSigner(DUMMYUSER);
+
     await network.provider.send("hardhat_setBalance", [sdtWhaleSigner._address, parseEther("10").toHexString()]);
     await network.provider.send("hardhat_setBalance", [timelock._address, parseEther("10").toHexString()]);
 
@@ -183,6 +198,10 @@ describe("veSDT voting", () => {
 
     await sdfxs.connect(sdFXSWhaleSigner).transfer(SDTWHALE, parseEther("1"));
     await sdangle.connect(sdAngleWhaleSigner).transfer(SDTWHALE, parseEther("1"));
+
+    await sdfxs.connect(sdFXSWhaleSigner).transfer(DUMMYUSER, parseEther("1"));
+    await sdangle.connect(sdAngleWhaleSigner).transfer(DUMMYUSER, parseEther("1"));
+    await sdt.connect(sdtWhaleSigner).transfer(DUMMYUSER, parseEther("1"));
   });
 
   describe("voting", async () => {
@@ -255,6 +274,7 @@ describe("veSDT voting", () => {
       var sdtAfter = await sdt.balanceOf(SDTWHALE);
 
       expect(sdtAfter).gt(sdtBefore);
+      console.log("SDT received: " + sdtAfter.sub(sdtBefore).toString());
     });
 
     it("user depositing sdAngle should be able to claim correct amount of rewards", async () => {
@@ -264,15 +284,55 @@ describe("veSDT voting", () => {
 
       var sdtBefore = await sdt.balanceOf(SDTWHALE);
       await sdangle.connect(sdtWhaleSigner).approve(angleGauge.address, parseEther("1"));
-
       await angleGauge.connect(sdtWhaleSigner)["deposit(uint256)"](parseEther("1"));
-
       await sdtDProxy.distributeMulti([anglePPSGaugeProxy.address]);
 
       await angleGauge.connect(sdtWhaleSigner)["claim_rewards()"]();
       var sdtAfter = await sdt.balanceOf(SDTWHALE);
 
       expect(sdtAfter).gt(sdtBefore);
+      console.log("SDT received: " + sdtAfter.sub(sdtBefore).toString());
     });
+
+    it("sdFXS staked with no veSDT", async () => {
+      const fxsGauge = await ethers.getContractAt("LiquidityGaugeV4", fxsPPSGaugeProxy.address);
+
+      var sdtBefore = await sdt.balanceOf(DUMMYUSER);
+      await sdfxs.connect(dummyUser).approve(fxsGauge.address, parseEther("1"));
+      await fxsGauge.connect(dummyUser)["deposit(uint256)"](parseEther("1"));
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]); // 1 week
+      await network.provider.send("evm_mine", []);
+      await sdtDProxy.distributeMulti([fxsPPSGaugeProxy.address]);
+
+      await fxsGauge.connect(dummyUser)["claim_rewards()"]();
+      var sdtAfter = await sdt.balanceOf(DUMMYUSER);
+
+      expect(sdtAfter).gt(sdtBefore);
+      console.log("SDT received: " + sdtAfter.sub(sdtBefore).toString());
+    });
+
+    it("sdFXS staked with veSDT but no delegation", async () => {
+      const fxsGauge = await ethers.getContractAt("LiquidityGaugeV4", fxsPPSGaugeProxy.address);
+
+      await sdt.connect(dummyUser).approve(veSDTProxy.address, parseEther("1"));
+      await veSDTProxy.connect(dummyUser).create_lock(parseEther("1"), (await getNow()) + 60 * 60 * 24 * 365 * 4);
+      var sdtBefore = await sdt.balanceOf(DUMMYUSER);
+      // await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]); // 1 week
+      // await network.provider.send("evm_mine", []);
+      await sdtDProxy.distributeMulti([fxsPPSGaugeProxy.address]);
+
+      await fxsGauge.connect(dummyUser)["claim_rewards()"]();
+      var sdtAfter = await sdt.balanceOf(DUMMYUSER);
+
+      console.log("SDT received: " + sdtAfter.sub(sdtBefore).toString());
+      expect(sdtAfter).gt(sdtBefore);
+    });
+
+    it("sdFXS staked with veSDT and some veSDT delegation", async () => {});
   });
 });
+
+// because we could test the amount received in 3 different use cases:
+// 1) User that stake sdFXS but does not hold any veSdT
+// 2) User that stake sdFXS and hold veSDT without delegating any
+// 2) User that stake sdFXS, hold veSDT, and delegated a part of them
