@@ -109,7 +109,11 @@ describe("veSDT voting", () => {
     lgv4FXSLogic = await LiquidityGaugeV4.deploy();
     lgv4ANGLELogic = await LiquidityGaugeV4.deploy();
 
-    veBoostProxy = await VeBoostProxy.deploy(veSDTProxy.address, deployer.address, deployer.address);
+    veBoostProxy = await VeBoostProxy.deploy(
+      veSDTProxy.address,
+      "0x0000000000000000000000000000000000000000",
+      deployer.address
+    );
     veBoost = await VeBoost.deploy(deployer.address, veSDTProxy.address, "veboost delegation", "veBoost", "ipfs://");
 
     let ABI_SDTD = [
@@ -178,6 +182,7 @@ describe("veSDT voting", () => {
     await sdtDProxy.connect(deployer).setDistribution(true);
 
     await sdfxs.connect(sdFXSWhaleSigner).transfer(SDTWHALE, parseEther("1"));
+    await sdangle.connect(sdAngleWhaleSigner).transfer(SDTWHALE, parseEther("1"));
   });
 
   describe("voting", async () => {
@@ -190,6 +195,7 @@ describe("veSDT voting", () => {
       // check vote correctness
       const angleGW = await gc.get_gauge_weight(anglePPSGaugeProxy.address);
       const fxsGW = await gc.get_gauge_weight(fxsPPSGaugeProxy.address);
+      // console.log(angleGW);
       //expect(angleGW).to.be.eq(fxsGW);
     });
   });
@@ -214,7 +220,7 @@ describe("veSDT voting", () => {
       console.log("sdtAmountAngle", sdtAmountAngle.toString());
 
       const sdtA = await sdt.balanceOf(sdtDProxy.address);
-      console.log("sdt doistributor bamance", sdtA.toString());
+      console.log("sdt distributor balance ", sdtA.toString());
 
       console.log("---------------------------------");
       console.log("---------------------------------");
@@ -229,21 +235,44 @@ describe("veSDT voting", () => {
       console.log("sdtAmountAngle2", sdtAmountAngle2.toString());
 
       const sdtA2 = await sdt.balanceOf(sdtDProxy.address);
-      console.log("sdt doistributor bamance2", sdtA2.toString());
+      console.log("sdt distributor balance2 ", sdtA2.toString());
     });
 
-    it("user should be able to claim correct amount of rewards", async () => {
+    it("user depositing sdFXS should be able to claim correct amount of rewards", async () => {
       // Users claim from frax, gauges, they should receive correct amount of SDT
 
       const fxsGauge = await ethers.getContractAt("LiquidityGaugeV4", fxsPPSGaugeProxy.address);
 
-      console.log(await sdt.balanceOf(SDTWHALE));
+      var sdtBefore = await sdt.balanceOf(SDTWHALE);
       await sdfxs.connect(sdtWhaleSigner).approve(fxsGauge.address, parseEther("1"));
 
       await fxsGauge.connect(sdtWhaleSigner)["deposit(uint256)"](parseEther("1"));
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]); // 1 week
+      await network.provider.send("evm_mine", []);
+      await sdtDProxy.distributeMulti([fxsPPSGaugeProxy.address]);
 
       await fxsGauge.connect(sdtWhaleSigner)["claim_rewards()"]();
-      console.log(await sdt.balanceOf(SDTWHALE));
+      var sdtAfter = await sdt.balanceOf(SDTWHALE);
+
+      expect(sdtAfter).gt(sdtBefore);
+    });
+
+    it("user depositing sdAngle should be able to claim correct amount of rewards", async () => {
+      // Users claim from frax, gauges, they should receive correct amount of SDT
+
+      const angleGauge = await ethers.getContractAt("LiquidityGaugeV4", anglePPSGaugeProxy.address);
+
+      var sdtBefore = await sdt.balanceOf(SDTWHALE);
+      await sdangle.connect(sdtWhaleSigner).approve(angleGauge.address, parseEther("1"));
+
+      await angleGauge.connect(sdtWhaleSigner)["deposit(uint256)"](parseEther("1"));
+
+      await sdtDProxy.distributeMulti([anglePPSGaugeProxy.address]);
+
+      await angleGauge.connect(sdtWhaleSigner)["claim_rewards()"]();
+      var sdtAfter = await sdt.balanceOf(SDTWHALE);
+
+      expect(sdtAfter).gt(sdtBefore);
     });
   });
 });
