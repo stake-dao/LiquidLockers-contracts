@@ -106,6 +106,9 @@ describe("veSDT voting", () => {
 
     await network.provider.send("hardhat_setBalance", [sdtWhaleSigner._address, parseEther("10").toHexString()]);
     await network.provider.send("hardhat_setBalance", [timelock._address, parseEther("10").toHexString()]);
+    await network.provider.send("hardhat_setBalance", [sdFXSWhaleSigner._address, parseEther("10").toHexString()]);
+    await network.provider.send("hardhat_setBalance", [sdAngleWhaleSigner._address, parseEther("10").toHexString()]);
+    await network.provider.send("hardhat_setBalance", [dummyUser._address, parseEther("10").toHexString()]);
 
     const GaugeController = await ethers.getContractFactory("GaugeController");
     const LiquidityGaugeV4 = await ethers.getContractFactory("LiquidityGaugeV4");
@@ -204,18 +207,49 @@ describe("veSDT voting", () => {
     await sdt.connect(sdtWhaleSigner).transfer(DUMMYUSER, parseEther("1"));
   });
 
-  describe("voting", async () => {
-    it("should vote for a gauge", async () => {
+  describe("GaugeController", async () => {
+    it("should vote for pps gauges", async () => {
       const wholePercent = 10000;
+      const angleVotePerc = 8000; // 80%
+      const fxsVotePerc = 2000; // 20%
       const veSDTBalance = await veSDTProxy["balanceOf(address)"](sdtWhaleSigner._address);
+
       // vote
-      await gc.connect(sdtWhaleSigner).vote_for_gauge_weights(anglePPSGaugeProxy.address, 8000);
-      await gc.connect(sdtWhaleSigner).vote_for_gauge_weights(fxsPPSGaugeProxy.address, 2000);
+      await gc.connect(sdtWhaleSigner).vote_for_gauge_weights(anglePPSGaugeProxy.address, angleVotePerc);
+      await gc.connect(sdtWhaleSigner).vote_for_gauge_weights(fxsPPSGaugeProxy.address, fxsVotePerc);
+
       // check vote correctness
       const angleGW = await gc.get_gauge_weight(anglePPSGaugeProxy.address);
       const fxsGW = await gc.get_gauge_weight(fxsPPSGaugeProxy.address);
-      // console.log(angleGW);
-      //expect(angleGW).to.be.eq(fxsGW);
+
+      // the total amount of veSDT that can be used to vote is based on the next slope
+      expect(angleGW).to.be.lt(veSDTBalance.div(wholePercent).mul(angleVotePerc));
+      expect(angleGW).to.be.gt(veSDTBalance.div(wholePercent).mul(angleVotePerc).sub(parseEther("1"))); 
+      expect(fxsGW).to.be.lt(veSDTBalance.div(wholePercent).mul(fxsVotePerc));
+      expect(fxsGW).to.be.gt(veSDTBalance.div(wholePercent).mul(fxsVotePerc).sub(parseEther("1")));
+
+      const totalWeight = await gc.get_total_weight();
+      expect(totalWeight).to.be.eq(angleGW.add(fxsGW).mul(parseEther("1")))
+
+      // fetch the gauge relative weight, max 1 (100%), from the previous week, it needs to be 0
+      const angleGRW = await gc["gauge_relative_weight(address)"](anglePPSGaugeProxy.address);
+      const fxsGRW = await gc["gauge_relative_weight(address)"](fxsPPSGaugeProxy.address);
+      expect(angleGRW).to.be.eq(0);
+      expect(fxsGRW).to.be.eq(0);
+    });
+
+    it("should call gauges checkpoint after 1 week", async () => {
+      // increase the timestamp by 1 week
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]); 
+      await network.provider.send("evm_mine", []);
+
+      // call checkpoint, it calculates the weight, for each gauge, based on the previous 7 days of vote
+      await gc.checkpoint_gauge(anglePPSGaugeProxy.address)
+
+      const angleGRWA = await gc["gauge_relative_weight(address)"](anglePPSGaugeProxy.address);
+      const fxsGRWA = await gc["gauge_relative_weight(address)"](fxsPPSGaugeProxy.address);
+      expect(angleGRWA).to.be.gt(parseEther("0.8"));
+      expect(fxsGRWA).to.be.lt(parseEther("0.2"));
     });
   });
 
@@ -312,20 +346,20 @@ describe("veSDT voting", () => {
     });
 
     it("sdFXS staked with veSDT but no delegation", async () => {
-      const fxsGauge = await ethers.getContractAt("LiquidityGaugeV4", fxsPPSGaugeProxy.address);
+      // const fxsGauge = await ethers.getContractAt("LiquidityGaugeV4", fxsPPSGaugeProxy.address);
 
-      await sdt.connect(dummyUser).approve(veSDTProxy.address, parseEther("1"));
-      await veSDTProxy.connect(dummyUser).create_lock(parseEther("1"), (await getNow()) + 60 * 60 * 24 * 365 * 4);
-      var sdtBefore = await sdt.balanceOf(DUMMYUSER);
+      // await sdt.connect(dummyUser).approve(veSDTProxy.address, parseEther("1"));
+      // await veSDTProxy.connect(dummyUser).create_lock(parseEther("1"), (await getNow()) + 60 * 60 * 24 * 365 * 4);
+      // var sdtBefore = await sdt.balanceOf(DUMMYUSER);
       // await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]); // 1 week
       // await network.provider.send("evm_mine", []);
-      await sdtDProxy.distributeMulti([fxsPPSGaugeProxy.address]);
+      // await sdtDProxy.distributeMulti([fxsPPSGaugeProxy.address]);
 
-      await fxsGauge.connect(dummyUser)["claim_rewards()"]();
-      var sdtAfter = await sdt.balanceOf(DUMMYUSER);
+      // await fxsGauge.connect(dummyUser)["claim_rewards()"]();
+      // var sdtAfter = await sdt.balanceOf(DUMMYUSER);
 
-      console.log("SDT received: " + sdtAfter.sub(sdtBefore).toString());
-      expect(sdtAfter).gt(sdtBefore);
+      // console.log("SDT received: " + sdtAfter.sub(sdtBefore).toString());
+      // expect(sdtAfter).gt(sdtBefore);
     });
 
     it("sdFXS staked with veSDT and some veSDT delegation", async () => {});
