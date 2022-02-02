@@ -12,7 +12,7 @@ contract AngleAccumulator {
     /* ========== STATE VARIABLES ========== */
     address public governance;
     address public locker;
-    address public sanUSDC_EUR = 0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad; // 6 decimals
+    address public tokenReward = 0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad; // sanUSDC_EUR (6 decimals)
     address public gauge;
 
     /* ========== EVENTS ========== */
@@ -20,6 +20,7 @@ contract AngleAccumulator {
     event RewardNotified(address gauge, uint256 amount);
     event LockerSet(address oldLocker, address newLocker);
     event GovernanceSet(address oldGov, address newGov);
+    event TokenRewardSet(address oldTr, address newTr);
 
     /* ========== CONSTRUCTOR ========== */
     constructor() {
@@ -30,17 +31,17 @@ contract AngleAccumulator {
     /// @notice Claims rewards from the locker and notifies it to the LGV4
     function claimAndNotify() external {
         require(locker != address(0));
-        ILocker(locker).claimFXSRewards(address(this));
+        ILocker(locker).claimRewards(tokenReward, address(this));
         _notifyReward();
     }
 
     /// @notice Notify the new reward to the LGV4
     function _notifyReward() internal {
         require(gauge != address(0));
-        uint256 balanceBefore = IERC20(sanUSDC_EUR).balanceOf(address(this));
-        IERC20(sanUSDC_EUR).approve(gauge, balanceBefore);
-        ILiquidityGauge(gauge).deposit_reward_token(sanUSDC_EUR, balanceBefore);
-        uint256 balanceAfter = IERC20(sanUSDC_EUR).balanceOf(address(this));
+        uint256 balanceBefore = IERC20(tokenReward).balanceOf(address(this));
+        IERC20(tokenReward).approve(gauge, balanceBefore);
+        ILiquidityGauge(gauge).deposit_reward_token(tokenReward, balanceBefore);
+        uint256 balanceAfter = IERC20(tokenReward).balanceOf(address(this));
         require(balanceAfter == 0);
         emit RewardNotified(gauge, balanceBefore);
     }
@@ -67,5 +68,13 @@ contract AngleAccumulator {
         require(msg.sender == governance, "!gov");
         emit LockerSet(locker, _newL);
         locker = _newL;
+    }
+
+    /// @notice Allows the governance to set the locker
+    /// @dev Can be called only by the governance
+    function setTokenReward(address _tokenReward) external {
+        require(msg.sender == governance, "!gov");
+        emit TokenRewardSet(tokenReward, _tokenReward);
+        tokenReward = _tokenReward;
     }
 }
