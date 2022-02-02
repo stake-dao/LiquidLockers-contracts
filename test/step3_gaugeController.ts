@@ -25,6 +25,8 @@ const sdANGLEWHALE = "0xb36a0671b3d49587236d7833b01e79798175875f";
 
 const DUMMYUSER = "0xf9E58B35310430C7894742000cF670062CADeF70";
 
+const SDT_DEPLOYER = "0xb36a0671B3D49587236d7833B01E79798175875f";
+
 const getNow = async function () {
   let blockNum = await ethers.provider.getBlockNumber();
   let block = await ethers.provider.getBlock(blockNum);
@@ -179,11 +181,28 @@ describe("veSDT voting", () => {
     );
 
     // Add gauge types
-    await gc.connect(deployer)["add_type(string,uint256)"]("Mainnet staking", parseEther("1")); // 0
+    const typesWeight = parseEther("1");
+    await gc.connect(deployer)["add_type(string,uint256)"]("Mainnet staking", typesWeight); // 0
+    await gc.connect(deployer)["add_type(string,uint256)"]("External", typesWeight); // 1
 
     // add FXS and ANGLE gauges into gaugeController
-    await gc.connect(deployer)["add_gauge(address,int128,uint256)"](fxsPPSGaugeProxy.address, 0, 0);
+    await gc.connect(deployer)["add_gauge(address,int128,uint256)"](fxsPPSGaugeProxy.address, 0, 0); // gauge - type - weight
     await gc.connect(deployer)["add_gauge(address,int128,uint256)"](anglePPSGaugeProxy.address, 0, 0);
+
+    // add external gauge
+    await gc.connect(deployer)["add_gauge(address,int128,uint256)"](SDT_DEPLOYER, 1, 0); // simulate an external gauge
+
+    const typeZeroWeight = await gc.get_type_weight(0);
+    const typeOneWeight = await gc.get_type_weight(1);
+    expect(typeZeroWeight).to.be.eq(typesWeight);
+    expect(typeOneWeight).to.be.eq(typesWeight);
+
+    const fxsGaugeWeight = await gc.get_gauge_weight(fxsPPSGaugeProxy.address);
+    const angleGaugeWeight = await gc.get_gauge_weight(fxsPPSGaugeProxy.address);
+    const externalGaugeWeight = await gc.get_gauge_weight(SDT_DEPLOYER);
+    expect(fxsGaugeWeight).to.be.eq(0);
+    expect(angleGaugeWeight).to.be.eq(0);
+    expect(externalGaugeWeight).to.be.eq(0);
 
     // Lock SDT for 4 years
     const sdtToLock = parseEther("10");
@@ -248,8 +267,8 @@ describe("veSDT voting", () => {
 
       const angleGRWA = await gc["gauge_relative_weight(address)"](anglePPSGaugeProxy.address);
       const fxsGRWA = await gc["gauge_relative_weight(address)"](fxsPPSGaugeProxy.address);
-      expect(angleGRWA).to.be.gt(parseEther("0.8"));
-      expect(fxsGRWA).to.be.lt(parseEther("0.2"));
+      expect(angleGRWA).to.be.gt(parseEther("0.8")); // 80%
+      expect(fxsGRWA).to.be.lt(parseEther("0.2")); // 20%
     });
   });
 
