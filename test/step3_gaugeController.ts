@@ -15,6 +15,12 @@ const VESDTP = "0x0C30476f66034E11782938DF8e4384970B6c9e8a";
 const sdFXS = "0x402F878BDd1f5C66FdAF0fabaBcF74741B68ac36"; // sdFXS
 const sdANGLE = "0x752B4c6e92d96467fE9b9a2522EF07228E00F87c"; // sdANGLE
 
+const FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0";
+const SAN_USDC_EUR = "0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad";
+
+const FXS_LOCKER = "0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f";
+const ANGLE_LOCKER = "0xD13F8C25CceD32cdfA79EB5eD654Ce3e484dCAF5";
+
 const MASTERCHEF = "0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c";
 const SWW = "0x37E8386602d9EBEa2c56dd11d8E142290595f1b5"; // SmartWalletWhitelist
 
@@ -51,10 +57,17 @@ describe("veSDT voting", () => {
   let veBoost: Contract;
   let veBoostProxy: Contract;
   let masterchef: Contract;
+  let fxsAccumulator: Contract;
+  let angleAccumulator: Contract;
+  let fxsLocker: Contract;
+  let angleLocker: Contract;
+  let fxs: Contract;
+  let sanUsdcEur: Contract;
   let timelock: JsonRpcSigner;
   let sdtWhaleSigner: JsonRpcSigner;
   let sdFXSWhaleSigner: JsonRpcSigner;
   let sdAngleWhaleSigner: JsonRpcSigner;
+  let sdtDeployerSigner: JsonRpcSigner;
   let deployer: SignerWithAddress;
   let dummyUser: JsonRpcSigner;
 
@@ -69,6 +82,10 @@ describe("veSDT voting", () => {
     sww = await ethers.getContractAt("SmartWalletWhitelist", SWW);
     veSDTProxy = await ethers.getContractAt("veSDT", VESDTP);
     masterchef = await ethers.getContractAt(MASTERCHEFABI, MASTERCHEF);
+    fxsLocker = await ethers.getContractAt("FxsLocker", FXS_LOCKER);
+    angleLocker = await ethers.getContractAt("AngleLocker", ANGLE_LOCKER);
+    fxs = await ethers.getContractAt(ERC20, FXS);
+    sanUsdcEur = await ethers.getContractAt(ERC20, SAN_USDC_EUR);
 
     await network.provider.request({
       method: "hardhat_impersonateAccount",
@@ -95,6 +112,11 @@ describe("veSDT voting", () => {
       params: [DUMMYUSER]
     });
 
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [SDT_DEPLOYER]
+    });
+
     await deployer.sendTransaction({
       to: DUMMYUSER,
       value: ethers.utils.parseEther("100") // 1 ether
@@ -105,6 +127,7 @@ describe("veSDT voting", () => {
     sdAngleWhaleSigner = await ethers.provider.getSigner(sdANGLEWHALE);
     timelock = await ethers.provider.getSigner(TIMELOCK);
     dummyUser = await ethers.provider.getSigner(DUMMYUSER);
+    sdtDeployerSigner = await ethers.provider.getSigner(SDT_DEPLOYER);
 
     await network.provider.send("hardhat_setBalance", [sdtWhaleSigner._address, parseEther("10").toHexString()]);
     await network.provider.send("hardhat_setBalance", [timelock._address, parseEther("10").toHexString()]);
@@ -119,10 +142,22 @@ describe("veSDT voting", () => {
     const Proxy = await ethers.getContractFactory("TransparentUpgradeableProxy");
     const VeBoost = await ethers.getContractFactory("veBoost");
     const VeBoostProxy = await ethers.getContractFactory("veBoostProxy");
+    const FxsAccumulator = await ethers.getContractFactory("FxsAccumulator");
+    const AngleAccumulator = await ethers.getContractFactory("AngleAccumulator");
 
     // Deploy
     gc = await GaugeController.connect(deployer).deploy(sdt.address, veSDTProxy.address, deployer.address);
     proxyAdmin = await ProxyAdmin.deploy();
+    fxsAccumulator = await FxsAccumulator.deploy();
+    angleAccumulator = await AngleAccumulator.deploy();
+
+    // set lockers into accumulators
+    await fxsAccumulator.setLocker(fxsLocker.address);
+    await angleAccumulator.setLocker(angleLocker.address);
+
+    // set accumulator into the locker
+    await fxsLocker.connect(sdtDeployerSigner).setAccumulator(fxsAccumulator.address);
+    await angleLocker.connect(sdtDeployerSigner).setAccumulator(angleAccumulator.address);
 
     // Contracts upgradeable
     sdtDistributor = await SdtDistributor.deploy();
@@ -158,7 +193,7 @@ describe("veSDT voting", () => {
     let iface_gv4 = new ethers.utils.Interface(ABI_LGV4);
     const dataFxsGauge = iface_gv4.encodeFunctionData("initialize", [
       sdFXS,
-      proxyAdmin.address,
+      deployer.address,
       sdt.address,
       veSDTProxy.address,
       veBoostProxy.address,
@@ -166,7 +201,7 @@ describe("veSDT voting", () => {
     ]);
     const dataAngleGauge = iface_gv4.encodeFunctionData("initialize", [
       sdANGLE,
-      proxyAdmin.address,
+      deployer.address,
       sdt.address,
       veSDTProxy.address,
       veBoostProxy.address,
@@ -179,6 +214,13 @@ describe("veSDT voting", () => {
       proxyAdmin.address,
       dataAngleGauge
     );
+    fxsPPSGaugeProxy = await ethers.getContractAt("LiquidityGaugeV4", fxsPPSGaugeProxy.address);
+    anglePPSGaugeProxy = await ethers.getContractAt("LiquidityGaugeV4", anglePPSGaugeProxy.address);
+
+    // // set reward distributor
+    await fxsPPSGaugeProxy.add_reward(fxs.address, fxsAccumulator.address);
+    await anglePPSGaugeProxy.add_reward(sanUsdcEur.address, angleAccumulator.address);
+    //const distributor = await fxsPPSGaugeProxy.reward_data()
 
     // Add gauge types
     const typesWeight = parseEther("1");
@@ -203,6 +245,10 @@ describe("veSDT voting", () => {
     expect(fxsGaugeWeight).to.be.eq(0);
     expect(angleGaugeWeight).to.be.eq(0);
     expect(externalGaugeWeight).to.be.eq(0);
+
+    // set gauge into the accumulator
+    await fxsAccumulator.setGauge(fxsPPSGaugeProxy.address);
+    await angleAccumulator.setGauge(anglePPSGaugeProxy.address);
 
     // Lock SDT for 4 years
     const sdtToLock = parseEther("10");
@@ -269,6 +315,22 @@ describe("veSDT voting", () => {
       const fxsGRWA = await gc["gauge_relative_weight(address)"](fxsPPSGaugeProxy.address);
       expect(angleGRWA).to.be.gt(parseEther("0.8")); // 80%
       expect(fxsGRWA).to.be.lt(parseEther("0.2")); // 20%
+    });
+  });
+
+  describe("Accumulator", async () => {
+    it("should claim rewards from the fxs locker", async function () {
+      this.enableTimeouts(false);
+      await fxsAccumulator.claimAndNotify();
+      const rewardBalance = await fxs.balanceOf(fxsPPSGaugeProxy.address);
+      expect(rewardBalance).to.be.gt(0);
+    });
+
+    it("should claim rewards from the angle locker", async function () {
+      this.enableTimeouts(false);
+      await angleAccumulator.claimAndNotify();
+      const rewardBalance = await sanUsdcEur.balanceOf(anglePPSGaugeProxy.address);
+      expect(rewardBalance).to.be.gt(0);
     });
   });
 

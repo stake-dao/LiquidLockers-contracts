@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
-//pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/ILiquidityGauge.sol";
@@ -8,7 +7,7 @@ import "../interfaces/ILocker.sol";
 
 /// @title A contract that accumulates FXS rewards and notifies them to the LGV4
 /// @author StakeDAO
-contract FXSAccumulator {
+contract FxsAccumulator {
     /* ========== STATE VARIABLES ========== */
     address public governance;
     address public locker;
