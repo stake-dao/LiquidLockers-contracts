@@ -30,6 +30,8 @@ const sdFXSWHALE = "0xbd2471b4150619a42093ffba3a7af35335cec5b6";
 const sdANGLEWHALE = "0xb36a0671b3d49587236d7833b01e79798175875f";
 
 const DUMMYUSER = "0xf9E58B35310430C7894742000cF670062CADeF70";
+const DUMMYUSER2 = "0x80d9BC4B2B21C69ba2B7ED92882fF79069Ea7e13";
+const DUMMYUSER3 = "0x81431b69B1e0E334d4161A13C2955e0f3599381e";
 
 const SDT_DEPLOYER = "0xb36a0671B3D49587236d7833B01E79798175875f";
 
@@ -70,6 +72,8 @@ describe("veSDT voting", () => {
   let sdtDeployerSigner: JsonRpcSigner;
   let deployer: SignerWithAddress;
   let dummyUser: JsonRpcSigner;
+  let dummyUser2: JsonRpcSigner;
+  let dummyUser3: JsonRpcSigner;
 
   before(async function () {
     this.enableTimeouts(false);
@@ -114,6 +118,15 @@ describe("veSDT voting", () => {
 
     await network.provider.request({
       method: "hardhat_impersonateAccount",
+      params: [DUMMYUSER2]
+    });
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [DUMMYUSER3]
+    });
+
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
       params: [SDT_DEPLOYER]
     });
 
@@ -122,11 +135,22 @@ describe("veSDT voting", () => {
       value: ethers.utils.parseEther("100") // 1 ether
     });
 
+    await deployer.sendTransaction({
+      to: DUMMYUSER2,
+      value: ethers.utils.parseEther("100") // 1 ether
+    });
+    await deployer.sendTransaction({
+      to: DUMMYUSER3,
+      value: ethers.utils.parseEther("100") // 1 ether
+    });
+
     sdtWhaleSigner = await ethers.provider.getSigner(SDTWHALE);
     sdFXSWhaleSigner = await ethers.provider.getSigner(sdFXSWHALE);
     sdAngleWhaleSigner = await ethers.provider.getSigner(sdANGLEWHALE);
     timelock = await ethers.provider.getSigner(TIMELOCK);
     dummyUser = await ethers.provider.getSigner(DUMMYUSER);
+    dummyUser2 = await ethers.provider.getSigner(DUMMYUSER2);
+    dummyUser3 = await ethers.provider.getSigner(DUMMYUSER3);
     sdtDeployerSigner = await ethers.provider.getSigner(SDT_DEPLOYER);
 
     await network.provider.send("hardhat_setBalance", [sdtWhaleSigner._address, parseEther("10").toHexString()]);
@@ -270,6 +294,12 @@ describe("veSDT voting", () => {
     await sdfxs.connect(sdFXSWhaleSigner).transfer(DUMMYUSER, parseEther("1"));
     await sdangle.connect(sdAngleWhaleSigner).transfer(DUMMYUSER, parseEther("1"));
     await sdt.connect(sdtWhaleSigner).transfer(DUMMYUSER, parseEther("1"));
+
+    await sdfxs.connect(sdFXSWhaleSigner).transfer(DUMMYUSER2, parseEther("1"));
+    await sdt.connect(sdtWhaleSigner).transfer(DUMMYUSER2, parseEther("1"));
+
+    await sdfxs.connect(sdFXSWhaleSigner).transfer(DUMMYUSER3, parseEther("1"));
+    await sdt.connect(sdtWhaleSigner).transfer(DUMMYUSER3, parseEther("1"));
   });
 
   describe("GaugeController", async () => {
@@ -289,12 +319,12 @@ describe("veSDT voting", () => {
 
       // the total amount of veSDT that can be used to vote is based on the next slope
       expect(angleGW).to.be.lt(veSDTBalance.div(wholePercent).mul(angleVotePerc));
-      expect(angleGW).to.be.gt(veSDTBalance.div(wholePercent).mul(angleVotePerc).sub(parseEther("1"))); 
+      expect(angleGW).to.be.gt(veSDTBalance.div(wholePercent).mul(angleVotePerc).sub(parseEther("1")));
       expect(fxsGW).to.be.lt(veSDTBalance.div(wholePercent).mul(fxsVotePerc));
       expect(fxsGW).to.be.gt(veSDTBalance.div(wholePercent).mul(fxsVotePerc).sub(parseEther("1")));
 
       const totalWeight = await gc.get_total_weight();
-      expect(totalWeight).to.be.eq(angleGW.add(fxsGW).mul(parseEther("1")))
+      expect(totalWeight).to.be.eq(angleGW.add(fxsGW).mul(parseEther("1")));
 
       // fetch the gauge relative weight, max 1 (100%), from the previous week, it needs to be 0
       const angleGRW = await gc["gauge_relative_weight(address)"](anglePPSGaugeProxy.address);
@@ -305,11 +335,11 @@ describe("veSDT voting", () => {
 
     it("should call gauges checkpoint after 1 week", async () => {
       // increase the timestamp by 1 week
-      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]); 
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]);
       await network.provider.send("evm_mine", []);
 
       // call checkpoint, it calculates the weight, for each gauge, based on the previous 7 days of vote
-      await gc.checkpoint_gauge(anglePPSGaugeProxy.address)
+      await gc.checkpoint_gauge(anglePPSGaugeProxy.address);
 
       const angleGRWA = await gc["gauge_relative_weight(address)"](anglePPSGaugeProxy.address);
       const fxsGRWA = await gc["gauge_relative_weight(address)"](fxsPPSGaugeProxy.address);
@@ -427,23 +457,106 @@ describe("veSDT voting", () => {
     });
 
     it("sdFXS staked with veSDT but no delegation", async () => {
-      // const fxsGauge = await ethers.getContractAt("LiquidityGaugeV4", fxsPPSGaugeProxy.address);
+      const fxsGauge = await ethers.getContractAt("LiquidityGaugeV4", fxsPPSGaugeProxy.address);
 
-      // await sdt.connect(dummyUser).approve(veSDTProxy.address, parseEther("1"));
-      // await veSDTProxy.connect(dummyUser).create_lock(parseEther("1"), (await getNow()) + 60 * 60 * 24 * 365 * 4);
-      // var sdtBefore = await sdt.balanceOf(DUMMYUSER);
-      // await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]); // 1 week
-      // await network.provider.send("evm_mine", []);
-      // await sdtDProxy.distributeMulti([fxsPPSGaugeProxy.address]);
+      await sdt.connect(dummyUser).approve(veSDTProxy.address, parseEther("1"));
+      await veSDTProxy.connect(dummyUser).create_lock(parseEther("1"), (await getNow()) + 60 * 60 * 24 * 365 * 4);
+      var sdtBefore = await sdt.balanceOf(DUMMYUSER);
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]); // 1 week
+      await network.provider.send("evm_mine", []);
+      await gc["gauge_relative_weight_write(address)"](fxsPPSGaugeProxy.address);
+      await gc["gauge_relative_weight_write(address)"](anglePPSGaugeProxy.address);
+      await sdtDProxy.distributeMulti([fxsPPSGaugeProxy.address]);
 
-      // await fxsGauge.connect(dummyUser)["claim_rewards()"]();
-      // var sdtAfter = await sdt.balanceOf(DUMMYUSER);
+      await fxsGauge.connect(dummyUser)["claim_rewards()"]();
+      var sdtAfter = await sdt.balanceOf(DUMMYUSER);
 
-      // console.log("SDT received: " + sdtAfter.sub(sdtBefore).toString());
-      // expect(sdtAfter).gt(sdtBefore);
+      console.log("SDT received: " + sdtAfter.sub(sdtBefore).toString());
+      expect(sdtAfter).gt(sdtBefore);
     });
 
-    it("sdFXS staked with veSDT and some veSDT delegation", async () => {});
+    it("sdFXS staked with veSDT and some veSDT delegation", async () => {
+      const fxsGauge = await ethers.getContractAt("LiquidityGaugeV4", fxsPPSGaugeProxy.address);
+
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]); // 1 week
+      await network.provider.send("evm_mine", []);
+
+      let blockNum = await ethers.provider.getBlockNumber();
+      let block = await ethers.provider.getBlock(blockNum);
+      var time = block.timestamp;
+      await veBoost
+        .connect(sdtWhaleSigner)
+        ["create_boost(address,address,int256,uint256,uint256,uint256)"](
+          sdtWhaleSigner._address,
+          dummyUser._address,
+          5_000,
+          0,
+          time + 86400 * 14,
+          0
+        );
+
+      var sdtBefore = await sdt.balanceOf(DUMMYUSER);
+
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]); // 1 week
+      await network.provider.send("evm_mine", []);
+      await gc["gauge_relative_weight_write(address)"](fxsPPSGaugeProxy.address);
+      await gc["gauge_relative_weight_write(address)"](anglePPSGaugeProxy.address);
+      await sdtDProxy.distributeMulti([fxsPPSGaugeProxy.address]);
+
+      await fxsGauge.connect(dummyUser)["claim_rewards()"]();
+
+      var sdtAfter = await sdt.balanceOf(DUMMYUSER);
+
+      console.log("SDT received: " + sdtAfter.sub(sdtBefore).toString());
+
+      expect(sdtAfter).gt(sdtBefore);
+    });
+
+    it("Boosted user receives more SDT compared to non-boosted", async function () {
+      const fxsGauge = await ethers.getContractAt("LiquidityGaugeV4", fxsPPSGaugeProxy.address);
+      await sdfxs.connect(dummyUser2).approve(fxsGauge.address, parseEther("1"));
+      await fxsGauge.connect(dummyUser2)["deposit(uint256)"](parseEther("1"));
+      await sdfxs.connect(dummyUser3).approve(fxsGauge.address, parseEther("1"));
+      await fxsGauge.connect(dummyUser3)["deposit(uint256)"](parseEther("1"));
+
+      await sdt.connect(dummyUser2).approve(veSDTProxy.address, parseEther("1"));
+      await veSDTProxy.connect(dummyUser2).create_lock(parseEther("1"), (await getNow()) + 60 * 60 * 24 * 365 * 4);
+
+      await sdt.connect(dummyUser3).approve(veSDTProxy.address, parseEther("1"));
+      await veSDTProxy.connect(dummyUser3).create_lock(parseEther("1"), (await getNow()) + 60 * 60 * 24 * 365 * 4);
+
+      let blockNum = await ethers.provider.getBlockNumber();
+      let block = await ethers.provider.getBlock(blockNum);
+      var time = block.timestamp;
+      await veBoost
+        .connect(dummyUser)
+        ["create_boost(address,address,int256,uint256,uint256,uint256)"](
+          dummyUser._address,
+          dummyUser2._address,
+          5_000,
+          0,
+          time + 86400 * 14,
+          0
+        );
+
+      var sdtBefore = await fxs.balanceOf(DUMMYUSER2);
+      var sdtBeforeNB = await fxs.balanceOf(DUMMYUSER3);
+
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]); // 1 week
+      await network.provider.send("evm_mine", []);
+
+      await sdtDProxy.distributeMulti([fxsPPSGaugeProxy.address]);
+
+      await fxsGauge.connect(dummyUser2)["claim_rewards()"]();
+      await fxsGauge.connect(dummyUser3)["claim_rewards()"]();
+      var sdtAfter = await fxs.balanceOf(DUMMYUSER2);
+      var sdtAfterNB = await fxs.balanceOf(DUMMYUSER3);
+
+      console.log("SDT received: " + sdtAfter.sub(sdtBefore).toString());
+      console.log("SDT receivedW: " + sdtAfterNB.sub(sdtBeforeNB).toString());
+
+      expect(sdtAfter.sub(sdtBefore)).gt(sdtAfterNB.sub(sdtBeforeNB));
+    });
   });
 });
 
