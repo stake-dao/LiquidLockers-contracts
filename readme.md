@@ -1,4 +1,6 @@
-# FXS Locker
+# Liquid Lockers
+
+_Contracts marked **[Risky]** are either freshly developed contracts from scratch or have been made a lot of changes to, from their originally sourced contracts, and hence need to be paid special attention to while auditing and  need to be tested thoroughly_
 
 ## Step 1
 
@@ -20,9 +22,9 @@ Users can start to lock their FXS in Frax finance via Stake DAO, getting sdFXS t
 
 ### Smart Contracts (general intended behaviour)
 
-1. **Depositor.sol**: contract responsible for collecting FXS from users and locking them in frax. [Diffchecker](https://www.diffnow.com/report/5apbh) with Convex's FxsDepositor.
+1. [Risky] **Depositor.sol**: contract responsible for collecting FXS from users and locking them in frax. [Diffchecker](https://www.diffnow.com/report/5apbh) with Convex's FxsDepositor.
 2. **sdToken.sol**: resultant token received by users, on locking FXS via FxsDepositor. [Diffchecker](https://www.diffchecker.com/QFoCaRAo) with Convex's cvxFXSToken.
-3. **FxsLocker.sol**: contract that directly interacts with frax's protocol contracts to lock FXS and also claim FXS rewards for FXS lockers. Basically manages Stake DAO's FXS lock in frax (increasing lock amount, time, etc). FxsDepositor locks FXS from users using this contract. This contract will own all the veFXS, which will then be used to vote on and boost the upcoming frax gauges, using the `execute()` function. [Diffchecker](https://www.diffnow.com/report/hp2ug) with Stake DAO's CRV locker [here](https://etherscan.io/address/0x52f541764E6e90eeBc5c21Ff570De0e2D63766B6#code).
+3. [Risky] **FxsLocker.sol**: contract that directly interacts with frax's protocol contracts to lock FXS and also claim FXS rewards for FXS lockers. Basically manages Stake DAO's FXS lock in frax (increasing lock amount, time, etc). FxsDepositor locks FXS from users using this contract. This contract will own all the veFXS, which will then be used to vote on and boost the upcoming frax gauges, using the `execute()` function. [Diffchecker](https://www.diffnow.com/report/hp2ug) with Stake DAO's CRV locker [here](https://etherscan.io/address/0x52f541764E6e90eeBc5c21Ff570De0e2D63766B6#code).
 
 ## Step 2
 
@@ -37,9 +39,10 @@ Users can start to lock their FXS in Frax finance via Stake DAO, getting sdFXS t
    
       
 ### Smart Contracts (general intended behaviour)
-1. **veSDT.vy** (not covered by coverage plugin): allows users to lock their SDT for a specified amount of time (max 4 years). Also allows them to increase their locked SDT amount and lock time. Additional function on top of Angle's contract is the `deposit_for_from()` method, which allows any address (contract or EOA) to lock more SDT for an existing address with a lock, by itself supplying those SDT. [Diffchecker](https://www.diffnow.com/report/zhef8) with veANGLE
+1. **veSDT.vy** [upgradable] (not covered by coverage plugin): allows users to lock their SDT for a specified amount of time (max 4 years). Also allows them to increase their locked SDT amount and lock time. Additional function on top of Angle's contract is the `deposit_for_from()` method, which allows any address (contract or EOA) to lock more SDT for an existing address with a lock, by itself supplying those SDT. [Diffchecker](https://www.diffnow.com/report/zhef8) with veANGLE
 2. **FeeDistributor.vy** (not covered by coverage plugin): contract that distributes sd3CRV (Stake DAO stablecoin LP token) to all SDT lockers in veSDT. These sd3CRV are supposed to be automatically received on harvests from all strategies built on top of all lockers, but they can also be manually ERC20 transferred, until the strategies are live. [Diffchecker](https://www.diffnow.com/report/jbkz4) with Angle's FeeDistributor.
 3. **SmartWalletWhitelist.sol**: contract to whitelist smart contracts to allow them to lock SDT in the veSDT contract. It can also revoke existing SDT-locking rights of contracts. [Diffchecker](https://www.diffnow.com/report/0k8fm) with Angle's SmartWalletWhitelist.
+4. **Contracts for Upgradability**
 
 ## Step 3
 
@@ -57,11 +60,19 @@ At this step, users will be able to vote, using veSDT, via the GaugeController, 
       
 ### Smart Contracts (general intended behaviour)
 
-1. **SdtDistributor.sol**: This contract will receive SDT from masterchef to distribute them to all locker gauges. The amount of SDT that every gauge will receive, will be based on the veSDT voting done every 10 days on GaugeContrller contract, from where SdtDistributor will read the voting data. There will be 1 SdtDistributor for all lockers of frax + angle + curve etc. And 1 SdtDistributor for all strategies on frax + angle + curve etc (in step 4). [Diffchecker](https://www.diffnow.com/report/hqdym) with AngleDistributor.
+1. [Risky] **SdtDistributor.sol** [upgradable]: This contract will receive SDT from masterchef to distribute them to all locker gauges. The amount of SDT that every gauge will receive, will be based on the veSDT voting done every 10 days on GaugeContrller contract, from where SdtDistributor will read the voting data. There will be 1 SdtDistributor for all lockers of frax + angle + curve etc. And 1 SdtDistributor for all strategies on frax + angle + curve etc (in step 4). [Diffchecker](https://www.diffnow.com/report/ewpol) with AngleDistributor.
 2. **GaugeController.vy** (not covered by coverage plugin): this contract will allow veSDT holders to vote on all locker gauges, to allocate proportion of SDT to each of these gauges (i.e. frax, angle, curve). They can obtain veSDT by locking a certain amount of SDT for a fixed period of time (1 SDT: 1 veSDT at max locking time of 4 years). There will be 1 GaugeController for all lockers of frax + angle + curve etc. And 1 GaugeController for all strategies on frax + angle + curve etc (in step 4). [Diffchecker](https://www.diffnow.com/report/vynzi) with Angle's GaugeController.
-3. **LiquidityGaugeV4.vy** (not covered by coverage plugin): It is a gauge multi rewards contract, so stakers of sdFXS, sdANGLE, sdCRV(later step) will be able to receive rewards in more than one token. In our scenario they will receive rewards in the token collected by lockers (FXS for the FxsLocker and sanUSDC_EUR for the AngleLocker) and also SDT from the SdtDistributor. This kind of gauge supports veSDT boost (i.e. users receiving more SDT as rewards when they have locked more SDT in veSDT contract) and delegation as well.
+3. [Risky for 1 new function] **LiquidityGaugeV4.vy** [upgradable] (not covered by coverage plugin): It is a gauge multi rewards contract, so stakers of sdFXS, sdANGLE, sdCRV(later step) will be able to receive rewards in more than one token. In our scenario they will receive rewards in the token collected by lockers (FXS for the FxsLocker and sanUSDC_EUR for the AngleLocker) and also SDT from the SdtDistributor. This kind of gauge supports veSDT boost (i.e. users receiving more SDT as rewards when they have locked more SDT in veSDT contract) and delegation as well.
 [Diffchecker](https://www.diffnow.com/report/fxqvb) with Angle's LiquidityGaugeV4.
-4. **Accumulator.sol**: it's a helper contract to LiquidityGaugeV4, which collects FXS rewards from multiple sources i.e. locker and strategies (for frax locker, and similarly sanUSDC_EUR for angle locker), and feeds them to LiquidityGaugeV4. It was needed cause LiquidityGaugeV4 can only have 1 source for a given reward token.
+4. [Risky] **Accumulator.sol**: it's a helper contract to LiquidityGaugeV4, which collects FXS rewards from multiple sources i.e. locker and strategies (for frax locker, and similarly sanUSDC_EUR for angle locker), and feeds them to LiquidityGaugeV4. It was needed cause LiquidityGaugeV4 can only have 1 source for a given reward token.
+5. [Risky] **ClaimContract.sol**: helper contract that will allow users to claim all their reward tokens i.e. (FXS, SDT) for frax locker and (sanUSDC_EUR, SDT) for angle locker in a single transaction. It also gives them the option to auto-lock reward tokens are lockable i.e. FXS in frax locker, SDT in veSDT contract.
+6. **veBoostProxy.vy**: proxy contract to manage the veBoost contract (to be deployed in step 4) which will allow users to delegate their veSDT boost to other users. We need to deploy veBoostProxy in step 3 cause LiquidityGaugeV4 contract needs an immutable deployed veBoostProxy address as one of its deployment parameters. [Diffchecker](https://www.diffnow.com/report/tywlq) with Angle's veBoostProxy.
+7. **Contracts for Upgradability**
+
+## Contracts for Upgradability
+1. **TransparentUpgradeableProxy.sol**: proxy contract that has an admin and the logic to upgrade an upgradable contract.
+2. **ProxyAdmin.sol**: the dedicated Admin contract of TransparentUpgradeableProxy contracts of all upgradable contracts. It allows calling `changeAdmin()` and `upgradeTo()`/`upgradeToAndCall()`  on TransparentUpgradeableProxy.
+3. **AccessControlUpgradeable.sol**: contract used by all upgradable contracts to implement access control.
 
 ## Setup
 
