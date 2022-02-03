@@ -53,7 +53,7 @@ At this step, users will be able to vote, using veSDT, via the GaugeController, 
 
 1. **Gauge Voting**: users who hold veSDT, can now vote for locker gauges of frax, angle (this release) and curve (next release), to allocate proportion of SDT to each of these gauges. They'll be allowed to vote once in 10 days, which will decide the proportion of SDT going to each gauge but do note that the amount of SDT that goes to each gauge w.r.t. this proportion, can be altered daily (to start with, but this interval can also be changed).
 
-2. **Locker Rewards**: users who have locked their FXS in frax locker and ANGLE in angle locker, receive sdX token (sdFXS, sdANGLE, sdCRV) as receipts, which they can now stake in LiquidityGaugeV4 contract, to start earning FXS, sanUSDC_EUR rewards respectively, along with SDT (coming from Masterchef). NOTE: users can boost their FXS, sanUSDC_EUR rewards by locking more SDT in the veSDT contract.
+2. **Locker Rewards**: users who have locked their FXS in frax locker and ANGLE in angle locker, receive sdX token (sdFXS, sdANGLE, sdCRV) as receipts, which they can now stake in LiquidityGaugeV4 contract, to start earning FXS, sanUSDC_EUR rewards respectively, along with SDT (coming from Masterchef). NOTE: users can boost their SDT rewards by locking more SDT in the veSDT contract.
       
 ### Smart Contracts (general intended behaviour)
 
