@@ -43,21 +43,25 @@ Users can start to lock their FXS in Frax finance via Stake DAO, getting sdFXS t
 
 ## Step 3
 
-At this step, users will be able to vote, using veSDT, via the GaugeController, for deciding the SDT rewards allocation to different pps gauges. Also, via the LiquidityGaugeV4 stakers can boost their rewards holding veSDT. </br>
+### General Understanding
+
+At this step, users will be able to vote, using veSDT, via the GaugeController, for deciding the SDT rewards allocation to different locker gauges. Also, via the LiquidityGaugeV4, users who have locked FXS, ANGLE will receive SDT, along with FXS, sanUSDC_EUR rewards respectively, and they can also boost their SDT rewards by locking more SDT (i.e. holding more veSDT). </br>
+
+### 2 Core Components:
 
 ![Screenshot 2022-02-01 at 7 29 10 PM](https://user-images.githubusercontent.com/22425782/151983477-3154c588-a7a1-4e22-af55-a1e157d0bff8.png) </br>
 
-1. SdtDistributor:
-This contracts will receive SDT from masterchef to distribute them to all pps gauges. The amount of SDT that every gauge will receive will be based on the veSDT weekly vote. There will be 1 SdtDistributor for all strategies on frax + angle + curve etc. And there will be 1 SdtDistributor for pps of frax + angle + curve etc.
+1. Gauge Voting: users who hold veSDT, can now vote for locker gauges of frax, angle (this release) and curve (next release), to allocate proportion of SDT to each of these gauges. They'll be allowed to vote once in 10 days, which will decide the proportion of SDT going to each gauge but do note that the amount of SDT that goes to each gauge w.r.t. this proportion, can be altered daily (to start with, but this interval can also be changed).
 
-2. GaugeController: Users can interact with the GaugeController voting for any pps gauges supported, using the veSDT that they hold. They can obtain veSDT locking a certain amount of SDT for a fixed period of time (1 SDT: 1 veSDT at max locking time, 4 years). There will be 1 GaugeController for all strategies on frax + angle + curve etc. And there will be 1 GaugeController for pps of frax + angle + curve etc.
-
-3. LiquidityGaugeV4: It is a gauge multi rewards, so stakers (sdFXS, sdANGLE) will be able to receive rewards in more than one token, in our scenario they will receive rewards in the token collected by lockers (FXS for the FxsLocker and sanEUR_USDC for the AngleLocker) and also SDT from the SdtDistributor. This kind of gauge supports veSDT boost and delegation as well.
+2. Locker Rewards: users who have locked their FXS in frax locker and ANGLE in angle locker, receive sdX token (sdFXS, sdANGLE, sdCRV) as receipts, which they can now stake in LiquidityGaugeV4 contract, to start earning FXS, sanUSDC_EUR rewards respectively, along with SDT (coming from Masterchef). NOTE: users can boost their FXS, sanUSDC_EUR rewards by locking more SDT in the veSDT contract.
       
 ### Smart Contracts (general intended behaviour)
-1. **SdtDistributor.sol**
-2. **GaugeController.vy** (not covered by coverage plugin)
-3. **LiquidityGaugeV4.vy** (not covered by coverage plugin)
+
+1. **SdtDistributor.sol**: This contract will receive SDT from masterchef to distribute them to all locker gauges. The amount of SDT that every gauge will receive, will be based on the veSDT voting done every 10 days on GaugeContrller contract, from where SdtDistributor will read the voting data. There will be 1 SdtDistributor for all lockers of frax + angle + curve etc. And 1 SdtDistributor for all strategies on frax + angle + curve etc (in step 4). [Diffchecker](https://www.diffnow.com/report/ewpol) with AngleDistributor.
+2. **GaugeController.vy** (not covered by coverage plugin): this contract will allow veSDT holders to vote on all locker gauges, to allocate proportion of SDT to each of these gauges (i.e. frax, angle, curve). They can obtain veSDT by locking a certain amount of SDT for a fixed period of time (1 SDT: 1 veSDT at max locking time of 4 years). There will be 1 GaugeController for all lockers of frax + angle + curve etc. And 1 GaugeController for all strategies on frax + angle + curve etc (in step 4). [Diffchecker](https://www.diffnow.com/report/vynzi) with Angle's GaugeController.
+3. **LiquidityGaugeV4.vy** (not covered by coverage plugin): It is a gauge multi rewards contract, so stakers of sdFXS, sdANGLE, sdCRV(later step) will be able to receive rewards in more than one token. In our scenario they will receive rewards in the token collected by lockers (FXS for the FxsLocker and sanUSDC_EUR for the AngleLocker) and also SDT from the SdtDistributor. This kind of gauge supports veSDT boost (i.e. users receiving more SDT as rewards when they have locked more SDT in veSDT contract) and delegation as well.
+[Diffchecker](https://www.diffnow.com/report/fxqvb) with Angle's LiquidityGaugeV4.
+4. **Accumulator.sol**: it's a helper contract to LiquidityGaugeV4, which collects FXS rewards from multiple sources i.e. locker and strategies (for frax locker, and similarly sanUSDC_EUR for angle locker), and feeds them to LiquidityGaugeV4. It was needed cause LiquidityGaugeV4 can only have 1 source for a given reward token.
 
 ## Setup
 
