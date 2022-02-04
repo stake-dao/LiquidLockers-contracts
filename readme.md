@@ -2,6 +2,17 @@
 
 _Contracts marked **[Risky]** are either freshly developed contracts from scratch or have been made a lot of changes to, from their originally sourced contracts, and hence need to be paid special attention to while auditing and  need to be tested thoroughly_
 
+## State of Continuous Auditing
+
+We have considered your review suggestions from the first version of the audit and have made the necessary fixes in subsequent developments. Please find our comments to your suggestions [here](https://docs.google.com/document/d/1EHn3lKTkW_fw3_TCx6B95HJGtQrMp1i74YQ06SQwpgk/edit?usp=sharing)
+
+The first version of audit was done on commit hash [`7e702aba329d5780ef5841f44ad699385b8b428f`](https://github.com/StakeDAO/sd-frax-veSDT/tree/7e702aba329d5780ef5841f44ad699385b8b428f), which mainly included contracts as described in Step 1 below. Specifically,
+1. FxsLocker - unchanged since that hash
+2. sdFXSToken.sol - unchanged since that hash
+3. FxsDepositor - has been modified. [Diffchecker](https://www.diffnow.com/report/4ug2a) between previous and current version.
+
+Since then, Step 2, Step 3 as described below, have been developed which need to be audited, along with FxsDepositor, which also has been modified.
+
 ## Step 1
 
 ### General Understanding
