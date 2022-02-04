@@ -111,6 +111,7 @@ claim_data: HashMap[address, HashMap[address, uint256]]
 
 admin: public(address)
 future_admin: public(address)
+claimer: public(address)
 
 initialized: public(bool)
 
@@ -351,6 +352,21 @@ def claim_rewards(_addr: address = msg.sender, _receiver: address = ZERO_ADDRESS
     """
     if _receiver != ZERO_ADDRESS:
         assert _addr == msg.sender  # dev: cannot redirect when claiming for another user
+    self._checkpoint_rewards(_addr, self.totalSupply, True, _receiver)
+
+@external
+@nonreentrant('lock')
+def claim_rewards_for(_addr: address, _receiver: address):
+    """
+    @notice Claim available reward tokens for `_addr`
+    @param _addr Address to claim for
+    @param _receiver Address to transfer rewards to - if set to
+                     ZERO_ADDRESS, uses the default reward receiver
+                     for the caller
+    """
+    assert self.claimer == msg.sender  # dev: only the claim contract can claim for other 
+    if _receiver != _addr:
+        assert _receiver == self.claimer # dev: if the receiver is not the user it needs to be the claimer
     self._checkpoint_rewards(_addr, self.totalSupply, True, _receiver)
 
 

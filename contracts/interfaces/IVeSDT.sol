@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.7;
 
-interface IVeToken {
+interface IVeSDT {
 	struct LockedBalance {
 		int128 amount;
 		uint256 end;
@@ -15,4 +15,6 @@ interface IVeToken {
 	function increase_unlock_time(uint256 _unlock_time) external;
 
 	function withdraw() external;
+
+	function deposit_for_from(address, uint256) external;
 }

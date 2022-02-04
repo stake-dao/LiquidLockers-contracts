@@ -3,5 +3,6 @@
 pragma solidity 0.8.7;
 
 interface IDepositor {
-	function depositFor(address account, uint256 amount) external;
+	function deposit(uint256 amount, bool lock) external;
+	function minter() external returns(address);
 }
