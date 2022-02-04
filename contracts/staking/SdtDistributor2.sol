@@ -2,25 +2,18 @@
 
 pragma solidity 0.8.7;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "../external/AccessControlUpgradeable.sol";
 
 import "../interfaces/IMasterchef.sol";
 import "../interfaces/IGaugeController.sol";
-import "../interfaces/ILiquidityGauge.sol";
-import "../interfaces/IStakingRewards.sol";
-
+import "./SdtDistributorEvents.sol";
 import "./MasterchefMasterToken.sol";
 import "hardhat/console.sol";
 
-contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable {
+contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable, SdtDistributorEvents {
 	using SafeERC20 for IERC20;
 
-	event RewardDistributed(address indexed gaugeAddr, uint256 sdtDistributed);
-
-	uint256 public constant DAY = 3600 * 24;
+	uint256 public timePeriod;
 
 	/// @notice Role for governors only
 	bytes32 public constant GOVERNOR_ROLE = keccak256("GOVERNOR_ROLE");
@@ -46,12 +39,29 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 	/// @notice Whether SDT distribution through this contract is on or no
 	bool public distributionsOn;
 
+	/// @notice Maps the address of a type >= 2 gauge to a delegate address responsible
+	/// for giving rewards to the actual gauge
+	mapping(address => address) public delegateGauges;
+
+	/// @notice Maps the address of a gauge to whether it was killed or not
+	/// A gauge killed in this contract cannot receive any rewards
+	mapping(address => bool) public killedGauges;
+
+	/// @notice Maps the address of a gauge delegate to whether this delegate supports the `notifyReward` interface
+	/// and is therefore built for automation
+	mapping(address => bool) public isInterfaceKnown;
+
 	/// @notice masterchef pid
 	uint256 public masterchefPID;
 
+	/// @notice timestamp of the last pull from masterchef
 	uint256 public lastMasterchefPull;
 
+	/// @notice Maps the timestapm of pull action to the amount of SDT that pulled
 	mapping(uint256 => uint256) public pulls; // day => SDT amount
+
+	/// @notice Maps the timestamp of last pull to the gauge addresses then keeps the data if particular gauge paid in the last pull
+	mapping(uint256 => mapping(address => bool)) public isGaugePaid;
 
 	function initialize(
 		address _rewardToken,
@@ -71,6 +81,7 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 		masterchef = IMasterchef(_masterchef);
 		masterchefToken = IERC20(address(new MasterchefMasterToken()));
 		distributionsOn = false;
+		timePeriod = 3600 * 24; // One day in seconds
 
 		_setRoleAdmin(GOVERNOR_ROLE, GOVERNOR_ROLE);
 		_setRoleAdmin(GUARDIAN_ROLE, GOVERNOR_ROLE);
@@ -91,9 +102,7 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 	function distributeMulti(address[] memory gauges) external nonReentrant {
 		require(distributionsOn == true, "not allowed");
 
-		if (block.timestamp > lastMasterchefPull + DAY) {
-			console.log("DISTRIBUTION");
-
+		if (block.timestamp > lastMasterchefPull + timePeriod) {
 			uint256 sdtBefore = rewardToken.balanceOf(address(this));
 			_pullSDT();
 			pulls[block.timestamp] = rewardToken.balanceOf(address(this)) - sdtBefore;
@@ -107,21 +116,15 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 
 	function _distributeReward(address gaugeAddr) internal {
 		int128 gaugeType = controller.gauge_types(gaugeAddr);
+		require(gaugeType >= 0 && !killedGauges[gaugeAddr], "Unrecognized or killed gauge");
 		uint256 sdtBalance = pulls[lastMasterchefPull];
-
-		console.log("sdtBalance", sdtBalance);
+		bool isPaid = isGaugePaid[lastMasterchefPull][gaugeAddr];
+		if (isPaid) {
+			return;
+		}
 
 		uint256 gaugeRelativeWeight = controller.gauge_relative_weight(gaugeAddr);
-		uint256 totalWeight = controller.get_total_weight();
-
-		console.log("gaugeAddr", gaugeAddr);
-		console.log("gaugeRelativeWeight", gaugeRelativeWeight);
-		console.log("totalWeight", totalWeight);
-
-		//uint256 sdtDistributed = (sdtBalance * ((gaugeRelativeWeight * 1e36) / totalWeight)) / 1e18;
-		uint256 sdtDistributed = sdtBalance * gaugeRelativeWeight / 1e18;
-
-		console.log("sdtDistributed", sdtDistributed);
+		uint256 sdtDistributed = (sdtBalance * gaugeRelativeWeight) / 1e18;
 
 		if (gaugeType == 1) {
 			rewardToken.safeTransfer(gaugeAddr, sdtDistributed);
@@ -129,12 +132,9 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 		} else if (gaugeType >= 2) {
 			// TODO need to be implemented
 		} else {
-			if (IERC20(rewardToken).allowance(address(this), gaugeAddr) == 0) {
-				rewardToken.safeApprove(gaugeAddr, type(uint256).max);
-			}
 			ILiquidityGauge(gaugeAddr).deposit_reward_token(address(rewardToken), sdtDistributed);
 		}
-
+		isGaugePaid[lastMasterchefPull][gaugeAddr] = true;
 		emit RewardDistributed(gaugeAddr, sdtDistributed);
 	}
 
@@ -144,5 +144,90 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 
 	function setDistribution(bool _state) external onlyRole(GOVERNOR_ROLE) {
 		distributionsOn = _state;
+	}
+
+	/// @notice Sets a new gauge controller
+	/// @param _controller Address of the new gauge controller
+	function setGaugeController(address _controller) external onlyRole(GOVERNOR_ROLE) {
+		require(_controller != address(0), "0");
+		controller = IGaugeController(_controller);
+		emit GaugeControllerUpdated(_controller);
+	}
+
+	/// @notice Sets a new delegate gauge for pulling rewards of a type >= 2 gauges or of all type >= 2 gauges
+	/// @param gaugeAddr Gauge to change the delegate of
+	/// @param _delegateGauge Address of the new gauge delegate related to `gaugeAddr`
+	/// @param toggleInterface Whether we should toggle the fact that the `_delegateGauge` is built for automation or not
+	/// @dev This function can be used to remove delegating or introduce the pulling of rewards to a given address
+	/// @dev If `gaugeAddr` is the zero address, this function updates the delegate gauge common to all gauges with type >= 2
+	/// @dev The `toggleInterface` parameter has been added for convenience to save one transaction when adding a gauge delegate
+	/// which supports the `notifyReward` interface
+	function setDelegateGauge(
+		address gaugeAddr,
+		address _delegateGauge,
+		bool toggleInterface
+	) external onlyRole(GOVERNOR_ROLE) {
+		if (gaugeAddr != address(0)) {
+			delegateGauges[gaugeAddr] = _delegateGauge;
+		} else {
+			delegateGauge = _delegateGauge;
+		}
+		emit DelegateGaugeUpdated(gaugeAddr, _delegateGauge);
+
+		if (toggleInterface) {
+			_toggleInterfaceKnown(_delegateGauge);
+		}
+	}
+
+	/// @notice Toggles the status of a gauge to either killed or unkilled
+	/// @param gaugeAddr Gauge to toggle the status of
+	/// @dev It is impossible to kill a gauge in the `GaugeController` contract, for this reason killing of gauges
+	/// takes place in the `SdtDistributor` contract
+	/// @dev This means that people could vote for a gauge in the gauge controller contract but that rewards are not going
+	/// to be distributed to it in the end: people would need to remove their weights on the gauge killed to end the diminution
+	/// in rewards
+	/// @dev In the case of a gauge being killed, this function resets the timestamps at which this gauge has been approved and
+	/// disapproves the gauge to spend the token
+	/// @dev It should be cautiously called by governance as it could result in less SDT overall rewards than initially planned
+	/// if people do not remove their voting weights to the killed gauge
+	function toggleGauge(address gaugeAddr) external onlyRole(GOVERNOR_ROLE) {
+		bool gaugeKilledMem = killedGauges[gaugeAddr];
+		if (!gaugeKilledMem) {
+			rewardToken.safeApprove(gaugeAddr, 0);
+		}
+		killedGauges[gaugeAddr] = !gaugeKilledMem;
+		emit GaugeToggled(gaugeAddr, !gaugeKilledMem);
+	}
+
+	/// @notice Notifies that the interface of a gauge delegate is known or has changed
+	/// @param _delegateGauge Address of the gauge to change
+	/// @dev Gauge delegates that are built for automation should be toggled
+	function toggleInterfaceKnown(address _delegateGauge) external onlyRole(GUARDIAN_ROLE) {
+		_toggleInterfaceKnown(_delegateGauge);
+	}
+
+	/// @notice Toggles the fact that a gauge delegate can be used for automation or not and therefore supports
+	/// the `notifyReward` interface
+	/// @param _delegateGauge Address of the gauge to change
+	function _toggleInterfaceKnown(address _delegateGauge) internal {
+		bool isInterfaceKnownMem = isInterfaceKnown[_delegateGauge];
+		isInterfaceKnown[_delegateGauge] = !isInterfaceKnownMem;
+		emit InterfaceKnownToggled(_delegateGauge, !isInterfaceKnownMem);
+	}
+
+	/**
+	@notice Gives max approvement to the gauge
+	@param gaugeAddr Address of the gauge
+	 */
+	function approveGauge(address gaugeAddr) external onlyRole(GOVERNOR_ROLE) {
+		rewardToken.safeApprove(gaugeAddr, type(uint256).max);
+	}
+
+	/**
+	@notice Set the time period for pull SDT from Masterchef
+	@param _timePeriod new timePeriod value in seconds
+	 */
+	function setTimePeriod(uint256 _timePeriod) external onlyRole(GOVERNOR_ROLE) {
+		timePeriod = _timePeriod;
 	}
 }
