@@ -7,4 +7,17 @@ interface IMasterchef {
 	function withdraw(uint256, uint256) external;
 
 	function userInfo(uint256, address) external view returns (uint256, uint256);
+
+	function poolInfo(uint256)
+		external
+		returns (
+			address,
+			uint256,
+			uint256,
+			uint256
+		);
+
+	function totalAllocPoint() external view returns (uint256);
+
+	function sdtPerBlock() external view returns (uint256);
 }
