@@ -252,11 +252,12 @@ describe("veSDT voting", () => {
     const typesWeight = parseEther("1");
     await gc.connect(deployer)["add_type(string,uint256)"]("Mainnet staking", typesWeight); // 0
     await gc.connect(deployer)["add_type(string,uint256)"]("External", typesWeight); // 1
+    await gc.connect(deployer)["add_type(string,uint256)"]("Cross Chain", typesWeight); // 2
 
     // add FXS and ANGLE gauges into gaugeController
     await gc.connect(deployer)["add_gauge(address,int128,uint256)"](fxsPPSGaugeProxy.address, 0, 0); // gauge - type - weight
     await gc.connect(deployer)["add_gauge(address,int128,uint256)"](anglePPSGaugeProxy.address, 0, 0);
-
+    await gc.connect(deployer)["add_gauge(address,int128,uint256)"](dummyUser3._address, 2, 0); // add type 2 gauge
     // add external gauge
     await gc.connect(deployer)["add_gauge(address,int128,uint256)"](SDT_DEPLOYER, 1, 0); // simulate an external gauge
 
@@ -441,6 +442,32 @@ describe("veSDT voting", () => {
     const tx = await sdtDProxy.distributeMulti([fxsPPSGaugeProxy.address]).catch((e: any) => e);
     expect(sdtDistributorFXSApprove).to.be.equal(0);
     expect(tx.message).to.have.string("Unrecognized or killed gauge");
+  });
+
+  it("it should add wallet as gauge and distribute rewards to wallet", async () => {
+    const angleVotePerc = 5000; // 50%
+    const walletGaugeVotePerc = 5000; // 50%
+    // vote
+    await gc.connect(sdtWhaleSigner).vote_for_gauge_weights(fxsPPSGaugeProxy.address, 0);
+    await gc.connect(sdtWhaleSigner).vote_for_gauge_weights(anglePPSGaugeProxy.address, angleVotePerc);
+    await gc.connect(sdtWhaleSigner).vote_for_gauge_weights(dummyUser3._address, walletGaugeVotePerc);
+    // increase the timestamp by 1 week
+    await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]);
+    await network.provider.send("evm_mine", []);
+
+    // call checkpoint, it calculates the weight, for each gauge, based on the previous 7 days of vote
+    await gc.checkpoint_gauge(anglePPSGaugeProxy.address);
+
+    const sdtBalanceOfwalletGaugeBeforeDistribute = await sdt.balanceOf(deployer.address);
+    const tx = await (await sdtDProxy.distributeMulti([dummyUser3._address, anglePPSGaugeProxy.address])).wait();
+    const sdtBalanceOfwalletGaugeAfterDistribute = await sdt.balanceOf(deployer.address);
+    expect(sdtBalanceOfwalletGaugeAfterDistribute).to.be.gt(sdtBalanceOfwalletGaugeBeforeDistribute);
+    expect(tx.events.filter((_: any) => _.event === "RewardDistributed")[0].args.gaugeAddr).to.be.eq(
+      dummyUser3._address
+    );
+    expect(tx.events.filter((_: any) => _.event === "RewardDistributed")[1].args.gaugeAddr).to.be.eq(
+      anglePPSGaugeProxy.address
+    );
   });
 });
 

@@ -130,7 +130,23 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 			rewardToken.safeTransfer(gaugeAddr, sdtDistributed);
 			IStakingRewards(gaugeAddr).notifyRewardAmount(sdtDistributed);
 		} else if (gaugeType >= 2) {
-			// TODO need to be implemented
+			// If it is defined, we use the specific delegate attached to the gauge
+			address delegate = delegateGauges[gaugeAddr];
+			if (delegate == address(0)) {
+				// If not, we check if a delegate common to all gauges with type >= 2 can be used
+				delegate = delegateGauge;
+			}
+			if (delegate != address(0)) {
+				// In the case where the gauge has a delegate (specific or not), then rewards are transferred to this gauge
+				rewardToken.safeTransfer(delegate, sdtDistributed);
+				// If this delegate supports a specific interface, then rewards sent are notified through this
+				// interface
+				if (isInterfaceKnown[delegate]) {
+					ISdtMiddlemanGauge(delegate).notifyReward(gaugeAddr, sdtDistributed);
+				}
+			} else {
+				rewardToken.safeTransfer(gaugeAddr, sdtDistributed);
+			}
 		} else {
 			ILiquidityGauge(gaugeAddr).deposit_reward_token(address(rewardToken), sdtDistributed);
 		}
