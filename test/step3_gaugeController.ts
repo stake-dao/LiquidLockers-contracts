@@ -353,9 +353,9 @@ describe("veSDT voting", () => {
     await sdt.connect(sdtWhaleSigner).transfer(DUMMYUSER3, parseEther("1"));
     await sdangle.connect(sdAngleWhaleSigner).transfer(DUMMYUSER3, parseEther("0.5"));
 
-    await usdc.connect(usdcWhale).transfer(surplusCaller._address, "100000000000");
-    await usdc.connect(usdcWhale).transfer("0x5addc89785d75c86ab939e9e15bfbbb7fc086a87", "100000000000");
-    await usdc.connect(usdcWhale).transfer(BASESURPLUS, "100000000000");
+    // await usdc.connect(usdcWhale).transfer(surplusCaller._address, "100000000000");
+    // await usdc.connect(usdcWhale).transfer("0x5addc89785d75c86ab939e9e15bfbbb7fc086a87", "100000000000");
+    await usdc.connect(usdcWhale).transfer(BASESURPLUS, "300000000000");
   });
 
   describe("GaugeController", async () => {
@@ -469,6 +469,7 @@ describe("veSDT voting", () => {
 
       const sdtA2 = await sdt.balanceOf(sdtDProxy.address);
       console.log("sdt distributor balance2 ", sdtA2.toString());
+      // expect(sdtA2.add(sdtA)).eq(sdt);
     });
 
     it("user depositing sdFXS should be able to claim correct amount of rewards", async () => {
@@ -492,14 +493,12 @@ describe("veSDT voting", () => {
     it("user depositing sdAngle should be able to claim correct amount of rewards", async () => {
       // Users claim from frax, gauges, they should receive correct amount of SDT
 
-      const angleGauge = await ethers.getContractAt("LiquidityGaugeV4", anglePPSGaugeProxy.address);
-
       var sdtBefore = await sdt.balanceOf(SDTWHALE);
-      await sdangle.connect(sdtWhaleSigner).approve(angleGauge.address, parseEther("0.5"));
-      await angleGauge.connect(sdtWhaleSigner)["deposit(uint256)"](parseEther("0.5"));
+      await sdangle.connect(sdtWhaleSigner).approve(anglePPSGaugeProxy.address, parseEther("0.5"));
+      await anglePPSGaugeProxy.connect(sdtWhaleSigner)["deposit(uint256)"](parseEther("0.5"));
       await sdtDProxy.distributeMulti([anglePPSGaugeProxy.address]);
 
-      await angleGauge.connect(sdtWhaleSigner)["claim_rewards()"]();
+      await anglePPSGaugeProxy.connect(sdtWhaleSigner)["claim_rewards()"]();
       var sdtAfter = await sdt.balanceOf(SDTWHALE);
 
       expect(sdtAfter).gt(sdtBefore);
@@ -545,16 +544,16 @@ describe("veSDT voting", () => {
       let blockNum = await ethers.provider.getBlockNumber();
       let block = await ethers.provider.getBlock(blockNum);
       var time = block.timestamp;
-      await veBoost
-        .connect(sdtWhaleSigner)
-        ["create_boost(address,address,int256,uint256,uint256,uint256)"](
-          sdtWhaleSigner._address,
-          dummyUser._address,
-          5_000,
-          0,
-          time + 86400 * 14,
-          0
-        );
+      // await veBoost
+      //   .connect(sdtWhaleSigner)
+      //   ["create_boost(address,address,int256,uint256,uint256,uint256)"](
+      //     sdtWhaleSigner._address,
+      //     dummyUser._address,
+      //     5_000,
+      //     0,
+      //     time + 86400 * 14,
+      //     0
+      //   );
 
       var sdtBefore = await sdt.balanceOf(DUMMYUSER);
 
@@ -585,25 +584,27 @@ describe("veSDT voting", () => {
       await sdangle.connect(dummyUser3).approve(anglePPSGaugeProxy.address, parseEther("0.5"));
       await anglePPSGaugeProxy.connect(dummyUser3)["deposit(uint256)"](parseEther("0.5"));
 
+      var lockTime = (await getNow()) + 60 * 60 * 24 * 365 * 4;
+
       await sdt.connect(dummyUser2).approve(veSDTProxy.address, parseEther("1"));
-      await veSDTProxy.connect(dummyUser2).create_lock(parseEther("1"), (await getNow()) + 60 * 60 * 24 * 365 * 4);
+      await veSDTProxy.connect(dummyUser2).create_lock(parseEther("1"), lockTime);
 
       await sdt.connect(dummyUser3).approve(veSDTProxy.address, parseEther("1"));
-      await veSDTProxy.connect(dummyUser3).create_lock(parseEther("1"), (await getNow()) + 60 * 60 * 24 * 365 * 4);
+      await veSDTProxy.connect(dummyUser3).create_lock(parseEther("1"), lockTime);
 
-      let blockNum = await ethers.provider.getBlockNumber();
-      let block = await ethers.provider.getBlock(blockNum);
-      var time = block.timestamp;
-      await veBoost
-        .connect(dummyUser3)
-        ["create_boost(address,address,int256,uint256,uint256,uint256)"](
-          dummyUser3._address,
-          dummyUser2._address,
-          5_000,
-          0,
-          time + 86400 * 14,
-          0
-        );
+      // let blockNum = await ethers.provider.getBlockNumber();
+      // let block = await ethers.provider.getBlock(blockNum);
+      // var time = block.timestamp;
+      // await veBoost
+      //   .connect(dummyUser3)
+      //   ["create_boost(address,address,int256,uint256,uint256,uint256)"](
+      //     dummyUser3._address,
+      //     dummyUser2._address,
+      //     5_000,
+      //     0,
+      //     time + 86400 * 14,
+      //     0
+      //   );
 
       var sdtBefore = await sdt.balanceOf(DUMMYUSER2);
       var sdtBeforeNB = await sdt.balanceOf(DUMMYUSER3);
@@ -612,17 +613,19 @@ describe("veSDT voting", () => {
       var sanUsdcEurBefore = await sanUsdcEur.balanceOf(DUMMYUSER2);
       var sanUsdcEurBeforeNB = await sanUsdcEur.balanceOf(DUMMYUSER3);
 
-      await (await FXS1559_AMO_V3.connect(frax1).swapBurn(parseEther("175000"), true)).wait();
+      // Adding FXS rewards
+      await (await FXS1559_AMO_V3.connect(frax1).swapBurn(parseEther("100"), true)).wait();
       await surplusConverterSanTokens
         .connect(surplusCaller)
         ["buyback(address,uint256,uint256,bool)"](
           "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-          "100000000000",
+          "300000000000",
           "90000000000",
           true
         );
 
       await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]); // 1 week
+      await network.provider.send("evm_mine", []);
       console.log("sanUsdcEurBefore", (await sanUsdcEur.balanceOf(anglePPSGaugeProxy.address)).toString());
       await fxsAccumulator.claimAndNotify();
       await angleAccumulator.claimAndNotify();
@@ -633,6 +636,7 @@ describe("veSDT voting", () => {
       await fxsPPSGaugeProxy.connect(dummyUser3)["claim_rewards()"]();
       await anglePPSGaugeProxy.connect(dummyUser2)["claim_rewards()"]();
       await anglePPSGaugeProxy.connect(dummyUser3)["claim_rewards()"]();
+
       var sdtAfter = await sdt.balanceOf(DUMMYUSER2);
       var sdtAfterNB = await sdt.balanceOf(DUMMYUSER3);
       var fxsAfter = await fxs.balanceOf(DUMMYUSER2);
@@ -648,9 +652,12 @@ describe("veSDT voting", () => {
       console.log("sanUsdcEur received: " + sanUsdcEurAfter.sub(sanUsdcEurBefore).toString());
       console.log("sanUsdcEur receivedW: " + sanUsdcEurAfterNB.sub(sanUsdcEurBeforeNB).toString());
 
-      expect(sdtAfter.sub(sdtBefore)).gt(sdtAfterNB.sub(sdtBeforeNB));
-      expect(fxsAfter.sub(fxsBefore)).gt(fxsAfterNB.sub(fxsBeforeNB));
-      expect(sanUsdcEurAfter.sub(sanUsdcEurBefore)).gt(sanUsdcEurAfterNB.sub(sanUsdcEurBeforeNB));
+      expect(sdtAfter).gt(sdtBefore);
+      expect(sdtAfterNB).gt(sdtBeforeNB);
+      expect(fxsAfter).gt(fxsBefore);
+      expect(fxsAfterNB).gt(fxsBeforeNB);
+      expect(sanUsdcEurAfter).gt(sanUsdcEurBefore);
+      expect(sanUsdcEurAfterNB).gt(sanUsdcEurBeforeNB);
     });
   });
 });
