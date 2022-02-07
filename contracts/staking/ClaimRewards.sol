@@ -9,23 +9,35 @@ import "hardhat/console.sol";
 
 // Claim rewards contract:
 // 1) Users can claim rewards from pps gauge and directly receive all tokens collected.
-// 2) Users can choose to direcly lock tokens supported by lockers (FXS, ANGLE) and receive the other not supported.
+// 2) Users can choose to direcly lock tokens supported by lockers (FXS, ANGLE) and receive the others not supported.
+// 3) Users can choose to direcly lock tokens supported by lockers (FXS, ANGLE) and stake sdToken into the gauge, then receives the others not supported.
 contract ClaimRewards {
 	using SafeERC20 for IERC20;
-	address constant SDT = 0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F;
+	address constant public SDT = 0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F;
 	address public governance;
 
 	mapping(address => address) public depositors;
+	mapping(address => uint256) public depositorsIndex;
+	mapping(address => bool) public gauges;
 
 	struct LockStatus {
 		bool[] locked;
-		address[] tokens;
+		bool[] staked;
+		bool lockSDT;
 	}
 
+	uint256 public depositorsCount;
+
+	uint256 private immutable MAX_REWARDS = 8;
+
+	event GaugeEnabled(address gauge);
+	event GaugeDisabled(address gauge);
+	event DepositorEnabled(address token, address depositor);
+	event DepositorDisabled(address token, address depositor);
 	event Recovered(address token, uint256 amount);
-	event RewardsClaimed(address[] _gauges);
-	event RewardClaimedAndLocked(address[] _gauges, LockStatus[] _locks, address[] _extraTokens);
-	event RewardClaimedAndSent(address _user, address[] _gauges);
+	event RewardsClaimed(address claimer, address[] gauges);
+	event RewardClaimedAndLocked(address[] gauges, bool locks, bool stake);
+	event RewardClaimedAndSent(address user, address[] gauges);
 
 	constructor() 	{
 		governance = msg.sender;
@@ -42,52 +54,64 @@ contract ClaimRewards {
 		for (uint256 index = 0; index < _gauges.length; index++) {
 			ILiquidityGauge(_gauges[index]).claim_rewards_for(msg.sender, msg.sender);
 		}
-		emit RewardsClaimed(_gauges);
+		emit RewardsClaimed(msg.sender, _gauges);
 	}
 
-	/// @notice A function that allows the user to claim and lock the token of choice
+	/// @notice A function that allows the user to claim, lock and stake tokens retrieved from gauges
 	/// @param _gauges Gauges from which rewards are to be claimed
-	/// @param _locks Status of locks for each reward token for each gauge
-	/// @param _extraTokens Tokens other than FXS & SDT being received as a reward
+	/// @param _lockStatus Status of locks for each reward token suppported by depositors and for SDT
 	function claimAndLock(
-		address[] calldata _gauges,
-		LockStatus[] calldata _locks,
-		address[] calldata _extraTokens
+		address[]  memory _gauges,
+		LockStatus memory _lockStatus
 	) public {
-		require(_gauges.length == _locks.length, "gauges & locks count diff");
+		LockStatus memory lockStatus = _lockStatus;
+		require(lockStatus.locked.length == lockStatus.staked.length, "different length");
+		require(lockStatus.locked.length == depositorsCount, "different length");
 
-		uint256 balance = IERC20(SDT).balanceOf(msg.sender);
-
-		// Claim not locked to the user & the locked to contract & user(SDT)
+		// Claim rewards token from gauges
 		for (uint256 index = 0; index < _gauges.length; index++) {
-			ILiquidityGauge(_gauges[index]).claim_rewards_for(msg.sender, address(this));
-		}
-
-		// Lock the SDT to the veSDT if any
-		balance = IERC20(SDT).balanceOf(address(this));
-		if (balance > 0) {
-			IERC20(SDT).approve(depositors[SDT], balance);
-			IVeSDT(depositors[SDT]).deposit_for_from(msg.sender, balance);
-		}
-
-		// If depositor is present, deposit it else send it to the user
-		for (uint256 index = 0; index < _extraTokens.length; index++) {
-			balance = IERC20(_extraTokens[index]).balanceOf(address(this));
-			if (balance > 0) {
-				address depositor = depositors[_extraTokens[index]];
-				if (depositor != address(0)) {
-					IERC20(_extraTokens[index]).approve(depositors[_extraTokens[index]], balance);
-					IDepositor(depositors[_extraTokens[index]]).deposit(balance, false);
-					address sdToken = IDepositor(depositors[_extraTokens[index]]).minter();
-					uint256 sdTokenBalance = IERC20(sdToken).balanceOf(address(this)); 
-					IERC20(sdToken).safeTransfer(msg.sender, sdTokenBalance);
-				} else {
-					IERC20(_extraTokens[index]).safeTransfer(msg.sender, balance);
+			address gauge = _gauges[index];
+			require(gauges[gauge], "Gauge not enabled");
+			ILiquidityGauge(gauge).claim_rewards_for(msg.sender, address(this));
+			// skip the first reward token, it is SDT for any LGV4
+			// it loops at ost until max rewards hardcoded on LGV4
+			for (uint256 i = 1; i < MAX_REWARDS; i++) {
+				address token = ILiquidityGauge(gauge).reward_tokens(i);
+				if(token == address(0)) {
+					break;
+				}
+				address depositor = depositors[token];
+				uint256 balance = IERC20(token).balanceOf(address(this));
+				if(balance > 0) {
+					if (depositor != address(0) && lockStatus.locked[depositorsIndex[token]]) {
+						IERC20(token).approve(depositor, balance);
+						IDepositor(depositor).deposit(balance, false);
+						address sdToken = IDepositor(depositor).minter();
+						uint256 sdTokenBalance = IERC20(sdToken).balanceOf(address(this)); 
+						if (lockStatus.staked[depositorsIndex[token]]) {
+							ILiquidityGauge(gauge).deposit(sdTokenBalance, msg.sender);
+						} else {
+							IERC20(sdToken).safeTransfer(msg.sender, sdTokenBalance);
+						}
+					} else {
+						IERC20(token).safeTransfer(msg.sender, balance);
+					}
 				}
 			}
 		}
 
-		emit RewardClaimedAndLocked(_gauges, _locks, _extraTokens);
+		// Lock SDT for veSDT or send to the user if any
+		uint256 balanceBefore = IERC20(SDT).balanceOf(address(this));
+		if (balanceBefore > 0) {
+			if (lockStatus.lockSDT) {
+				IERC20(SDT).approve(depositors[SDT], balanceBefore);
+				IVeSDT(depositors[SDT]).deposit_for_from(msg.sender, balanceBefore);
+			} else {
+				IERC20(SDT).safeTransfer(msg.sender, balanceBefore);
+			}
+			require(IERC20(SDT).balanceOf(address(this)) == 0, "wrong amount sent");
+		}
+		//emit RewardClaimedAndLocked(_gauges, _lock, _stake);
 	}
 
 	/// @notice A function that recover any ERC20 token
@@ -99,20 +123,44 @@ contract ClaimRewards {
 		uint256 _amount,
 		address _recipient
 	) external onlyGovernance {
+		require(_recipient != address(0), "can't be zero address");
 		IERC20(_token).safeTransfer(_recipient, _amount);
 		emit Recovered(_token, _amount);
 	}
 
-	/// @notice A function that set a depositor for a specific token
+	/// @notice A function that enable a gauge
+	/// @param _gauge gauge address to enable
+	function enableGauge(address _gauge) external onlyGovernance {
+		require(_gauge != address(0), "can't be zero address");
+		require(gauges[_gauge] == false, "already enabled");
+		emit GaugeEnabled(_gauge);
+	}
+
+	/// @notice A function that disable a gauge
+	/// @param _gauge gauge address to disable
+	function disableGauge(address _gauge) external onlyGovernance {
+		require(_gauge != address(0), "can't be zero address");
+		require(gauges[_gauge], "already disabled");
+		emit GaugeDisabled(_gauge);
+	}
+
+	/// @notice A function that add a new depositor for a specific token
 	/// @param _token token address  
 	/// @param _depositor depositor address 
-	function setDepositor(address _token, address _depositor) public onlyGovernance {
+	function addDepositor(address _token, address _depositor) public onlyGovernance {
+		require(_token != address(0), "can't be zero address");
+		require(_depositor != address(0), "can't be zero address");
+		require(depositors[_token] == address(0), "already added");
 		depositors[_token] = _depositor;
+		depositorsIndex[_depositor] = depositorsCount;
+		depositorsCount++;
+		emit DepositorEnabled(_token, _depositor);
 	}
 
 	/// @notice A function that set the governance address 
 	/// @param _governance governance address  
 	function setGovernance(address _governance) public onlyGovernance {
+		require(_governance != address(0), "can't be zero address");
 		governance = _governance;
 	}
 }
