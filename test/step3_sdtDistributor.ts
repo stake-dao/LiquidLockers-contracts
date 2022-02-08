@@ -43,7 +43,7 @@ const getNow = async function () {
   return time;
 };
 
-describe("veSDT voting", () => {
+describe("Sdt Distributor - SDT distribution related tests", () => {
   let sdt: Contract;
   let sdfxs: Contract;
   let sdangle: Contract;

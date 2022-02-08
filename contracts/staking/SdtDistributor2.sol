@@ -246,4 +246,20 @@ contract SdtDistributor2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable
 	function setTimePeriod(uint256 _timePeriod) external onlyRole(GOVERNOR_ROLE) {
 		timePeriod = _timePeriod;
 	}
+
+	/// @notice Withdraws ERC20 tokens that could accrue on this contract
+	/// @param tokenAddress Address of the ERC20 token to withdraw
+	/// @param to Address to transfer to
+	/// @param amount Amount to transfer
+	/// @dev Added to support recovering LP Rewards and other mistaken tokens
+	/// from other systems to be distributed to holders
+	/// @dev This function could also be used to recover SDT tokens in case the rate got smaller
+	function recoverERC20(
+		address tokenAddress,
+		address to,
+		uint256 amount
+	) external onlyRole(GOVERNOR_ROLE) {
+		IERC20(tokenAddress).safeTransfer(to, amount);
+		emit Recovered(tokenAddress, to, amount);
+	}
 }
