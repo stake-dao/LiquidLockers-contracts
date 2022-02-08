@@ -232,8 +232,8 @@ describe("veSDT voting", () => {
     // Deploy
     gc = await GaugeController.connect(deployer).deploy(sdt.address, veSDTProxy.address, deployer.address);
     proxyAdmin = await ProxyAdmin.deploy();
-    fxsAccumulator = await FxsAccumulator.deploy();
-    angleAccumulator = await AngleAccumulator.deploy();
+    fxsAccumulator = await FxsAccumulator.deploy(fxs.address);
+    angleAccumulator = await AngleAccumulator.deploy(sanUsdcEur.address);
 
     // set lockers into accumulators
     await fxsAccumulator.setLocker(fxsLocker.address);
