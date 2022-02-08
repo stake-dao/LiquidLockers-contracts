@@ -590,6 +590,12 @@ def set_reward_distributor(_reward_token: address, _distributor: address):
 
     self.reward_data[_reward_token].distributor = _distributor
 
+@external
+def set_claimer(_claimer: address):
+    assert msg.sender == self.admin
+    assert _claimer != ZERO_ADDRESS
+
+    self.claimer = _claimer
 
 @external
 @nonreentrant("lock")

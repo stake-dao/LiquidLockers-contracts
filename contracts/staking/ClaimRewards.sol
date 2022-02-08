@@ -14,6 +14,7 @@ import "hardhat/console.sol";
 contract ClaimRewards {
 	using SafeERC20 for IERC20;
 	address constant public SDT = 0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F;
+	address constant public veSDT = 0x0C30476f66034E11782938DF8e4384970B6c9e8a;
 	address public governance;
 
 	mapping(address => address) public depositors;
@@ -52,6 +53,7 @@ contract ClaimRewards {
 	/// @param _gauges Gauges from which rewards are to be claimed
 	function claimRewards(address[] calldata _gauges) public {
 		for (uint256 index = 0; index < _gauges.length; index++) {
+			require(gauges[_gauges[index]], "Gauge not enabled");
 			ILiquidityGauge(_gauges[index]).claim_rewards_for(msg.sender, msg.sender);
 		}
 		emit RewardsClaimed(msg.sender, _gauges);
@@ -66,7 +68,7 @@ contract ClaimRewards {
 	) public {
 		LockStatus memory lockStatus = _lockStatus;
 		require(lockStatus.locked.length == lockStatus.staked.length, "different length");
-		require(lockStatus.locked.length == depositorsCount, "different length");
+		require(lockStatus.locked.length == depositorsCount, "different depositors length");
 
 		// Claim rewards token from gauges
 		for (uint256 index = 0; index < _gauges.length; index++) {
@@ -74,7 +76,7 @@ contract ClaimRewards {
 			require(gauges[gauge], "Gauge not enabled");
 			ILiquidityGauge(gauge).claim_rewards_for(msg.sender, address(this));
 			// skip the first reward token, it is SDT for any LGV4
-			// it loops at ost until max rewards hardcoded on LGV4
+			// it loops at most until max rewards, it is hardcoded on LGV4
 			for (uint256 i = 1; i < MAX_REWARDS; i++) {
 				address token = ILiquidityGauge(gauge).reward_tokens(i);
 				if(token == address(0)) {
@@ -89,13 +91,18 @@ contract ClaimRewards {
 						address sdToken = IDepositor(depositor).minter();
 						uint256 sdTokenBalance = IERC20(sdToken).balanceOf(address(this)); 
 						if (lockStatus.staked[depositorsIndex[token]]) {
+							IERC20(sdToken).approve(gauge, sdTokenBalance);
 							ILiquidityGauge(gauge).deposit(sdTokenBalance, msg.sender);
 						} else {
 							IERC20(sdToken).safeTransfer(msg.sender, sdTokenBalance);
 						}
+						uint256 sdTokenBalanceLeft = IERC20(sdToken).balanceOf(address(this)); 
+						require(sdTokenBalanceLeft == 0, "wrong amount sent");
 					} else {
 						IERC20(token).safeTransfer(msg.sender, balance);
 					}
+					uint256 balanceLeft = IERC20(token).balanceOf(address(this));
+					require(balanceLeft == 0, "wrong amount sent");
 				}
 			}
 		}
@@ -104,8 +111,8 @@ contract ClaimRewards {
 		uint256 balanceBefore = IERC20(SDT).balanceOf(address(this));
 		if (balanceBefore > 0) {
 			if (lockStatus.lockSDT) {
-				IERC20(SDT).approve(depositors[SDT], balanceBefore);
-				IVeSDT(depositors[SDT]).deposit_for_from(msg.sender, balanceBefore);
+				IERC20(SDT).approve(veSDT, balanceBefore);
+				IVeSDT(veSDT).deposit_for_from(msg.sender, balanceBefore);
 			} else {
 				IERC20(SDT).safeTransfer(msg.sender, balanceBefore);
 			}
@@ -114,11 +121,11 @@ contract ClaimRewards {
 		//emit RewardClaimedAndLocked(_gauges, _lock, _stake);
 	}
 
-	/// @notice A function that recover any ERC20 token
+	/// @notice A function that rescue any ERC20 token
 	/// @param _token token address 
 	/// @param _amount amount to rescue
 	/// @param _recipient address to send token rescued
-	function recoverERC20(
+	function rescueERC20(
 		address _token,
 		uint256 _amount,
 		address _recipient
@@ -133,6 +140,7 @@ contract ClaimRewards {
 	function enableGauge(address _gauge) external onlyGovernance {
 		require(_gauge != address(0), "can't be zero address");
 		require(gauges[_gauge] == false, "already enabled");
+		gauges[_gauge] = true;
 		emit GaugeEnabled(_gauge);
 	}
 
@@ -141,6 +149,7 @@ contract ClaimRewards {
 	function disableGauge(address _gauge) external onlyGovernance {
 		require(_gauge != address(0), "can't be zero address");
 		require(gauges[_gauge], "already disabled");
+		gauges[_gauge] = false;
 		emit GaugeDisabled(_gauge);
 	}
 
