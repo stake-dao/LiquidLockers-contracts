@@ -221,7 +221,7 @@ describe("veSDT voting", () => {
 
     const GaugeController = await ethers.getContractFactory("GaugeController");
     const LiquidityGaugeV4 = await ethers.getContractFactory("LiquidityGaugeV4");
-    const SdtDistributor = await ethers.getContractFactory("SdtDistributor2");
+    const SdtDistributor = await ethers.getContractFactory("SdtDistributor");
     const ProxyAdmin = await ethers.getContractFactory("ProxyAdmin");
     const Proxy = await ethers.getContractFactory("TransparentUpgradeableProxy");
     const VeBoost = await ethers.getContractFactory("veBoost");
@@ -269,7 +269,7 @@ describe("veSDT voting", () => {
     ]);
 
     sdtDProxy = await Proxy.connect(deployer).deploy(sdtDistributor.address, proxyAdmin.address, dataSdtD);
-    sdtDProxy = await ethers.getContractAt("SdtDistributor2", sdtDProxy.address);
+    sdtDProxy = await ethers.getContractAt("SdtDistributor", sdtDProxy.address);
 
     let ABI_LGV4 = [
       "function initialize(address _staking_token, address _admin, address _SDT, address _voting_escrow, address _veBoost_proxy, address _distributor)"
