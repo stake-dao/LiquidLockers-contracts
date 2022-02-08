@@ -80,6 +80,17 @@ describe("Sdt Distributor - SDT distribution related tests", () => {
   before(async function () {
     this.enableTimeouts(false);
 
+    await network.provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: process.env.MAINNET,
+            blockNumber: 14133625
+          }
+        }
+      ]
+    });
     [deployer] = await ethers.getSigners();
 
     sdt = await ethers.getContractAt(ERC20, SDT);
@@ -349,21 +360,20 @@ describe("Sdt Distributor - SDT distribution related tests", () => {
     expect(fxsGRWA).to.be.lt(parseEther("0.2")); // 20%
   });
 
-  describe("Accumulator", async () => {
-    it("should claim rewards from the fxs locker", async function () {
-      this.enableTimeouts(false);
-      await fxsAccumulator.claimAndNotify();
-      const rewardBalance = await fxs.balanceOf(fxsPPSGaugeProxy.address);
-      expect(rewardBalance).to.be.gt(0);
-    });
-
-    it("should claim rewards from the angle locker", async function () {
-      this.enableTimeouts(false);
-      await angleAccumulator.claimAndNotify();
-      const rewardBalance = await sanUsdcEur.balanceOf(anglePPSGaugeProxy.address);
-      expect(rewardBalance).to.be.gt(0);
-    });
+  it("should claim rewards from the fxs locker", async function () {
+    this.enableTimeouts(false);
+    await fxsAccumulator.claimAndNotify();
+    const rewardBalance = await fxs.balanceOf(fxsPPSGaugeProxy.address);
+    expect(rewardBalance).to.be.gt(0);
   });
+
+  it("should claim rewards from the angle locker", async function () {
+    this.enableTimeouts(false);
+    await angleAccumulator.claimAndNotify();
+    const rewardBalance = await sanUsdcEur.balanceOf(anglePPSGaugeProxy.address);
+    expect(rewardBalance).to.be.gt(0);
+  });
+
   it("it should not able to addGauge when not governor", async function () {
     const tx = await sdtDProxy
       .connect(sdtWhaleSigner)
@@ -468,6 +478,19 @@ describe("Sdt Distributor - SDT distribution related tests", () => {
     expect(tx.events.filter((_: any) => _.event === "RewardDistributed")[1].args.gaugeAddr).to.be.eq(
       anglePPSGaugeProxy.address
     );
+  });
+
+  it("it should be able to change distribution period of the sdt", async () => {
+    await sdtDProxy.setTimePeriod(60 * 60 * 24 * 7); // set new distribution period to 1 week
+    await network.provider.send("evm_increaseTime", [60 * 60 * 24]); // 1 day
+    await network.provider.send("evm_mine", []);
+    const tx = await (await sdtDProxy.distributeMulti([dummyUser3._address, anglePPSGaugeProxy.address])).wait();
+    expect(tx.events.filter((_: any) => _.event === "RewardDistributed").length).to.be.eq(0); // it should not distribute any rewards since new distribution period is 1 week
+  });
+
+  it("it should not distribute rewards if gauge is not set on gaugecontroller", async () => {
+    const tx = await sdtDProxy.distributeMulti([dummyUser2._address]).catch((e: any) => e);
+    expect(tx.message).not.be.empty;
   });
 });
 
