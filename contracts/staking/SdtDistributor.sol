@@ -2,12 +2,7 @@
 
 pragma solidity 0.8.7;
 
-import "../external/AccessControlUpgradeable.sol";
-
-import "../interfaces/IMasterchef.sol";
-import "../interfaces/IGaugeController.sol";
 import "./SdtDistributorEvents.sol";
-import "./MasterchefMasterToken.sol";
 import "hardhat/console.sol";
 
 contract SdtDistributor is ReentrancyGuardUpgradeable, AccessControlUpgradeable, SdtDistributorEvents {

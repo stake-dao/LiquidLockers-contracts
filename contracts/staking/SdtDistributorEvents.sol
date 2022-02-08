@@ -11,6 +11,9 @@ import "../interfaces/ILiquidityGauge.sol";
 import "../interfaces/ISdtMiddlemanGauge.sol";
 import "../interfaces/IStakingRewards.sol";
 
+import "../interfaces/IMasterchef.sol";
+import "./MasterchefMasterToken.sol";
+
 import "../external/AccessControlUpgradeable.sol";
 
 /// @title SdtDistributorEvents
