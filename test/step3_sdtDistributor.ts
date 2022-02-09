@@ -57,7 +57,7 @@ describe("Sdt Distributor - SDT distribution related tests", () => {
   let sww: Contract;
   let sdtDistributor: Contract;
   let sdtDProxy: Contract;
-  let veBoost: Contract;
+  //let veBoost: Contract;
   let veBoostProxy: Contract;
   let masterchef: Contract;
   let fxsAccumulator: Contract;
@@ -177,7 +177,7 @@ describe("Sdt Distributor - SDT distribution related tests", () => {
     const SdtDistributor = await ethers.getContractFactory("SdtDistributor");
     const ProxyAdmin = await ethers.getContractFactory("ProxyAdmin");
     const Proxy = await ethers.getContractFactory("TransparentUpgradeableProxy");
-    const VeBoost = await ethers.getContractFactory("veBoost");
+    //const VeBoost = await ethers.getContractFactory("veBoost");
     const VeBoostProxy = await ethers.getContractFactory("veBoostProxy");
     const FxsAccumulator = await ethers.getContractFactory("FxsAccumulator");
     const AngleAccumulator = await ethers.getContractFactory("AngleAccumulator");
@@ -206,7 +206,7 @@ describe("Sdt Distributor - SDT distribution related tests", () => {
       "0x0000000000000000000000000000000000000000",
       deployer.address
     );
-    veBoost = await VeBoost.deploy(deployer.address, veSDTProxy.address, "veboost delegation", "veBoost", "ipfs://");
+    //veBoost = await VeBoost.deploy(deployer.address, veSDTProxy.address, "veboost delegation", "veBoost", "ipfs://");
 
     let ABI_SDTD = [
       "function initialize(address _rewardToken, address _controller, address _masterchef, address governor, address guardian, address _delegate_gauge)"
@@ -362,14 +362,14 @@ describe("Sdt Distributor - SDT distribution related tests", () => {
 
   it("should claim rewards from the fxs locker", async function () {
     this.enableTimeouts(false);
-    await fxsAccumulator.claimAndNotify();
+    await fxsAccumulator.claimAndNotifyAll();
     const rewardBalance = await fxs.balanceOf(fxsPPSGaugeProxy.address);
     expect(rewardBalance).to.be.gt(0);
   });
 
   it("should claim rewards from the angle locker", async function () {
     this.enableTimeouts(false);
-    await angleAccumulator.claimAndNotify();
+    await angleAccumulator.claimAndNotifyAll();
     const rewardBalance = await sanUsdcEur.balanceOf(anglePPSGaugeProxy.address);
     expect(rewardBalance).to.be.gt(0);
   });

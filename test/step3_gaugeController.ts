@@ -224,7 +224,7 @@ describe("veSDT voting", () => {
     const SdtDistributor = await ethers.getContractFactory("SdtDistributor");
     const ProxyAdmin = await ethers.getContractFactory("ProxyAdmin");
     const Proxy = await ethers.getContractFactory("TransparentUpgradeableProxy");
-    const VeBoost = await ethers.getContractFactory("veBoost");
+    //const VeBoost = await ethers.getContractFactory("veBoost");
     const VeBoostProxy = await ethers.getContractFactory("veBoostProxy");
     const FxsAccumulator = await ethers.getContractFactory("FxsAccumulator");
     const AngleAccumulator = await ethers.getContractFactory("AngleAccumulator");
@@ -253,7 +253,7 @@ describe("veSDT voting", () => {
       "0x0000000000000000000000000000000000000000",
       deployer.address
     );
-    veBoost = await VeBoost.deploy(deployer.address, veSDTProxy.address, "veboost delegation", "veBoost", "ipfs://");
+    //veBoost = await VeBoost.deploy(deployer.address, veSDTProxy.address, "veboost delegation", "veBoost", "ipfs://");
 
     let ABI_SDTD = [
       "function initialize(address _rewardToken, address _controller, address _masterchef, address governor, address guardian, address _delegate_gauge)"
@@ -417,14 +417,14 @@ describe("veSDT voting", () => {
   describe("Accumulator", async () => {
     it("should claim rewards from the fxs locker", async function () {
       this.enableTimeouts(false);
-      await fxsAccumulator.claimAndNotify();
+      await fxsAccumulator.claimAndNotifyAll();
       const rewardBalance = await fxs.balanceOf(fxsPPSGaugeProxy.address);
       expect(rewardBalance).to.be.gt(0);
     });
 
     it("should claim rewards from the angle locker", async function () {
       this.enableTimeouts(false);
-      await angleAccumulator.claimAndNotify();
+      await angleAccumulator.claimAndNotifyAll();
       const rewardBalance = await sanUsdcEur.balanceOf(anglePPSGaugeProxy.address);
       expect(rewardBalance).to.be.gt(0);
     });
@@ -584,87 +584,87 @@ describe("veSDT voting", () => {
       expect(sdtAfter).gt(sdtBefore);
     });
 
-    it("Boosted user receives more SDT compared to non-boosted", async function () {
-      this.enableTimeouts(false);
+    // it("Boosted user receives more SDT compared to non-boosted", async function () {
+    //   this.enableTimeouts(false);
 
-      await sdfxs.connect(dummyUser2).approve(fxsPPSGaugeProxy.address, parseEther("1"));
-      await fxsPPSGaugeProxy.connect(dummyUser2)["deposit(uint256)"](parseEther("1"));
-      await sdfxs.connect(dummyUser3).approve(fxsPPSGaugeProxy.address, parseEther("1"));
-      await fxsPPSGaugeProxy.connect(dummyUser3)["deposit(uint256)"](parseEther("1"));
-      await sdangle.connect(dummyUser2).approve(anglePPSGaugeProxy.address, parseEther("0.5"));
-      await anglePPSGaugeProxy.connect(dummyUser2)["deposit(uint256)"](parseEther("0.5"));
-      await sdangle.connect(dummyUser3).approve(anglePPSGaugeProxy.address, parseEther("0.5"));
-      await anglePPSGaugeProxy.connect(dummyUser3)["deposit(uint256)"](parseEther("0.5"));
+    //   await sdfxs.connect(dummyUser2).approve(fxsPPSGaugeProxy.address, parseEther("1"));
+    //   await fxsPPSGaugeProxy.connect(dummyUser2)["deposit(uint256)"](parseEther("1"));
+    //   await sdfxs.connect(dummyUser3).approve(fxsPPSGaugeProxy.address, parseEther("1"));
+    //   await fxsPPSGaugeProxy.connect(dummyUser3)["deposit(uint256)"](parseEther("1"));
+    //   await sdangle.connect(dummyUser2).approve(anglePPSGaugeProxy.address, parseEther("0.5"));
+    //   await anglePPSGaugeProxy.connect(dummyUser2)["deposit(uint256)"](parseEther("0.5"));
+    //   await sdangle.connect(dummyUser3).approve(anglePPSGaugeProxy.address, parseEther("0.5"));
+    //   await anglePPSGaugeProxy.connect(dummyUser3)["deposit(uint256)"](parseEther("0.5"));
 
-      var lockTime = (await getNow()) + 60 * 60 * 24 * 365 * 4;
+    //   var lockTime = (await getNow()) + 60 * 60 * 24 * 365 * 4;
 
-      await sdt.connect(dummyUser2).approve(veSDTProxy.address, parseEther("1"));
-      await veSDTProxy.connect(dummyUser2).create_lock(parseEther("1"), lockTime);
+    //   await sdt.connect(dummyUser2).approve(veSDTProxy.address, parseEther("1"));
+    //   await veSDTProxy.connect(dummyUser2).create_lock(parseEther("1"), lockTime);
 
-      await sdt.connect(dummyUser3).approve(veSDTProxy.address, parseEther("1"));
-      await veSDTProxy.connect(dummyUser3).create_lock(parseEther("1"), lockTime);
+    //   await sdt.connect(dummyUser3).approve(veSDTProxy.address, parseEther("1"));
+    //   await veSDTProxy.connect(dummyUser3).create_lock(parseEther("1"), lockTime);
 
-      let blockNum = await ethers.provider.getBlockNumber();
-      let block = await ethers.provider.getBlock(blockNum);
-      var time = block.timestamp;
-      await veBoost
-        .connect(dummyUser3)
-        ["create_boost(address,address,int256,uint256,uint256,uint256)"](
-          dummyUser3._address,
-          dummyUser2._address,
-          5_000,
-          0,
-          time + 86400 * 14,
-          0
-        );
+    //   let blockNum = await ethers.provider.getBlockNumber();
+    //   let block = await ethers.provider.getBlock(blockNum);
+    //   var time = block.timestamp;
+    //   await veBoost
+    //     .connect(dummyUser3)
+    //     ["create_boost(address,address,int256,uint256,uint256,uint256)"](
+    //       dummyUser3._address,
+    //       dummyUser2._address,
+    //       5_000,
+    //       0,
+    //       time + 86400 * 14,
+    //       0
+    //     );
 
-      var sdtBefore = await sdt.balanceOf(DUMMYUSER2);
-      var sdtBeforeNB = await sdt.balanceOf(DUMMYUSER3);
-      var fxsBefore = await fxs.balanceOf(DUMMYUSER2);
-      var fxsBeforeNB = await fxs.balanceOf(DUMMYUSER3);
-      var sanUsdcEurBefore = await sanUsdcEur.balanceOf(DUMMYUSER2);
-      var sanUsdcEurBeforeNB = await sanUsdcEur.balanceOf(DUMMYUSER3);
+    //   var sdtBefore = await sdt.balanceOf(DUMMYUSER2);
+    //   var sdtBeforeNB = await sdt.balanceOf(DUMMYUSER3);
+    //   var fxsBefore = await fxs.balanceOf(DUMMYUSER2);
+    //   var fxsBeforeNB = await fxs.balanceOf(DUMMYUSER3);
+    //   var sanUsdcEurBefore = await sanUsdcEur.balanceOf(DUMMYUSER2);
+    //   var sanUsdcEurBeforeNB = await sanUsdcEur.balanceOf(DUMMYUSER3);
 
-      // Adding FXS rewards
-      await (await FXS1559_AMO_V3.connect(frax1).swapBurn(parseEther("100"), true)).wait();
-      await surplusConverterSanTokens
-        .connect(surplusCaller)
-        ["buyback(address,uint256,uint256,bool)"](
-          "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-          "300000000000",
-          "90000000000",
-          true
-        );
+    //   // Adding FXS rewards
+    //   await (await FXS1559_AMO_V3.connect(frax1).swapBurn(parseEther("100"), true)).wait();
+    //   await surplusConverterSanTokens
+    //     .connect(surplusCaller)
+    //     ["buyback(address,uint256,uint256,bool)"](
+    //       "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    //       "300000000000",
+    //       "90000000000",
+    //       true
+    //     );
 
-      await sanUsdcEur.connect(sanUsdcEurWhale).transfer(angleAccumulator.address, "100000000");
+    //   await sanUsdcEur.connect(sanUsdcEurWhale).transfer(angleAccumulator.address, "100000000");
 
-      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]); // 1 week
-      await network.provider.send("evm_mine", []);
+    //   await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]); // 1 week
+    //   await network.provider.send("evm_mine", []);
 
-      await fxsAccumulator.claimAndNotify();
-      await angleAccumulator.claimAndNotify();
+    //   await fxsAccumulator.claimAndNotifyAll();
+    //   await angleAccumulator.claimAndNotifyAll();
 
-      await sdtDProxy.distributeMulti([fxsPPSGaugeProxy.address, anglePPSGaugeProxy.address]);
+    //   await sdtDProxy.distributeMulti([fxsPPSGaugeProxy.address, anglePPSGaugeProxy.address]);
 
-      await fxsPPSGaugeProxy.connect(dummyUser2)["claim_rewards()"]();
-      await fxsPPSGaugeProxy.connect(dummyUser3)["claim_rewards()"]();
-      await anglePPSGaugeProxy.connect(dummyUser2)["claim_rewards()"]();
-      await anglePPSGaugeProxy.connect(dummyUser3)["claim_rewards()"]();
+    //   await fxsPPSGaugeProxy.connect(dummyUser2)["claim_rewards()"]();
+    //   await fxsPPSGaugeProxy.connect(dummyUser3)["claim_rewards()"]();
+    //   await anglePPSGaugeProxy.connect(dummyUser2)["claim_rewards()"]();
+    //   await anglePPSGaugeProxy.connect(dummyUser3)["claim_rewards()"]();
 
-      var sdtAfter = await sdt.balanceOf(DUMMYUSER2);
-      var sdtAfterNB = await sdt.balanceOf(DUMMYUSER3);
-      var fxsAfter = await fxs.balanceOf(DUMMYUSER2);
-      var fxsAfterNB = await fxs.balanceOf(DUMMYUSER3);
-      var sanUsdcEurAfter = await sanUsdcEur.balanceOf(DUMMYUSER2);
-      var sanUsdcEurAfterNB = await sanUsdcEur.balanceOf(DUMMYUSER3);
+    //   var sdtAfter = await sdt.balanceOf(DUMMYUSER2);
+    //   var sdtAfterNB = await sdt.balanceOf(DUMMYUSER3);
+    //   var fxsAfter = await fxs.balanceOf(DUMMYUSER2);
+    //   var fxsAfterNB = await fxs.balanceOf(DUMMYUSER3);
+    //   var sanUsdcEurAfter = await sanUsdcEur.balanceOf(DUMMYUSER2);
+    //   var sanUsdcEurAfterNB = await sanUsdcEur.balanceOf(DUMMYUSER3);
 
-      expect(sdtAfter).gt(sdtBefore);
-      expect(sdtAfterNB).gt(sdtBeforeNB);
-      expect(fxsAfter).gt(fxsBefore);
-      expect(fxsAfterNB).gt(fxsBeforeNB);
-      expect(sanUsdcEurAfter).gt(sanUsdcEurBefore);
-      expect(sanUsdcEurAfterNB).gt(sanUsdcEurBeforeNB);
-    });
+    //   expect(sdtAfter).gt(sdtBefore);
+    //   expect(sdtAfterNB).gt(sdtBeforeNB);
+    //   expect(fxsAfter).gt(fxsBefore);
+    //   expect(fxsAfterNB).gt(fxsBeforeNB);
+    //   expect(sanUsdcEurAfter).gt(sanUsdcEurBefore);
+    //   expect(sanUsdcEurAfterNB).gt(sanUsdcEurBeforeNB);
+    // });
   });
 });
 

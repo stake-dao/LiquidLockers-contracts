@@ -4,10 +4,12 @@ pragma solidity 0.8.7;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/ILiquidityGauge.sol";
 import "../interfaces/ILocker.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title A contract that defines the functions shared by all accumulators 
 /// @author StakeDAO
 contract BaseAccumulator {
+    using SafeERC20 for IERC20;
     /* ========== STATE VARIABLES ========== */
     address public governance;
     address public locker;
@@ -20,6 +22,8 @@ contract BaseAccumulator {
     event LockerSet(address oldLocker, address newLocker);
     event GovernanceSet(address oldGov, address newGov);
     event TokenRewardSet(address oldTr, address newTr);
+    event TokenDeposited(address token, uint256 amount);
+    event ERC20Rescued(address token, uint256 amount);
 
     /* ========== CONSTRUCTOR ========== */
     constructor(address _tokenReward) {
@@ -29,22 +33,46 @@ contract BaseAccumulator {
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    /// @notice Notify the reward with an extra token
+    /// @notice Notify the reward using an extra token
     /// @param _tokenReward token address to notify
-    function notifyExtraReward(address _tokenReward) external {
+    /// @param _amount amount to notify
+    function notifyExtraReward(address _tokenReward, uint256 _amount) external {
         require(msg.sender == governance, "!gov");
-        _notifyReward(_tokenReward);
+        _notifyReward(_tokenReward, _amount);
+    }
+
+    /// @notice Notify the reward using all balance of extra token
+    /// @param _tokenReward token address to notify
+    function notifyAllExtraReward(address _tokenReward) external {
+        require(msg.sender == governance, "!gov");
+        uint256 amount = IERC20(_tokenReward).balanceOf(address(this));
+        _notifyReward(_tokenReward, amount);
     }
 
     /// @notice Notify the new reward to the LGV4
-    function _notifyReward(address _tokenReward) internal {
+    /// @param _tokenReward token to notify
+    /// @param _amount amount to notify
+    function _notifyReward(address _tokenReward, uint256 _amount) internal {
         require(gauge != address(0), "gauge not set");
+        require(_amount > 0, "set an amount > 0");
         uint256 balanceBefore = IERC20(_tokenReward).balanceOf(address(this));
-        IERC20(_tokenReward).approve(gauge, balanceBefore);
-        ILiquidityGauge(gauge).deposit_reward_token(_tokenReward, balanceBefore);
-        uint256 balanceAfter = IERC20(_tokenReward).balanceOf(address(this));
-        require(balanceAfter == 0, "balance !0");
-        emit RewardNotified(gauge, _tokenReward, balanceBefore);
+        require(balanceBefore >= _amount, "amount not enough");
+        if (ILiquidityGauge(gauge).reward_data(_tokenReward).distributor != address(0)) {
+            IERC20(_tokenReward).approve(gauge, _amount);
+            ILiquidityGauge(gauge).deposit_reward_token(_tokenReward, _amount);
+            uint256 balanceAfter = IERC20(_tokenReward).balanceOf(address(this));
+            require(balanceBefore - balanceAfter == _amount, "wrong amount notified");
+            emit RewardNotified(gauge, _tokenReward, _amount);
+        }
+    }
+
+    /// @notice Deposit token into the accumulator
+    /// @param _token token to deposit
+    /// @param _amount amount to deposit
+    function depositToken(address _token, uint256 _amount) external {
+        require(_amount > 0, "set an amount > 0");
+        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+        emit TokenDeposited(_token, _amount);
     }
 
     /// @notice Sets gauge for the accumulator which will receive and distribute the rewards
@@ -78,4 +106,19 @@ contract BaseAccumulator {
         emit TokenRewardSet(tokenReward, _tokenReward);
         tokenReward = _tokenReward;
     }
+
+    /// @notice A function that rescue any ERC20 token
+	/// @param _token token address 
+	/// @param _amount amount to rescue
+	/// @param _recipient address to send token rescued
+	function rescueERC20(
+		address _token,
+		uint256 _amount,
+		address _recipient
+	) external {
+        require(msg.sender == governance, "!gov");
+		require(_recipient != address(0), "can't be zero address");
+		IERC20(_token).safeTransfer(_recipient, _amount);
+		emit ERC20Rescued(_token, _amount);
+	}
 }

@@ -2,6 +2,16 @@
 pragma solidity 0.8.7;
 
 interface ILiquidityGauge {
+
+    struct Reward {
+        address token;
+        address distributor;
+        uint256 period_finish;
+        uint256 rate;
+        uint256 last_update;
+        uint256 integral;
+    }
+
     // solhint-disable-next-line
     function deposit_reward_token(address _rewardToken, uint256 _amount) external;
     
@@ -16,4 +26,7 @@ interface ILiquidityGauge {
 
     // solhint-disable-next-line
     function reward_tokens(uint256 _i) external view returns(address);
+
+    // solhint-disable-next-line
+    function reward_data(address _tokenReward) external view returns(Reward memory);
 }

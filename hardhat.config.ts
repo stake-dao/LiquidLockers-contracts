@@ -95,7 +95,7 @@ export default {
     version: "0.2.16"
   },
   solidity: {
-    compilers: [{ version: "0.8.7" }],
+    version: "0.8.7",
     settings: {
       optimizer: {
         enabled: true,
