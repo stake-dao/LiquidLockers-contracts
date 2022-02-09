@@ -11,7 +11,24 @@ The first version of audit was done on commit hash [`7e702aba329d5780ef5841f44ad
 2. sdFXSToken.sol - unchanged since that hash
 3. FxsDepositor - has been modified. [Diffchecker](https://www.diffnow.com/report/4ug2a) between previous and current version.
 
-Since then, Step 2, Step 3 as described below, have been developed which need to be audited, along with FxsDepositor, which also has been modified.
+Since then, Step 2, Step 3 as described in detail below, have been developed which need to be audited, along with Depositor.sol, which also has been modified. Contracts with `Risk` as `High` and `To Audit?` as ✅, need to be audited with special attention.
+
+Sr. No. | Contract | Step | Risk | Audited? | To Audit?
+--- | --- | --- | --- | --- | --- |
+1 | Depositor.sol | 1 | High | ✅ | ✅
+2 | sdToken.sol | 1 | Low | ✅ | :x:
+3 | FxsLocker.sol | 1 | High | ✅ | :x:
+4 | veSDT.vy | 2 | Low | :x: | ✅
+5 | FeeDistributor.vy | 2 | Low | :x: | ✅
+6 | TransparentUpgradeableProxy.sol | 2, 3 | Low | :x: | ✅
+7 | ProxyAdmin.sol | 2, 3 | Low | :x: | ✅
+8 | AccessControlUpgradeable.sol | 2, 3 | Low | :x: | ✅
+9 | SdtDistributor.sol | 3 | High | :x: | ✅
+10 | GaugeController.vy | 3 | Low | :x: | ✅
+11 | LiquidityGaugeV4.vy | 3 | High | :x: | ✅
+12 | Accumulator.sol | 3 | High | :x: | ✅
+13 | ClaimRewards.sol | 3 | High | :x: | ✅
+14 | veBoostProxy.vy | 3 | High | :x: | ✅
 
 ## Step 1
 
@@ -76,7 +93,7 @@ At this step, users will be able to vote, using veSDT, via the GaugeController, 
 3. [Risky for 1 new function] **LiquidityGaugeV4.vy** [upgradable] (not covered by coverage plugin) (WIP): It is a gauge multi rewards contract, so stakers of sdFXS, sdANGLE, sdCRV(later step) will be able to receive rewards in more than one token. In our scenario they will receive rewards in the token collected by lockers (FXS for the FxsLocker and sanUSDC_EUR for the AngleLocker) and also SDT from the SdtDistributor. This kind of gauge supports veSDT boost (i.e. users receiving more SDT as rewards when they have locked more SDT in veSDT contract) and delegation as well.
 [Diffchecker](https://www.diffnow.com/report/fxqvb) with Angle's LiquidityGaugeV4.
 4. [Risky] **Accumulator.sol**: it's a helper contract to LiquidityGaugeV4, which collects FXS rewards from multiple sources i.e. locker and strategies (for frax locker, and similarly sanUSDC_EUR for angle locker), and feeds them to LiquidityGaugeV4. It was needed cause LiquidityGaugeV4 can only have 1 source for a given reward token.
-5. [Risky] **ClaimContract.sol** (WIP): helper contract that will allow users to claim all their reward tokens i.e. (FXS, SDT) for frax locker and (sanUSDC_EUR, SDT) for angle locker in a single transaction. It also gives them the option to auto-lock reward tokens are lockable i.e. FXS in frax locker, SDT in veSDT contract.
+5. [Risky] **ClaimRewards.sol** (WIP): helper contract that will allow users to claim all their reward tokens i.e. (FXS, SDT) for frax locker and (sanUSDC_EUR, SDT) for angle locker in a single transaction. It also gives them the option to auto-lock reward tokens are lockable i.e. FXS in frax locker, SDT in veSDT contract.
 6. **veBoostProxy.vy**: proxy contract to manage the veBoost contract (to be deployed in step 4) which will allow users to delegate their veSDT boost to other users. We need to deploy veBoostProxy in step 3 cause LiquidityGaugeV4 contract needs an immutable deployed veBoostProxy address as one of its deployment parameters. [Diffchecker](https://www.diffnow.com/report/tywlq) with Angle's veBoostProxy.
 7. [**Contracts for Upgradability**](https://github.com/StakeDAO/sd-frax-veSDT/tree/feature/step3#contracts-for-upgradability)
 
