@@ -1,6 +1,6 @@
 import { ethers, network } from "hardhat";
 import { Contract } from "@ethersproject/contracts";
-import { parseEther } from "@ethersproject/units";
+import { parseEther, parseUnits } from "@ethersproject/units";
 import { JsonRpcSigner } from "@ethersproject/providers";
 
 import ERC20 from "./fixtures/ERC20.json";
@@ -15,6 +15,7 @@ const VESDTP = "0x0C30476f66034E11782938DF8e4384970B6c9e8a";
 const sdFXS = "0x402F878BDd1f5C66FdAF0fabaBcF74741B68ac36"; // sdFXS
 const sdANGLE = "0x752B4c6e92d96467fE9b9a2522EF07228E00F87c"; // sdANGLE
 
+const ANGLE = "0x31429d1856aD1377A8A0079410B297e1a9e214c2";
 const FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0";
 const SAN_USDC_EUR = "0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad";
 const FXSNOTIFIER = "0x5180db0237291a6449dda9ed33ad90a38787621c";
@@ -42,6 +43,9 @@ const DUMMYUSER2 = "0x80d9BC4B2B21C69ba2B7ED92882fF79069Ea7e13";
 const DUMMYUSER3 = "0x81431b69B1e0E334d4161A13C2955e0f3599381e";
 
 const SDT_DEPLOYER = "0xb36a0671B3D49587236d7833B01E79798175875f";
+
+const FXS_DEPOSITOR = "0x070DF1b96059F5DC34FCB140Ffdc8c41d6eeF1cA";
+const ANGLE_DEPOSITOR = "0x3449599Ff9Ae8459a7a24D33eee518627e8C88C9";
 
 const getNow = async function () {
   let blockNum = await ethers.provider.getBlockNumber();
@@ -76,6 +80,7 @@ describe("veSDT voting", () => {
   let FXS1559_AMO_V3: Contract;
   let surplusConverterSanTokens: Contract;
   let usdc: Contract;
+  let claimRewards: Contract;
   let timelock: JsonRpcSigner;
   let sdtWhaleSigner: JsonRpcSigner;
   let sdFXSWhaleSigner: JsonRpcSigner;
@@ -228,12 +233,14 @@ describe("veSDT voting", () => {
     const VeBoostProxy = await ethers.getContractFactory("veBoostProxy");
     const FxsAccumulator = await ethers.getContractFactory("FxsAccumulator");
     const AngleAccumulator = await ethers.getContractFactory("AngleAccumulator");
+    const ClaimRewards = await ethers.getContractFactory("ClaimRewards");
 
     // Deploy
     gc = await GaugeController.connect(deployer).deploy(sdt.address, veSDTProxy.address, deployer.address);
     proxyAdmin = await ProxyAdmin.deploy();
     fxsAccumulator = await FxsAccumulator.deploy(fxs.address);
     angleAccumulator = await AngleAccumulator.deploy(sanUsdcEur.address);
+    claimRewards = await ClaimRewards.deploy();
 
     // set lockers into accumulators
     await fxsAccumulator.setLocker(fxsLocker.address);
@@ -301,10 +308,11 @@ describe("veSDT voting", () => {
     fxsPPSGaugeProxy = await ethers.getContractAt("LiquidityGaugeV4", fxsPPSGaugeProxy.address);
     anglePPSGaugeProxy = await ethers.getContractAt("LiquidityGaugeV4", anglePPSGaugeProxy.address);
 
-    // // set reward distributor
+    // set reward distributor
     await fxsPPSGaugeProxy.add_reward(fxs.address, fxsAccumulator.address);
     await anglePPSGaugeProxy.add_reward(sanUsdcEur.address, angleAccumulator.address);
-    //const distributor = await fxsPPSGaugeProxy.reward_data()
+    await fxsPPSGaugeProxy.set_claimer(claimRewards.address);
+    await anglePPSGaugeProxy.set_claimer(claimRewards.address);
 
     // Add gauge types
     const typesWeight = parseEther("1");
@@ -333,6 +341,12 @@ describe("veSDT voting", () => {
     // set gauge into the accumulator
     await fxsAccumulator.setGauge(fxsPPSGaugeProxy.address);
     await angleAccumulator.setGauge(anglePPSGaugeProxy.address);
+
+    // set gauges and depositors on claim reward contract
+    await claimRewards.enableGauge(fxsPPSGaugeProxy.address);
+    await claimRewards.enableGauge(anglePPSGaugeProxy.address);
+    await claimRewards.addDepositor(fxs.address, FXS_DEPOSITOR);
+    await claimRewards.addDepositor(ANGLE, ANGLE_DEPOSITOR);
 
     // Lock SDT for 4 years
     const sdtToLock = parseEther("10");
@@ -583,6 +597,150 @@ describe("veSDT voting", () => {
 
       expect(sdtAfter).gt(sdtBefore);
     });
+
+    it("Should deposit sdToken into gauges", async function() {
+      this.enableTimeouts(false);
+      // deposit 1 sdFxs and 1 sdAngle
+      var lockTime = (await getNow()) + 60 * 60 * 24 * 365 * 4;
+      await sdfxs.connect(dummyUser2).approve(fxsPPSGaugeProxy.address, parseEther("1"));
+      await fxsPPSGaugeProxy.connect(dummyUser2)["deposit(uint256)"](parseEther("1"));
+      await sdangle.connect(dummyUser2).approve(anglePPSGaugeProxy.address, parseEther("0.5"));
+      await anglePPSGaugeProxy.connect(dummyUser2)["deposit(uint256)"](parseEther("0.5"));
+      await sdt.connect(dummyUser2).approve(veSDTProxy.address, parseEther("1"));
+      await veSDTProxy.connect(dummyUser2).create_lock(parseEther("1"), lockTime);
+    });
+
+    it("Should claim FXS, sanUSDC_EUR and SDT rewards", async function() {
+      this.enableTimeouts(false);
+      //Adding FXS rewards
+      await (await FXS1559_AMO_V3.connect(frax1).swapBurn(parseEther("100"), true)).wait();
+      await surplusConverterSanTokens
+        .connect(surplusCaller)
+        ["buyback(address,uint256,uint256,bool)"](
+          "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "300000000000",
+          "90000000000",
+          true
+        );
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 0.5]); // half day
+      await network.provider.send("evm_mine", []);
+
+      await sanUsdcEur.connect(sanUsdcEurWhale).transfer(angleAccumulator.address, parseUnits("10", "6"));
+      await fxsAccumulator.claimAndNotifyAll();
+      await angleAccumulator.claimAndNotifyAll();
+      
+      const fxsBefore = await fxs.balanceOf(dummyUser2._address);
+      const sanLPBefore = await sanUsdcEur.balanceOf(dummyUser2._address);
+      const sdtBefore = await sdt.balanceOf(dummyUser2._address);
+      await claimRewards.connect(dummyUser2).claimRewards([fxsPPSGaugeProxy.address, anglePPSGaugeProxy.address]);
+      const sanLPAfter = await sanUsdcEur.balanceOf(dummyUser2._address);
+      const sdtAfter = await sdt.balanceOf(dummyUser2._address);
+      const fxsAfter = await fxs.balanceOf(dummyUser2._address);
+      expect(fxsAfter).gt(fxsBefore);
+      expect(sanLPAfter).gt(sanLPBefore);
+      expect(sdtAfter).gt(sdtBefore);
+    });
+
+    it("Should claim FXS, sanUSDC_EUR and SDT rewards not locking any token", async () => {
+      // it behaves like the previous test, but the user claims the reward
+      // using the claimAndLock function, passing the lockStatus structure 
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 0.5]); // half day
+      await network.provider.send("evm_mine", []);
+
+      // 0 fxs
+      // 1 angle
+      const lockStatus = {locked: [false, false], staked: [false, false], lockSDT: false }
+      const fxsBefore = await fxs.balanceOf(dummyUser2._address);
+      const sanLPBefore = await sanUsdcEur.balanceOf(dummyUser2._address);
+      const sdtBefore = await sdt.balanceOf(dummyUser2._address);
+      await claimRewards.connect(dummyUser2).claimAndLock([fxsPPSGaugeProxy.address, anglePPSGaugeProxy.address], lockStatus);
+      const sanLPAfter = await sanUsdcEur.balanceOf(dummyUser2._address);
+      const sdtAfter = await sdt.balanceOf(dummyUser2._address);
+      const fxsAfter = await fxs.balanceOf(dummyUser2._address);
+      expect(fxsAfter).gt(fxsBefore);
+      expect(sanLPAfter).gt(sanLPBefore);
+      expect(sdtAfter).gt(sdtBefore);
+    });
+
+    it("Should claim reward, lock FXS, receive sdFXS and sanLP token, and lock SDT", async () => {
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 0.5]); // half day
+      await network.provider.send("evm_mine", []);
+
+      // 0 fxs
+      // 1 angle
+      const lockStatus = {locked: [true, true], staked: [false, false], lockSDT: true }
+
+      const fxsBefore = await fxs.balanceOf(dummyUser2._address);
+      const sanLPBefore = await sanUsdcEur.balanceOf(dummyUser2._address);
+      const sdtBefore = await sdt.balanceOf(dummyUser2._address);
+      const sdFxsBefore = await sdfxs.balanceOf(dummyUser2._address);
+      const sdAngleBefore = await sdangle.balanceOf(dummyUser2._address);
+      await claimRewards.connect(dummyUser2).claimAndLock([fxsPPSGaugeProxy.address, anglePPSGaugeProxy.address], lockStatus);
+      const fxsAfter = await fxs.balanceOf(dummyUser2._address);
+      const sanLPAfter = await sanUsdcEur.balanceOf(dummyUser2._address);
+      const sdtAfter = await sdt.balanceOf(dummyUser2._address);
+      const sdFxsAfter = await sdfxs.balanceOf(dummyUser2._address);
+      const sdAngleAfter = await sdangle.balanceOf(dummyUser2._address);
+
+      expect(fxsAfter).eq(fxsBefore);
+      expect(sanLPAfter).gt(sanLPBefore);
+      expect(sdFxsAfter).gt(sdFxsBefore);
+      expect(sdAngleAfter).eq(sdAngleBefore);
+      expect(sdtAfter).eq(sdtBefore);
+    });
+
+    it("Should claim reward, lock FXS, stake sdFXS, receive sanLP token, and lock SDT", async () => {
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 0.5]); // half day
+      await network.provider.send("evm_mine", []);
+
+      // 0 fxs
+      // 1 angle
+      const lockStatus = {locked: [true, true], staked: [true, true], lockSDT: true }
+
+      const fxsBefore = await fxs.balanceOf(dummyUser2._address);
+      const sanLPBefore = await sanUsdcEur.balanceOf(dummyUser2._address);
+      const sdtBefore = await sdt.balanceOf(dummyUser2._address);
+      const sdFxsBefore = await sdfxs.balanceOf(dummyUser2._address);
+      const sdAngleBefore = await sdangle.balanceOf(dummyUser2._address);
+      await claimRewards.connect(dummyUser2).claimAndLock([fxsPPSGaugeProxy.address, anglePPSGaugeProxy.address], lockStatus);
+      const fxsAfter = await fxs.balanceOf(dummyUser2._address);
+      const sanLPAfter = await sanUsdcEur.balanceOf(dummyUser2._address);
+      const sdtAfter = await sdt.balanceOf(dummyUser2._address);
+      const sdFxsAfter = await sdfxs.balanceOf(dummyUser2._address);
+      const sdAngleAfter = await sdangle.balanceOf(dummyUser2._address);
+
+      expect(fxsAfter).eq(fxsBefore);
+      expect(sanLPAfter).gt(sanLPBefore);
+      expect(sdFxsAfter).eq(sdFxsBefore);
+      expect(sdAngleAfter).eq(sdAngleBefore);
+      expect(sdtAfter).eq(sdtBefore);
+    });
+
+    it("Should disable gauge", async () => {
+      await claimRewards.disableGauge(fxsPPSGaugeProxy.address);
+      const gaugeEnaled = await claimRewards.gauges(fxsPPSGaugeProxy.address);
+      expect(gaugeEnaled).to.be.false;
+      await claimRewards.enableGauge(fxsPPSGaugeProxy.address);
+      const gaugeEnabledAfter = await claimRewards.gauges(fxsPPSGaugeProxy.address);
+      expect(gaugeEnabledAfter).to.be.true;
+    });
+
+    it("Should check governance", async () => {
+      await claimRewards.setGovernance(dummyUser2._address);
+      const goverance = await claimRewards.governance();
+      expect(goverance).eq(dummyUser2._address);
+      await claimRewards.connect(dummyUser2).setGovernance(deployer.address);
+    });
+
+    it("Should rescue token", async() => {
+      const amountToRescue = parseUnits("10", "6");
+      await sanUsdcEur.connect(sanUsdcEurWhale).transfer(claimRewards.address, amountToRescue);
+      const balanceBefore = await sanUsdcEur.balanceOf(dummyUser2._address);
+      await claimRewards.rescueERC20(sanUsdcEur.address, amountToRescue, dummyUser2._address);
+      const balanceAfter = await sanUsdcEur.balanceOf(dummyUser2._address);
+      expect(balanceAfter.sub(balanceBefore)).eq(amountToRescue);
+    });
+    
 
     // it("Boosted user receives more SDT compared to non-boosted", async function () {
     //   this.enableTimeouts(false);
