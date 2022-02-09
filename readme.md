@@ -28,7 +28,7 @@ Sr. No. | Contract | Step | Risk | Audited? | To Audit?
 11 | LiquidityGaugeV4.vy | 3 | High | :x: | ✅
 12 | Accumulator.sol | 3 | High | :x: | ✅
 13 | ClaimRewards.sol | 3 | High | :x: | ✅
-14 | veBoostProxy.vy | 3 | High | :x: | ✅
+14 | veBoostProxy.vy | 3 | Low | :x: | ✅
 
 ## Step 1
 
