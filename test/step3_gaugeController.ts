@@ -725,7 +725,7 @@ describe("veSDT voting", () => {
       expect(gaugeEnabledAfter).to.be.true;
     });
 
-    it("Should check governance", async () => {
+    it("Should set a new claimReward governance", async () => {
       await claimRewards.setGovernance(dummyUser2._address);
       const goverance = await claimRewards.governance();
       expect(goverance).eq(dummyUser2._address);
@@ -740,7 +740,69 @@ describe("veSDT voting", () => {
       const balanceAfter = await sanUsdcEur.balanceOf(dummyUser2._address);
       expect(balanceAfter.sub(balanceBefore)).eq(amountToRescue);
     });
-    
+
+    it("Should claim rewards from the accumulators", async() => {
+      const amountToNotifyFxs = parseEther("0.0001")
+      const fxsAccumulatorBalance = await fxs.balanceOf(fxsAccumulator.address);
+      expect(fxsAccumulatorBalance).eq(0);
+      await fxsAccumulator.claimAndNotify(amountToNotifyFxs);
+      const fxsAccumulatorBalanceAfter = await fxs.balanceOf(fxsAccumulator.address);
+      expect(fxsAccumulatorBalanceAfter).gt(0);
+
+      const angleAccumulatorBalance = await sanUsdcEur.balanceOf(angleAccumulator.address);
+      expect(angleAccumulatorBalance).eq(0);
+
+      await sanUsdcEur.connect(sanUsdcEurWhale).transfer(angleAccumulator.address, parseUnits("10", "7"));
+      const amountToNotifySanLP = parseUnits("10", "6");
+      
+      await angleAccumulator.claimAndNotify(amountToNotifySanLP);
+      const angleAccumulatorBalanceAfter = await sanUsdcEur.balanceOf(angleAccumulator.address);
+      expect(angleAccumulatorBalanceAfter).gt(0); 
+    });
+
+    it("Should deposit tokens into the accumulator and rescue them", async() => {
+      const amountToDeposit = parseEther("10");
+      const balanceBefore = await sdt.balanceOf(fxsAccumulator.address);
+      expect(balanceBefore).eq(0);
+
+      // send sdt to the fxsAccumulator
+      await sdt.connect(sdtWhaleSigner).approve(fxsAccumulator.address, amountToDeposit);
+      await fxsAccumulator.connect(sdtWhaleSigner).depositToken(sdt.address, amountToDeposit);
+      const balanceAfter = await sdt.balanceOf(fxsAccumulator.address);
+      expect(balanceAfter).eq(amountToDeposit);
+
+      // rescue sdt
+      const sdtBalanceBefore = await sdt.balanceOf(dummyUser2._address);
+      await fxsAccumulator.rescueERC20(sdt.address, amountToDeposit, dummyUser2._address);
+      const sdtBalanceAfter = await sdt.balanceOf(dummyUser2._address);
+      const sdtLeft = await sdt.balanceOf(fxsAccumulator.address);
+      expect(sdtLeft).eq(0);
+      expect(sdtBalanceAfter.sub(sdtBalanceBefore)).eq(amountToDeposit);
+    });
+
+    it("Should notify an extra token reward but it remains into the accumulator", async() => {
+      const amountToNotify = parseUnits("10", "7");
+      const balanceBefore = await sanUsdcEur.balanceOf(fxsAccumulator.address);
+      expect(balanceBefore).eq(0);
+      await sanUsdcEur.connect(sanUsdcEurWhale).transfer(fxsAccumulator.address, amountToNotify);
+      await fxsAccumulator.notifyAllExtraReward(sanUsdcEur.address);
+      await fxsAccumulator.notifyExtraReward(sanUsdcEur.address, amountToNotify);
+      const balanceLeft = await sanUsdcEur.balanceOf(fxsAccumulator.address);
+      expect(balanceLeft).eq(amountToNotify);
+    });
+
+    it("Should set a new fxsAccumulator governance", async () => {
+      await fxsAccumulator.setGovernance(dummyUser2._address);
+      const goverance = await fxsAccumulator.governance();
+      expect(goverance).eq(dummyUser2._address);
+      await fxsAccumulator.connect(dummyUser2).setGovernance(deployer.address);
+    });
+
+    it("Should set a new token reward", async () => {
+      await fxsAccumulator.setTokenReward(ANGLE);
+      const tokenReward = await fxsAccumulator.tokenReward();
+      expect(tokenReward).eq(ANGLE);
+    });
 
     // it("Boosted user receives more SDT compared to non-boosted", async function () {
     //   this.enableTimeouts(false);
