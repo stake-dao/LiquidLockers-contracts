@@ -20,6 +20,7 @@ Sr. No. | Contract | Step | Risk | WIP | Audited? | To Audit?
 3 | FxsLocker.sol | 1 | High | :x: | ✅ | :x:
 4 | AngleLocker.sol | 1 | High | :x: | :x: | ✅
 4 | veSDT.vy | 2 | Low | :x: | :x: | ✅
+6 | SmartWalletWhitelist.sol | 2 | Low | :x: | :x: | ✅
 5 | FeeDistributor.vy | 2 | Low | :x: | :x: | ✅
 6 | TransparentUpgradeableProxy.sol | 2, 3 | Low | :x: | :x: | ✅
 7 | ProxyAdmin.sol | 2, 3 | Low | :x: | :x: | ✅
