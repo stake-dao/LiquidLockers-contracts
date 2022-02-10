@@ -83,25 +83,26 @@ contract ClaimRewards {
 				}
 				address depositor = depositors[token];
 				uint256 balance = IERC20(token).balanceOf(address(this));
-				require(balance != 0);
-				if (depositor != address(0) && lockStatus.locked[depositorsIndex[token]]) {
-					IERC20(token).approve(depositor, balance);
-					IDepositor(depositor).deposit(balance, false);
-					address sdToken = IDepositor(depositor).minter();
-					uint256 sdTokenBalance = IERC20(sdToken).balanceOf(address(this));
-					if (lockStatus.staked[depositorsIndex[token]]) {
-						IERC20(sdToken).approve(gauge, sdTokenBalance);
-						ILiquidityGauge(gauge).deposit(sdTokenBalance, msg.sender);
+				if (balance != 0) {
+					if (depositor != address(0) && lockStatus.locked[depositorsIndex[token]]) {
+						IERC20(token).approve(depositor, balance);
+						IDepositor(depositor).deposit(balance, false);
+						address sdToken = IDepositor(depositor).minter();
+						uint256 sdTokenBalance = IERC20(sdToken).balanceOf(address(this));
+						if (lockStatus.staked[depositorsIndex[token]]) {
+							IERC20(sdToken).approve(gauge, sdTokenBalance);
+							ILiquidityGauge(gauge).deposit(sdTokenBalance, msg.sender);
+						} else {
+							SafeERC20.safeTransfer(IERC20(sdToken), msg.sender, sdTokenBalance);
+						}
+						uint256 sdTokenBalanceLeft = IERC20(sdToken).balanceOf(address(this));
+						require(sdTokenBalanceLeft == 0, "wrong amount sent");
 					} else {
-						SafeERC20.safeTransfer(IERC20(sdToken), msg.sender, sdTokenBalance);
+						SafeERC20.safeTransfer(IERC20(token), msg.sender, balance);
 					}
-					uint256 sdTokenBalanceLeft = IERC20(sdToken).balanceOf(address(this));
-					require(sdTokenBalanceLeft == 0, "wrong amount sent");
-				} else {
-					SafeERC20.safeTransfer(IERC20(token), msg.sender, balance);
+					uint256 balanceLeft = IERC20(token).balanceOf(address(this));
+					require(balanceLeft == 0, "wrong amount sent");
 				}
-				uint256 balanceLeft = IERC20(token).balanceOf(address(this));
-				require(balanceLeft == 0, "wrong amount sent");
 			}
 		}
 
