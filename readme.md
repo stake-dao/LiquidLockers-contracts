@@ -13,22 +13,22 @@ The first version of audit was done on commit hash [`7e702aba329d5780ef5841f44ad
 
 Since then, Step 2, Step 3 as described in detail below, have been developed which need to be audited, along with Depositor.sol, which also has been modified. Contracts with `Risk` as `High` and `To Audit?` as ✅, need to be audited with special attention.
 
-Sr. No. | Contract | Step | Risk | Audited? | To Audit?
---- | --- | --- | --- | --- | --- |
-1 | Depositor.sol | 1 | High | ✅ | ✅
-2 | sdToken.sol | 1 | Low | ✅ | :x:
-3 | FxsLocker.sol | 1 | High | ✅ | :x:
-4 | veSDT.vy | 2 | Low | :x: | ✅
-5 | FeeDistributor.vy | 2 | Low | :x: | ✅
-6 | TransparentUpgradeableProxy.sol | 2, 3 | Low | :x: | ✅
-7 | ProxyAdmin.sol | 2, 3 | Low | :x: | ✅
-8 | AccessControlUpgradeable.sol | 2, 3 | Low | :x: | ✅
-9 | SdtDistributor.sol | 3 | High | :x: | ✅
-10 | GaugeController.vy | 3 | Low | :x: | ✅
-11 | LiquidityGaugeV4.vy | 3 | High | :x: | ✅
-12 | Accumulator.sol | 3 | High | :x: | ✅
-13 | ClaimRewards.sol | 3 | High | :x: | ✅
-14 | veBoostProxy.vy | 3 | Low | :x: | ✅
+Sr. No. | Contract | Step | Risk | WIP | Audited? | To Audit?
+--- | --- | --- | --- | --- | --- | --- |
+1 | Depositor.sol | 1 | High | :x: | ✅ | ✅
+2 | sdToken.sol | 1 | Low | :x: | ✅ | :x:
+3 | FxsLocker.sol | 1 | High | :x: | ✅ | :x:
+4 | veSDT.vy | 2 | Low | :x: | :x: | ✅
+5 | FeeDistributor.vy | 2 | Low | :x: | :x: | ✅
+6 | TransparentUpgradeableProxy.sol | 2, 3 | Low | :x: | :x: | ✅
+7 | ProxyAdmin.sol | 2, 3 | Low | :x: | :x: | ✅
+8 | AccessControlUpgradeable.sol | 2, 3 | Low | :x: | :x: | ✅
+9 | SdtDistributor.sol | 3 | High | ✅ | :x: | ✅
+10 | GaugeController.vy | 3 | Low | :x: | :x: | ✅
+11 | LiquidityGaugeV4.vy | 3 | High | ✅  | :x: | ✅
+12 | Accumulator.sol | 3 | High | ✅  | :x: | ✅
+13 | ClaimRewards.sol | 3 | High | ✅  | :x: | ✅
+14 | veBoostProxy.vy | 3 | Low | :x: | :x: | ✅
 
 ## Step 1
 
