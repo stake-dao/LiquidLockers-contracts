@@ -19,18 +19,19 @@ Sr. No. | Contract | Step | Risk | WIP | Audited? | To Audit?
 2 | sdToken.sol | 1 | Low | :x: | ✅ | :x:
 3 | FxsLocker.sol | 1 | High | :x: | ✅ | :x:
 4 | AngleLocker.sol | 1 | High | :x: | :x: | ✅
-4 | veSDT.vy | 2 | Low | :x: | :x: | ✅
+5 | veSDT.vy | 2 | Low | :x: | :x: | ✅
 6 | SmartWalletWhitelist.sol | 2 | Low | :x: | :x: | ✅
-5 | FeeDistributor.vy | 2 | Low | :x: | :x: | ✅
-6 | TransparentUpgradeableProxy.sol | 2, 3 | Low | :x: | :x: | ✅
-7 | ProxyAdmin.sol | 2, 3 | Low | :x: | :x: | ✅
-8 | AccessControlUpgradeable.sol | 2, 3 | Low | :x: | :x: | ✅
-9 | SdtDistributor.sol | 3 | High | ✅ | :x: | ✅
-10 | GaugeController.vy | 3 | Low | :x: | :x: | ✅
-11 | LiquidityGaugeV4.vy | 3 | High | ✅  | :x: | ✅
-12 | Accumulator.sol | 3 | High | ✅  | :x: | ✅
-13 | ClaimRewards.sol | 3 | High | ✅  | :x: | ✅
-14 | veBoostProxy.vy | 3 | Low | :x: | :x: | ✅
+7 | FeeDistributor.vy | 2 | Low | :x: | :x: | ✅
+8 | TransparentUpgradeableProxy.sol | 2, 3 | Low | :x: | :x: | ✅
+9 | ProxyAdmin.sol | 2, 3 | Low | :x: | :x: | ✅
+10 | AccessControlUpgradeable.sol | 2, 3 | Low | :x: | :x: | ✅
+11 | SdtDistributor.sol | 3 | High | ✅ | :x: | ✅
+12 | GaugeController.vy | 3 | Low | :x: | :x: | ✅
+13 | LiquidityGaugeV4.vy | 3 | High | ✅  | :x: | ✅
+14 | FxsAccumulator.sol | 3 | High | :x: | :x: | ✅
+15 | AngleAccumulator.sol | 3 | High | :x: | :x: | ✅
+16 | ClaimRewards.sol | 3 | High | ✅  | :x: | ✅
+17 | veBoostProxy.vy | 3 | Low | :x: | :x: | ✅
 
 ## Step 1
 
