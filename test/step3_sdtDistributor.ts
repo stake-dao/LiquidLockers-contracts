@@ -36,6 +36,8 @@ const DUMMYUSER3 = "0x81431b69B1e0E334d4161A13C2955e0f3599381e";
 
 const SDT_DEPLOYER = "0xb36a0671B3D49587236d7833B01E79798175875f";
 
+const FAKE_INTERFACE_KNOWN = "0xD3cFc4E65a73BB6C482383EB38f5C3E1d1411616";
+
 const getNow = async function () {
   let blockNum = await ethers.provider.getBlockNumber();
   let block = await ethers.provider.getBlock(blockNum);
@@ -80,17 +82,17 @@ describe("Sdt Distributor - SDT distribution related tests", () => {
   before(async function () {
     this.enableTimeouts(false);
 
-    await network.provider.request({
-      method: "hardhat_reset",
-      params: [
-        {
-          forking: {
-            jsonRpcUrl: process.env.MAINNET,
-            blockNumber: 14133625
-          }
-        }
-      ]
-    });
+    // await network.provider.request({
+    //   method: "hardhat_reset",
+    //   params: [
+    //     {
+    //       forking: {
+    //         jsonRpcUrl: process.env.MAINNET,
+    //         blockNumber: 14133625
+    //       }
+    //     }
+    //   ]
+    // });
     [deployer] = await ethers.getSigners();
 
     sdt = await ethers.getContractAt(ERC20, SDT);
@@ -491,6 +493,36 @@ describe("Sdt Distributor - SDT distribution related tests", () => {
   it("it should not distribute rewards if gauge is not set on gaugecontroller", async () => {
     const tx = await sdtDProxy.distributeMulti([dummyUser2._address]).catch((e: any) => e);
     expect(tx.message).not.be.empty;
+  });
+
+  it("it should toggle an interface known", async () => {
+    // simulate a toggle interface for managing gauges of type >=2
+    await sdtDProxy.toggleInterfaceKnown(FAKE_INTERFACE_KNOWN);
+  });
+
+  it("it should set a delegate gauge", async () => {
+    // simulate a toggle interface for managing gauges of type >=2
+    await sdtDProxy.setDelegateGauge(TIMELOCK, TIMELOCK, false);
+    await sdtDProxy.setDelegateGauge(ethers.constants.AddressZero, TIMELOCK, true);
+  });
+
+  it("it should set a new gauge controller", async () => {
+    // set a new gauge controller
+    await sdtDProxy.setGaugeController(TIMELOCK);
+    const gaugeController = await sdtDProxy.controller();
+    expect(gaugeController).eq(TIMELOCK);
+    await sdtDProxy.setGaugeController(gc.address);
+    const newGaugeController = await sdtDProxy.controller();
+    expect(newGaugeController).eq(gc.address);
+  }); 
+
+  it("it should rescue ERC20", async () => {
+    const amountToRescue = parseEther("1");
+    const balanceBefore = await sdt.balanceOf(deployer.address);
+    await sdt.connect(sdtWhaleSigner).transfer(sdtDProxy.address, amountToRescue);
+    await sdtDProxy.recoverERC20(sdt.address, deployer.address, amountToRescue);
+    const balanceAfter = await sdt.balanceOf(deployer.address);
+    expect(balanceAfter.sub(balanceBefore)).eq(amountToRescue);
   });
 });
 
