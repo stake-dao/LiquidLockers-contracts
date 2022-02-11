@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "../interfaces/ITokenMinter.sol";
 import "../interfaces/ILocker.sol";
 import "../interfaces/ISdToken.sol";
+import "../interfaces/ILiquidityGauge.sol";
 
 /// @title Contract that accepts tokens and locks them
 /// @author StakeDAO
@@ -24,6 +25,7 @@ contract Depositor {
 	uint256 public lockIncentive = 10; //incentive to users who spend gas to lock token
 	uint256 public constant FEE_DENOMINATOR = 10000;
 
+	address public gauge;
 	address public governance;
 	address public immutable locker;
 	address public immutable minter;
@@ -32,10 +34,9 @@ contract Depositor {
 	bool public relock = true;
 
 	/* ========== EVENTS ========== */
-	event Deposited(address indexed user, uint256 indexed amount, bool lock);
-	event IncentiveReceived(address indexed user, uint256 indexed amount);
+	event Deposited(address indexed caller, address indexed user, uint256 indexed amount, bool lock, bool stake);
+	event IncentiveReceived(address indexed caller, uint256 indexed amount);
 	event TokenLocked(address indexed user, uint256 indexed amount);
-	event DepositedFor(address indexed user, uint256 indexed amount);
 	event GovernanceChanged(address indexed newGovernance);
 	event SdTokenOperatorChanged(address indexed newSdToken);
 	event FeesChanged(uint256 newFee);
@@ -68,6 +69,11 @@ contract Depositor {
 	function setRelock(bool _relock) external {
 		require(msg.sender == governance, "!auth");
 		relock = _relock;
+	}
+
+	function setGauge(address _gauge) external {
+		require(msg.sender == governance, "!auth");
+		gauge = _gauge;
 	}
 
 	function setFees(uint256 _lockIncentive) external {
@@ -128,8 +134,17 @@ contract Depositor {
 	/// @dev User needs to approve the contract to transfer the token
 	/// @param _amount The amount of token to deposit
 	/// @param _lock Whether to lock the token
-	function deposit(uint256 _amount, bool _lock) public {
+	/// @param _stake Whether to stake the token
+	/// @param _user User to deposit for
+	function deposit(
+		uint256 _amount,
+		bool _lock,
+		bool _stake,
+		address _user
+	) public {
 		require(_amount > 0, "!>0");
+		require(_user != address(0), "!user");
+		require(gauge != address(0), "!gauge");
 
 		// If User chooses to lock Token
 		if (_lock) {
@@ -150,16 +165,27 @@ contract Depositor {
 			incentiveToken = incentiveToken + callIncentive;
 		}
 
-		ITokenMinter(minter).mint(msg.sender, _amount);
+		if (!_stake) {
+			ITokenMinter(minter).mint(_user, _amount);
+		} else {
+			ITokenMinter(minter).mint(address(this), _amount);
+			IERC20(minter).safeApprove(gauge, 0);
+			IERC20(minter).safeApprove(gauge, _amount);
+			ILiquidityGauge(gauge).deposit(_amount, _user);
+		}
 
-		emit Deposited(msg.sender, _amount, _lock);
+		emit Deposited(msg.sender, _user, _amount, _lock, _stake);
 	}
 
 	/// @notice Deposits all the token of a user & locks them based on the options choosen
 	/// @dev User needs to approve the contract to transfer Token tokens
 	/// @param _lock Whether to lock the token
-	function depositAll(bool _lock) external {
+	function depositAll(
+		bool _lock,
+		bool _stake,
+		address _user
+	) external {
 		uint256 tokenBal = IERC20(token).balanceOf(msg.sender);
-		deposit(tokenBal, _lock);
+		deposit(tokenBal, _lock, _stake, _user);
 	}
 }

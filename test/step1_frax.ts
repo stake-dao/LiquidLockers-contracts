@@ -18,6 +18,8 @@ const ETH_100 = BigNumber.from(10).mul(BigNumber.from(10).pow(18)).toHexString()
 const FXS_HOLDER = "0xF977814e90dA44bFA03b6295A0616a897441aceC";
 const FXS_HOLDER_2 = "0x5028D77B91a3754fb38B2FBB726AF02d1FE44Db6";
 
+const SDT = "0x73968b9a57c6e53d41345fd57a6e6ae27d6cdb2f";
+
 const FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0";
 const VE_FXS = "0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0";
 
@@ -50,6 +52,7 @@ describe("FXS Depositor", function () {
   let walletCheckerOwner: JsonRpcSigner;
   let deployer: SignerWithAddress;
   let baseOwner: SignerWithAddress;
+  let liquidityGauge: Contract;
 
   let randomLocker1: Contract;
   let randomLocker2: Contract;
@@ -80,6 +83,8 @@ describe("FXS Depositor", function () {
     const FxsLocker = await ethers.getContractFactory("FxsLocker");
     const FxsDepositor = await ethers.getContractFactory("Depositor");
     const SdFXSToken = await ethers.getContractFactory("sdToken");
+    const LiquidityGauge = await ethers.getContractFactory("LiquidityGaugeV4");
+    const VeBoostProxy = await ethers.getContractFactory("veBoostProxy");
 
     fxsHolder = ethers.provider.getSigner(FXS_HOLDER);
     fxsHolder2 = ethers.provider.getSigner(FXS_HOLDER_2);
@@ -100,6 +105,21 @@ describe("FXS Depositor", function () {
     randomLocker2 = await FxsLocker.deploy(ACC);
 
     fxsDepositor = await FxsDepositor.deploy(fxs.address, locker.address, sdFXSToken.address);
+
+    liquidityGauge = await LiquidityGauge.deploy();
+
+    const RANDOM = "0x478bBC744811eE8310B461514BDc29D03739084D";
+    const VESDTP = "0x0C30476f66034E11782938DF8e4384970B6c9e8a";
+    const veSDTProxy = await ethers.getContractAt("veSDT", VESDTP);
+
+    const veBoostProxy = await VeBoostProxy.deploy(
+      veSDTProxy.address,
+      "0x0000000000000000000000000000000000000000",
+      deployer.address
+    );
+
+    await liquidityGauge.initialize(sdFXSToken.address, ACC, SDT, veSDTProxy.address, veBoostProxy.address, RANDOM);
+    await fxsDepositor.setGauge(liquidityGauge.address);
 
     // Set FxsDepositor on lockers
     await locker.setFxsDepositor(fxsDepositor.address);
@@ -254,7 +274,7 @@ describe("FXS Depositor", function () {
 
       const addedLockingAmount = parseEther("1000");
       await fxs.connect(fxsHolder).approve(fxsDepositor.address, addedLockingAmount);
-      await fxsDepositor.connect(fxsHolder).deposit(addedLockingAmount, true);
+      await fxsDepositor.connect(fxsHolder).deposit(addedLockingAmount, true, false, fxsHolder._address);
 
       const veFXSLockedAfter = await veFXS.locked(locker.address);
       const userFxsBalanceAfter = await fxs.balanceOf(fxsHolder._address);
@@ -275,7 +295,7 @@ describe("FXS Depositor", function () {
 
       const fxsBalance = parseEther("1000");
       await fxs.connect(fxsHolder2).approve(fxsDepositor.address, fxsBalance);
-      await fxsDepositor.connect(fxsHolder2).deposit(fxsBalance, false);
+      await fxsDepositor.connect(fxsHolder2).deposit(fxsBalance, false, false, fxsHolder2._address);
 
       const veFXSLockedAfter = await veFXS.locked(locker.address);
       const userFxsBalanceAfter = await fxs.balanceOf(fxsHolder2._address);
@@ -298,7 +318,7 @@ describe("FXS Depositor", function () {
 
       const fxsBalance = await fxs.balanceOf(fxsHolder2._address);
       await fxs.connect(fxsHolder2).approve(fxsDepositor.address, fxsBalance);
-      await fxsDepositor.connect(fxsHolder2).depositAll(true);
+      await fxsDepositor.connect(fxsHolder2).depositAll(true, false, fxsHolder2._address);
 
       const veFXSLockedAfter = await veFXS.locked(locker.address);
       const userFxsBalanceAfter = await fxs.balanceOf(fxsHolder2._address);
@@ -311,15 +331,59 @@ describe("FXS Depositor", function () {
       expect(userFxsBalanceAfter).to.be.equal(userFxsBalanceBefore.sub(fxsBalance));
     });
 
+    it("Should deposit and stake in gauge for caller", async function () {
+      this.enableTimeouts(false);
+
+      const veFXSLocked = await veFXS.locked(locker.address);
+      const userFxsBalanceBefore = await fxs.balanceOf(fxsHolder2._address);
+
+      const fxsBalance = parseEther("1000");
+      await fxs.connect(fxsHolder2).approve(fxsDepositor.address, fxsBalance);
+      await fxsDepositor.connect(fxsHolder2).deposit(fxsBalance, false, true, fxsHolder2._address);
+
+      const veFXSLockedAfter = await veFXS.locked(locker.address);
+      const userFxsBalanceAfter = await fxs.balanceOf(fxsHolder2._address);
+      const userSdFxsBalanceAfter = await sdFXSToken.balanceOf(fxsHolder2._address);
+
+      const stakedBalance = await liquidityGauge.balanceOf(fxsHolder2._address);
+
+      expect(userFxsBalanceAfter).to.be.equal(userFxsBalanceBefore.sub(fxsBalance));
+      expect(userSdFxsBalanceAfter).to.be.equal(userSdFxsBalanceAfter);
+      expect(stakedBalance).to.be.gt(0);
+    });
+
+    it("Should deposit and stake in gauge for caller", async function () {
+      this.enableTimeouts(false);
+
+      const RANDOM_USER = "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8";
+
+      const veFXSLocked = await veFXS.locked(locker.address);
+      const userFxsBalanceBefore = await fxs.balanceOf(fxsHolder2._address);
+
+      const fxsBalance = parseEther("1000");
+      await fxs.connect(fxsHolder2).approve(fxsDepositor.address, fxsBalance);
+      await fxsDepositor.connect(fxsHolder2).deposit(fxsBalance, false, true, RANDOM_USER);
+
+      const veFXSLockedAfter = await veFXS.locked(locker.address);
+      const userFxsBalanceAfter = await fxs.balanceOf(fxsHolder2._address);
+      const userSdFxsBalanceAfter = await sdFXSToken.balanceOf(fxsHolder2._address);
+
+      const stakedBalance = await liquidityGauge.balanceOf(RANDOM_USER);
+
+      expect(userFxsBalanceAfter).to.be.equal(userFxsBalanceBefore.sub(fxsBalance));
+      expect(userSdFxsBalanceAfter).to.be.equal(userSdFxsBalanceAfter);
+      expect(stakedBalance).to.be.gt(0);
+    });
+
     it("Should lock FXS", async function () {
       this.enableTimeouts(false);
 
       // Lock FXS already deposited into the Depositor if there is any
       const addedLockingAmount = parseEther("100");
       await fxs.connect(fxsHolder).approve(fxsDepositor.address, addedLockingAmount.mul(2));
-      await fxsDepositor.connect(fxsHolder).deposit(addedLockingAmount, false);
+      await fxsDepositor.connect(fxsHolder).deposit(addedLockingAmount, false, false, fxsHolder._address);
       await fxsDepositor.lockToken();
-      await fxsDepositor.connect(fxsHolder).deposit(addedLockingAmount, true);
+      await fxsDepositor.connect(fxsHolder).deposit(addedLockingAmount, true, false, fxsHolder._address);
       await fxsDepositor.lockToken();
       const fxsBalance = await fxs.balanceOf(fxsDepositor.address);
       expect(fxsBalance).to.be.equal(0);

@@ -19,6 +19,8 @@ const ETH_100 = BigNumber.from(10).mul(BigNumber.from(10).pow(18)).toHexString()
 const ANGLE_HOLDER = "0x7bB909d58E54aba5596DFCaA873df0d50bC5d760";
 const ANGLE_HOLDER_2 = "0x9843C8a8263308A309BfC3C2d1c308126D8E754D";
 
+const SDT = "0x73968b9a57c6e53d41345fd57a6e6ae27d6cdb2f";
+
 const ANGLE = "0x31429d1856aD1377A8A0079410B297e1a9e214c2";
 const VE_ANGLE = "0x0C462Dbb9EC8cD1630f1728B2CFD2769d09f0dd5";
 
@@ -61,6 +63,7 @@ describe("ANGLE Depositor", function () {
   let baseOwner: SignerWithAddress;
   let feeDAdmin: JsonRpcSigner;
   let feeDistributor: Contract;
+  let liquidityGauge: Contract;
 
   let randomLocker1: Contract;
   let randomLocker2: Contract;
@@ -101,6 +104,8 @@ describe("ANGLE Depositor", function () {
     const AngleLocker = await ethers.getContractFactory("AngleLocker");
     const AngleDepositor = await ethers.getContractFactory("Depositor");
     const SdANGLEToken = await ethers.getContractFactory("sdToken");
+    const LiquidityGauge = await ethers.getContractFactory("LiquidityGaugeV4");
+    const VeBoostProxy = await ethers.getContractFactory("veBoostProxy");
 
     angleHolder = ethers.provider.getSigner(ANGLE_HOLDER);
     angleHolder2 = ethers.provider.getSigner(ANGLE_HOLDER_2);
@@ -127,6 +132,21 @@ describe("ANGLE Depositor", function () {
     randomLocker2 = await AngleLocker.deploy(ACC);
 
     angleDepositor = await AngleDepositor.deploy(angle.address, locker.address, sdANGLEToken.address);
+
+    liquidityGauge = await LiquidityGauge.deploy();
+
+    const RANDOM = "0x478bBC744811eE8310B461514BDc29D03739084D";
+    const VESDTP = "0x0C30476f66034E11782938DF8e4384970B6c9e8a";
+    const veSDTProxy = await ethers.getContractAt("veSDT", VESDTP);
+
+    const veBoostProxy = await VeBoostProxy.deploy(
+      veSDTProxy.address,
+      "0x0000000000000000000000000000000000000000",
+      deployer.address
+    );
+
+    await liquidityGauge.initialize(sdANGLEToken.address, ACC, SDT, veSDTProxy.address, veBoostProxy.address, RANDOM);
+    await angleDepositor.setGauge(liquidityGauge.address);
 
     // Set AngleDepositor on lockers
     await locker.setAngleDepositor(angleDepositor.address);
@@ -281,7 +301,7 @@ describe("ANGLE Depositor", function () {
 
       const addedLockingAmount = parseEther("1000");
       await angle.connect(angleHolder).approve(angleDepositor.address, addedLockingAmount);
-      await angleDepositor.connect(angleHolder).deposit(addedLockingAmount, true);
+      await angleDepositor.connect(angleHolder).deposit(addedLockingAmount, true, false, angleHolder._address);
 
       const veANGLELockedAfter = await veANGLE.locked(locker.address);
       const userAngleBalanceAfter = await angle.balanceOf(angleHolder._address);
@@ -302,7 +322,7 @@ describe("ANGLE Depositor", function () {
 
       const angleBalance = parseEther("1000");
       await angle.connect(angleHolder2).approve(angleDepositor.address, angleBalance);
-      await angleDepositor.connect(angleHolder2).deposit(angleBalance, false);
+      await angleDepositor.connect(angleHolder2).deposit(angleBalance, false, false, angleHolder2._address);
 
       const veANGLELockedAfter = await veANGLE.locked(locker.address);
       const userAngleBalanceAfter = await angle.balanceOf(angleHolder2._address);
@@ -311,6 +331,50 @@ describe("ANGLE Depositor", function () {
       expect(userAngleBalanceAfter).to.be.equal(userAngleBalanceBefore.sub(angleBalance));
       // less than, coz incentive amount of sdANGLE is deducted for this user as he's not locking
       expect(userSdAngleBalanceAfter).to.be.lt(angleBalance);
+    });
+
+    it("Should deposit and stake in gauge for caller", async function () {
+      this.enableTimeouts(false);
+
+      const veANGLELocked = await veANGLE.locked(locker.address);
+      const userAngleBalanceBefore = await angle.balanceOf(angleHolder2._address);
+
+      const angleBalance = parseEther("1000");
+      await angle.connect(angleHolder2).approve(angleDepositor.address, angleBalance);
+      await angleDepositor.connect(angleHolder2).deposit(angleBalance, false, true, angleHolder2._address);
+
+      const veANGLELockedAfter = await veANGLE.locked(locker.address);
+      const userAngleBalanceAfter = await angle.balanceOf(angleHolder2._address);
+      const userSdAngleBalanceAfter = await sdANGLEToken.balanceOf(angleHolder2._address);
+
+      const angleHolder2StakedBalance = await liquidityGauge.balanceOf(angleHolder2._address);
+
+      expect(userAngleBalanceAfter).to.be.equal(userAngleBalanceBefore.sub(angleBalance));
+      expect(userSdAngleBalanceAfter).to.be.equal(userSdAngleBalanceAfter);
+      expect(angleHolder2StakedBalance).to.be.gt(0);
+    });
+
+    it("Should deposit and stake in gauge for any user", async function () {
+      this.enableTimeouts(false);
+
+      const RANDOM_USER = "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8";
+
+      const veANGLELocked = await veANGLE.locked(locker.address);
+      const userAngleBalanceBefore = await angle.balanceOf(angleHolder2._address);
+
+      const angleBalance = parseEther("1000");
+      await angle.connect(angleHolder2).approve(angleDepositor.address, angleBalance);
+      await angleDepositor.connect(angleHolder2).deposit(angleBalance, false, true, RANDOM_USER);
+
+      const veANGLELockedAfter = await veANGLE.locked(locker.address);
+      const userAngleBalanceAfter = await angle.balanceOf(angleHolder2._address);
+      const userSdAngleBalanceAfter = await sdANGLEToken.balanceOf(angleHolder2._address);
+
+      const randomUserStakedBalance = await liquidityGauge.balanceOf(RANDOM_USER);
+
+      expect(userAngleBalanceAfter).to.be.equal(userAngleBalanceBefore.sub(angleBalance));
+      expect(userSdAngleBalanceAfter).to.be.equal(userSdAngleBalanceAfter);
+      expect(randomUserStakedBalance).to.be.gt(0);
     });
 
     it("Should depositAll and lock ANGLE via AngleDepositor", async function () {
@@ -325,7 +389,7 @@ describe("ANGLE Depositor", function () {
 
       const angleBalance = await angle.balanceOf(angleHolder2._address);
       await angle.connect(angleHolder2).approve(angleDepositor.address, angleBalance);
-      await angleDepositor.connect(angleHolder2).depositAll(true);
+      await angleDepositor.connect(angleHolder2).depositAll(true, false, angleHolder2._address);
 
       const veANGLELockedAfter = await veANGLE.locked(locker.address);
       const userAngleBalanceAfter = await angle.balanceOf(angleHolder2._address);
@@ -344,9 +408,9 @@ describe("ANGLE Depositor", function () {
       // Lock ANGLE already deposited into the Depositor if there is any
       const addedLockingAmount = parseEther("100");
       await angle.connect(angleHolder).approve(angleDepositor.address, addedLockingAmount.mul(2));
-      await angleDepositor.connect(angleHolder).deposit(addedLockingAmount, false);
+      await angleDepositor.connect(angleHolder).deposit(addedLockingAmount, false, false, angleHolder._address);
       await angleDepositor.lockToken();
-      await angleDepositor.connect(angleHolder).deposit(addedLockingAmount, true);
+      await angleDepositor.connect(angleHolder).deposit(addedLockingAmount, true, false, angleHolder._address);
       await angleDepositor.lockToken();
       const angleBalance = await angle.balanceOf(angleDepositor.address);
       expect(angleBalance).to.be.equal(0);
@@ -371,7 +435,6 @@ describe("ANGLE Depositor", function () {
       await network.provider.send("evm_mine", []);
 
       await feeDistributor.connect(feeDAdmin).checkpoint_token();
-      await feeDistributor.connect(feeDAdmin).toggle_allow_checkpoint_token();
 
       await network.provider.send("evm_increaseTime", [86401 * 7]); // 1 week
       await network.provider.send("evm_mine", []);

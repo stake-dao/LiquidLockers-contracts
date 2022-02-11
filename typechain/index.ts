@@ -6,12 +6,10 @@ export type { VeSDT } from "./VeSDT";
 export type { FeeDistributor } from "./FeeDistributor";
 export type { GaugeController } from "./GaugeController";
 export type { LiquidityGaugeV4 } from "./LiquidityGaugeV4";
-export type { VeBoost } from "./VeBoost";
 export type { VeBoostProxy } from "./VeBoostProxy";
 
 export { VeSDT__factory } from "./factories/VeSDT__factory";
 export { FeeDistributor__factory } from "./factories/FeeDistributor__factory";
 export { GaugeController__factory } from "./factories/GaugeController__factory";
 export { LiquidityGaugeV4__factory } from "./factories/LiquidityGaugeV4__factory";
-export { VeBoost__factory } from "./factories/VeBoost__factory";
 export { VeBoostProxy__factory } from "./factories/VeBoostProxy__factory";

@@ -27,6 +27,7 @@ export interface LiquidityGaugeV4Interface extends utils.Interface {
     "claimable_reward(address,address)": FunctionFragment;
     "set_rewards_receiver(address)": FunctionFragment;
     "claim_rewards()": FunctionFragment;
+    "claim_rewards_for(address,address)": FunctionFragment;
     "kick(address)": FunctionFragment;
     "deposit(uint256)": FunctionFragment;
     "withdraw(uint256)": FunctionFragment;
@@ -37,6 +38,7 @@ export interface LiquidityGaugeV4Interface extends utils.Interface {
     "decreaseAllowance(address,uint256)": FunctionFragment;
     "add_reward(address,address)": FunctionFragment;
     "set_reward_distributor(address,address)": FunctionFragment;
+    "set_claimer(address)": FunctionFragment;
     "deposit_reward_token(address,uint256)": FunctionFragment;
     "commit_transfer_ownership(address)": FunctionFragment;
     "accept_transfer_ownership()": FunctionFragment;
@@ -60,6 +62,7 @@ export interface LiquidityGaugeV4Interface extends utils.Interface {
     "reward_integral_for(address,address)": FunctionFragment;
     "admin()": FunctionFragment;
     "future_admin()": FunctionFragment;
+    "claimer()": FunctionFragment;
     "initialized()": FunctionFragment;
   };
 
@@ -87,6 +90,10 @@ export interface LiquidityGaugeV4Interface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "claim_rewards",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "claim_rewards_for",
+    values: [string, string]
   ): string;
   encodeFunctionData(functionFragment: "kick", values: [string]): string;
   encodeFunctionData(
@@ -125,6 +132,7 @@ export interface LiquidityGaugeV4Interface extends utils.Interface {
     functionFragment: "set_reward_distributor",
     values: [string, string]
   ): string;
+  encodeFunctionData(functionFragment: "set_claimer", values: [string]): string;
   encodeFunctionData(
     functionFragment: "deposit_reward_token",
     values: [string, BigNumberish]
@@ -199,6 +207,7 @@ export interface LiquidityGaugeV4Interface extends utils.Interface {
     functionFragment: "future_admin",
     values?: undefined
   ): string;
+  encodeFunctionData(functionFragment: "claimer", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "initialized",
     values?: undefined
@@ -226,6 +235,10 @@ export interface LiquidityGaugeV4Interface extends utils.Interface {
     functionFragment: "claim_rewards",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "claim_rewards_for",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "kick", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "deposit", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "withdraw", data: BytesLike): Result;
@@ -246,6 +259,10 @@ export interface LiquidityGaugeV4Interface extends utils.Interface {
   decodeFunctionResult(functionFragment: "add_reward", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "set_reward_distributor",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "set_claimer",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -322,6 +339,7 @@ export interface LiquidityGaugeV4Interface extends utils.Interface {
     functionFragment: "future_admin",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "claimer", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "initialized",
     data: BytesLike
@@ -483,6 +501,12 @@ export interface LiquidityGaugeV4 extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
+    claim_rewards_for(
+      _addr: string,
+      _receiver: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
     kick(
       addr: string,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -557,6 +581,11 @@ export interface LiquidityGaugeV4 extends BaseContract {
     set_reward_distributor(
       _reward_token: string,
       _distributor: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    set_claimer(
+      _claimer: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
@@ -647,6 +676,8 @@ export interface LiquidityGaugeV4 extends BaseContract {
 
     future_admin(overrides?: CallOverrides): Promise<[string]>;
 
+    claimer(overrides?: CallOverrides): Promise<[string]>;
+
     initialized(overrides?: CallOverrides): Promise<[boolean]>;
   };
 
@@ -694,6 +725,12 @@ export interface LiquidityGaugeV4 extends BaseContract {
   ): Promise<ContractTransaction>;
 
   "claim_rewards(address,address)"(
+    _addr: string,
+    _receiver: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  claim_rewards_for(
     _addr: string,
     _receiver: string,
     overrides?: Overrides & { from?: string | Promise<string> }
@@ -776,6 +813,11 @@ export interface LiquidityGaugeV4 extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
+  set_claimer(
+    _claimer: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
   deposit_reward_token(
     _reward_token: string,
     _amount: BigNumberish,
@@ -854,6 +896,8 @@ export interface LiquidityGaugeV4 extends BaseContract {
 
   future_admin(overrides?: CallOverrides): Promise<string>;
 
+  claimer(overrides?: CallOverrides): Promise<string>;
+
   initialized(overrides?: CallOverrides): Promise<boolean>;
 
   callStatic: {
@@ -896,6 +940,12 @@ export interface LiquidityGaugeV4 extends BaseContract {
     ): Promise<void>;
 
     "claim_rewards(address,address)"(
+      _addr: string,
+      _receiver: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    claim_rewards_for(
       _addr: string,
       _receiver: string,
       overrides?: CallOverrides
@@ -974,6 +1024,8 @@ export interface LiquidityGaugeV4 extends BaseContract {
       _distributor: string,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    set_claimer(_claimer: string, overrides?: CallOverrides): Promise<void>;
 
     deposit_reward_token(
       _reward_token: string,
@@ -1056,6 +1108,8 @@ export interface LiquidityGaugeV4 extends BaseContract {
     admin(overrides?: CallOverrides): Promise<string>;
 
     future_admin(overrides?: CallOverrides): Promise<string>;
+
+    claimer(overrides?: CallOverrides): Promise<string>;
 
     initialized(overrides?: CallOverrides): Promise<boolean>;
   };
@@ -1176,6 +1230,12 @@ export interface LiquidityGaugeV4 extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
+    claim_rewards_for(
+      _addr: string,
+      _receiver: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
     kick(
       addr: string,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -1250,6 +1310,11 @@ export interface LiquidityGaugeV4 extends BaseContract {
     set_reward_distributor(
       _reward_token: string,
       _distributor: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    set_claimer(
+      _claimer: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
@@ -1328,6 +1393,8 @@ export interface LiquidityGaugeV4 extends BaseContract {
 
     future_admin(overrides?: CallOverrides): Promise<BigNumber>;
 
+    claimer(overrides?: CallOverrides): Promise<BigNumber>;
+
     initialized(overrides?: CallOverrides): Promise<BigNumber>;
   };
 
@@ -1376,6 +1443,12 @@ export interface LiquidityGaugeV4 extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     "claim_rewards(address,address)"(
+      _addr: string,
+      _receiver: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    claim_rewards_for(
       _addr: string,
       _receiver: string,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -1455,6 +1528,11 @@ export interface LiquidityGaugeV4 extends BaseContract {
     set_reward_distributor(
       _reward_token: string,
       _distributor: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    set_claimer(
+      _claimer: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
@@ -1540,6 +1618,8 @@ export interface LiquidityGaugeV4 extends BaseContract {
     admin(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     future_admin(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    claimer(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     initialized(overrides?: CallOverrides): Promise<PopulatedTransaction>;
   };
