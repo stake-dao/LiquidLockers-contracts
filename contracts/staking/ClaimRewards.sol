@@ -86,17 +86,11 @@ contract ClaimRewards {
 				if (balance != 0) {
 					if (depositor != address(0) && lockStatus.locked[depositorsIndex[token]]) {
 						IERC20(token).approve(depositor, balance);
-						IDepositor(depositor).deposit(balance, false);
-						address sdToken = IDepositor(depositor).minter();
-						uint256 sdTokenBalance = IERC20(sdToken).balanceOf(address(this));
 						if (lockStatus.staked[depositorsIndex[token]]) {
-							IERC20(sdToken).approve(gauge, sdTokenBalance);
-							ILiquidityGauge(gauge).deposit(sdTokenBalance, msg.sender);
+							IDepositor(depositor).deposit(balance, false, true, msg.sender);
 						} else {
-							SafeERC20.safeTransfer(IERC20(sdToken), msg.sender, sdTokenBalance);
+							IDepositor(depositor).deposit(balance, false, false, msg.sender);
 						}
-						uint256 sdTokenBalanceLeft = IERC20(sdToken).balanceOf(address(this));
-						require(sdTokenBalanceLeft == 0, "wrong amount sent");
 					} else {
 						SafeERC20.safeTransfer(IERC20(token), msg.sender, balance);
 					}

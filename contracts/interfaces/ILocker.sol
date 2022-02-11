@@ -29,4 +29,8 @@ interface ILocker {
 	) external;
 
 	function voteGaugeWeight(address, uint256) external;
+
+	function setAngleDepositor(address) external;
+
+	function setFxsDepositor(address) external;
 }

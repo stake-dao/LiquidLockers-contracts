@@ -81,6 +81,10 @@ describe("veSDT voting", () => {
   let surplusConverterSanTokens: Contract;
   let usdc: Contract;
   let claimRewards: Contract;
+  let angleDepositorOld: Contract;
+  let fxsDepositorOld: Contract;
+  let angleDepositorNew: Contract;
+  let fxsDepositorNew: Contract;
   let timelock: JsonRpcSigner;
   let sdtWhaleSigner: JsonRpcSigner;
   let sdFXSWhaleSigner: JsonRpcSigner;
@@ -101,8 +105,8 @@ describe("veSDT voting", () => {
     [deployer] = await ethers.getSigners();
 
     sdt = await ethers.getContractAt(ERC20, SDT);
-    sdfxs = await ethers.getContractAt(ERC20, sdFXS);
-    sdangle = await ethers.getContractAt(ERC20, sdANGLE);
+    sdfxs = await ethers.getContractAt("sdToken", sdFXS);
+    sdangle = await ethers.getContractAt("sdToken", sdANGLE);
     sww = await ethers.getContractAt("SmartWalletWhitelist", SWW);
     veSDTProxy = await ethers.getContractAt("veSDT", VESDTP);
     masterchef = await ethers.getContractAt(MASTERCHEFABI, MASTERCHEF);
@@ -113,6 +117,9 @@ describe("veSDT voting", () => {
     usdc = await ethers.getContractAt(ERC20, "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
     FXS1559_AMO_V3 = await ethers.getContractAt("IFXS1559_AMO_V3", FXSAMO);
     surplusConverterSanTokens = await ethers.getContractAt("ISurplusConverterSanTokens", BASESURPLUS);
+    // use the abi related to the new Depositor, but it needs only for calling the set operator 
+    fxsDepositorOld = await ethers.getContractAt("Depositor", FXS_DEPOSITOR);
+    angleDepositorOld = await ethers.getContractAt("Depositor", ANGLE_DEPOSITOR);
 
     await network.provider.request({
       method: "hardhat_impersonateAccount",
@@ -234,6 +241,19 @@ describe("veSDT voting", () => {
     const FxsAccumulator = await ethers.getContractFactory("FxsAccumulator");
     const AngleAccumulator = await ethers.getContractFactory("AngleAccumulator");
     const ClaimRewards = await ethers.getContractFactory("ClaimRewards");
+    const NewDepositor = await ethers.getContractFactory("Depositor");
+
+    // New depositor migration
+    angleDepositorNew = await NewDepositor.deploy(ANGLE, ANGLE_LOCKER, sdangle.address);
+    fxsDepositorNew = await NewDepositor.deploy(FXS, FXS_LOCKER, sdfxs.address);
+
+    // set new operators
+    await angleDepositorOld.connect(sdtDeployerSigner).setSdTokenOperator(angleDepositorNew.address);
+    await fxsDepositorOld.connect(sdtDeployerSigner).setSdTokenOperator(fxsDepositorNew.address);
+
+    // set new depositor on lockers
+    await angleLocker.connect(sdtDeployerSigner).setAngleDepositor(angleDepositorNew.address);
+    await fxsLocker.connect(sdtDeployerSigner).setFxsDepositor(fxsDepositorNew.address);
 
     // Deploy
     gc = await GaugeController.connect(deployer).deploy(sdt.address, veSDTProxy.address, deployer.address);
@@ -308,6 +328,10 @@ describe("veSDT voting", () => {
     fxsPPSGaugeProxy = await ethers.getContractAt("LiquidityGaugeV4", fxsPPSGaugeProxy.address);
     anglePPSGaugeProxy = await ethers.getContractAt("LiquidityGaugeV4", anglePPSGaugeProxy.address);
 
+    // set gauges into the depositors
+    await fxsDepositorNew.setGauge(fxsPPSGaugeProxy.address);
+    await angleDepositorNew.setGauge(anglePPSGaugeProxy.address);
+
     // set reward distributor
     await fxsPPSGaugeProxy.add_reward(fxs.address, fxsAccumulator.address);
     await anglePPSGaugeProxy.add_reward(sanUsdcEur.address, angleAccumulator.address);
@@ -345,8 +369,8 @@ describe("veSDT voting", () => {
     // set gauges and depositors on claim reward contract
     await claimRewards.enableGauge(fxsPPSGaugeProxy.address);
     await claimRewards.enableGauge(anglePPSGaugeProxy.address);
-    await claimRewards.addDepositor(fxs.address, FXS_DEPOSITOR);
-    await claimRewards.addDepositor(ANGLE, ANGLE_DEPOSITOR);
+    await claimRewards.addDepositor(fxs.address, fxsDepositorNew.address);
+    await claimRewards.addDepositor(ANGLE, angleDepositorNew.address);
 
     // Lock SDT for 4 years
     const sdtToLock = parseEther("10");
