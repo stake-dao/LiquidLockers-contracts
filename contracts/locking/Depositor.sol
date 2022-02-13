@@ -54,28 +54,38 @@ contract Depositor {
 	}
 
 	/* ========== RESTRICTED FUNCTIONS ========== */
+	/// @notice Set the new governance
+	/// @param _governance governance address 
 	function setGovernance(address _governance) external {
 		require(msg.sender == governance, "!auth");
 		governance = _governance;
 		emit GovernanceChanged(_governance);
 	}
 
+	/// @notice Set the new operator for minting sdToken
+	/// @param _operator operator address
 	function setSdTokenOperator(address _operator) external {
 		require(msg.sender == governance, "!auth");
 		ISdToken(minter).setOperator(_operator);
 		emit SdTokenOperatorChanged(_operator);
 	}
 
+	/// @notice Enable the relock or not
+	/// @param _relock relock status 
 	function setRelock(bool _relock) external {
 		require(msg.sender == governance, "!auth");
 		relock = _relock;
 	}
 
+	/// @notice Set the gauge to deposit token yielded
+	/// @param _gauge gauge address 
 	function setGauge(address _gauge) external {
 		require(msg.sender == governance, "!auth");
 		gauge = _gauge;
 	}
 
+	/// @notice set the fees for locking incentive
+	/// @param _lockIncentive contract must have tokens to lock
 	function setFees(uint256 _lockIncentive) external {
 		require(msg.sender == governance, "!auth");
 
@@ -144,7 +154,6 @@ contract Depositor {
 	) public {
 		require(_amount > 0, "!>0");
 		require(_user != address(0), "!user");
-		require(gauge != address(0), "!gauge");
 
 		// If User chooses to lock Token
 		if (_lock) {
@@ -165,13 +174,13 @@ contract Depositor {
 			incentiveToken = incentiveToken + callIncentive;
 		}
 
-		if (!_stake) {
-			ITokenMinter(minter).mint(_user, _amount);
-		} else {
+		if (_stake && gauge != address(0)) {
 			ITokenMinter(minter).mint(address(this), _amount);
 			IERC20(minter).safeApprove(gauge, 0);
 			IERC20(minter).safeApprove(gauge, _amount);
 			ILiquidityGauge(gauge).deposit(_amount, _user);
+		} else {
+			ITokenMinter(minter).mint(_user, _amount);
 		}
 
 		emit Deposited(msg.sender, _user, _amount, _lock, _stake);
@@ -180,6 +189,8 @@ contract Depositor {
 	/// @notice Deposits all the token of a user & locks them based on the options choosen
 	/// @dev User needs to approve the contract to transfer Token tokens
 	/// @param _lock Whether to lock the token
+	/// @param _stake Whether to stake the token
+	/// @param _user User to deposit for 
 	function depositAll(
 		bool _lock,
 		bool _stake,

@@ -77,30 +77,35 @@ contract BaseAccumulator {
 
     /// @notice Sets gauge for the accumulator which will receive and distribute the rewards
     /// @dev Can be called only by the governance
+    /// @param _gauge token address 
     function setGauge(address _gauge) external {
         require(msg.sender == governance, "!gov");
         emit GaugeSet(gauge, _gauge);
         gauge = _gauge;
     }
 
-    /// @notice Allows the governance to set the governance
+    /// @notice Allows the governance to set the new governance
     /// @dev Can be called only by the governance
-    function setGovernance(address _newG) external {
+    /// @param _governance token address 
+    function setGovernance(address _governance) external {
         require(msg.sender == governance, "!gov");
-        emit GovernanceSet(governance, _newG);
-        governance = _newG;
+        require(_governance != address(0), "can't be zero address");
+        emit GovernanceSet(governance, _governance);
+        governance = _governance;
     }
 
     /// @notice Allows the governance to set the locker
     /// @dev Can be called only by the governance
-    function setLocker(address _newL) external {
+    /// @param _locker locker address 
+    function setLocker(address _locker) external {
         require(msg.sender == governance, "!gov");
-        emit LockerSet(locker, _newL);
-        locker = _newL;
+        emit LockerSet(locker, _locker);
+        locker = _locker;
     }
 
-    /// @notice Allows the governance to set the locker
+    /// @notice Allows the governance to set the token reward
     /// @dev Can be called only by the governance
+    /// @param _tokenReward token reward address 
     function setTokenReward(address _tokenReward) external {
         require(msg.sender == governance, "!gov");
         emit TokenRewardSet(tokenReward, _tokenReward);
