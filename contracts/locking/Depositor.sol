@@ -12,7 +12,6 @@ import "../interfaces/ILiquidityGauge.sol";
 /// @author StakeDAO
 contract Depositor {
 	using SafeERC20 for IERC20;
-	using Address for address;
 
 	/* ========== STATE VARIABLES ========== */
 	address public token;
