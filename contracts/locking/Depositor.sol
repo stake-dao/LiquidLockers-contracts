@@ -120,7 +120,8 @@ contract Depositor {
 			uint256 unlockAt = block.timestamp + MAXTIME;
 			uint256 unlockInWeeks = (unlockAt / WEEK) * WEEK;
 
-			if (unlockInWeeks - unlockTime > 2) {
+			// 1 week buffer
+			if (unlockInWeeks - unlockTime > 1) {
 				ILocker(locker).increaseUnlockTime(unlockAt);
 				unlockTime = unlockInWeeks;
 			}
