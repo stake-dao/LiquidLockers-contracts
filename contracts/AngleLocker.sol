@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVeANGLE.sol";
@@ -28,7 +27,6 @@ contract AngleLocker {
 	/* ========== EVENTS ========== */
 	event LockCreated(address indexed user, uint256 value, uint256 duration);
 	event TokenClaimed(address indexed user, uint256 value);
-	event Voted(uint256 _voteId, address indexed _votingAddress, bool _support);
 	event VotedOnGaugeWeight(address indexed _gauge, uint256 _weight);
 	event Released(address indexed user, uint256 value);
 	event GovernanceChanged(address indexed newGovernance);
@@ -56,7 +54,7 @@ contract AngleLocker {
 	}
 
 	modifier onlyGovernanceOrDepositor() {
-		require(msg.sender == governance || msg.sender == angleDepositor, "!(gov||proxy||AngleDepositor)");
+		require(msg.sender == governance || msg.sender == angleDepositor, "!(gov||AngleDepositor)");
 		_;
 	}
 
@@ -65,7 +63,7 @@ contract AngleLocker {
 	/// @dev Can only be called by governance or proxy
 	/// @param _value The amount of token to be locked
 	/// @param _unlockTime The duration for which the token is to be locked
-	function createLock(uint256 _value, uint256 _unlockTime) external onlyGovernanceOrDepositor {
+	function createLock(uint256 _value, uint256 _unlockTime) external onlyGovernance {
 		IVeANGLE(veAngle).create_lock(_value, _unlockTime);
 		emit LockCreated(msg.sender, _value, _unlockTime);
 	}
@@ -94,7 +92,7 @@ contract AngleLocker {
 	/// @notice Withdraw the ANGLE from veANGLE
 	/// @dev call only after lock time expires
 	/// @param _recipient The address which will receive the released ANGLE
-	function release(address _recipient) external onlyGovernanceOrDepositor {
+	function release(address _recipient) external onlyGovernance {
 		IVeANGLE(veAngle).withdraw();
 		uint256 balance = IERC20(angle).balanceOf(address(this));
 
@@ -110,26 +108,36 @@ contract AngleLocker {
 		emit VotedOnGaugeWeight(_gauge, _weight);
 	}
 
+	/// @notice Set new governance address 
+	/// @param _governance governance address 
 	function setGovernance(address _governance) external onlyGovernance {
 		governance = _governance;
 		emit GovernanceChanged(_governance);
 	}
 
+	/// @notice Set the Angle Depositor
+	/// @param _angleDepositor angle deppositor address
 	function setAngleDepositor(address _angleDepositor) external onlyGovernance {
 		angleDepositor = _angleDepositor;
 		emit AngleDepositorChanged(_angleDepositor);
 	}
 
-	function setFeeDistributor(address _newYD) external onlyGovernance {
-		feeDistributor = _newYD;
-		emit FeeDistributorChanged(_newYD);
+	/// @notice Set the fee distributor 
+	/// @param _newFD fee distributor address
+	function setFeeDistributor(address _newFD) external onlyGovernance {
+		feeDistributor = _newFD;
+		emit FeeDistributorChanged(_newFD);
 	}
 
+	/// @notice Set the gauge controller
+	/// @param _gaugeController gauge controller address 
 	function setGaugeController(address _gaugeController) external onlyGovernance {
 		gaugeController = _gaugeController;
 		emit GaugeControllerChanged(_gaugeController);
 	}
 
+	/// @notice Set the accumulator
+	/// @param _accumulator accumulator address
 	function setAccumulator(address _accumulator) external onlyGovernance {
 		accumulator = _accumulator;
 		emit AccumulatorChanged(_accumulator);
@@ -143,7 +151,7 @@ contract AngleLocker {
 		address to,
 		uint256 value,
 		bytes calldata data
-	) external onlyGovernanceOrDepositor returns (bool, bytes memory) {
+	) external onlyGovernance returns (bool, bytes memory) {
 		(bool success, bytes memory result) = to.call{ value: value }(data);
 		return (success, result);
 	}

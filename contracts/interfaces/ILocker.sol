@@ -22,12 +22,6 @@ interface ILocker {
 
 	function setGovernance(address) external;
 
-	function vote(
-		uint256,
-		address,
-		bool
-	) external;
-
 	function voteGaugeWeight(address, uint256) external;
 
 	function setAngleDepositor(address) external;

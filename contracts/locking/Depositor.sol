@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/Context.sol";
 import "../interfaces/ITokenMinter.sol";
 import "../interfaces/ILocker.sol";
 import "../interfaces/ISdToken.sol";
@@ -34,9 +31,9 @@ contract Depositor {
 	bool public relock = true;
 
 	/* ========== EVENTS ========== */
-	event Deposited(address indexed caller, address indexed user, uint256 indexed amount, bool lock, bool stake);
-	event IncentiveReceived(address indexed caller, uint256 indexed amount);
-	event TokenLocked(address indexed user, uint256 indexed amount);
+	event Deposited(address indexed caller, address indexed user, uint256 amount, bool lock, bool stake);
+	event IncentiveReceived(address indexed caller, uint256 amount);
+	event TokenLocked(address indexed user, uint256 amount);
 	event GovernanceChanged(address indexed newGovernance);
 	event SdTokenOperatorChanged(address indexed newSdToken);
 	event FeesChanged(uint256 newFee);
@@ -120,7 +117,8 @@ contract Depositor {
 			uint256 unlockAt = block.timestamp + MAXTIME;
 			uint256 unlockInWeeks = (unlockAt / WEEK) * WEEK;
 
-			// 1 week buffer
+			// it means that a 1 week + at least 1 second has been passed 
+			// since last increased unlock time
 			if (unlockInWeeks - unlockTime > 1) {
 				ILocker(locker).increaseUnlockTime(unlockAt);
 				unlockTime = unlockInWeeks;

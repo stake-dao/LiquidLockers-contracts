@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVeFXS.sol";
@@ -28,7 +27,6 @@ contract FxsLocker {
 	/* ========== EVENTS ========== */
 	event LockCreated(address indexed user, uint256 value, uint256 duration);
 	event FXSClaimed(address indexed user, uint256 value);
-	event Voted(uint256 _voteId, address indexed _votingAddress, bool _support);
 	event VotedOnGaugeWeight(address indexed _gauge, uint256 _weight);
 	event Released(address indexed user, uint256 value);
 	event GovernanceChanged(address indexed newGovernance);
@@ -56,16 +54,16 @@ contract FxsLocker {
 	}
 
 	modifier onlyGovernanceOrDepositor() {
-		require(msg.sender == governance || msg.sender == fxsDepositor, "!(gov||proxy||fxsDepositor)");
+		require(msg.sender == governance || msg.sender == fxsDepositor, "!(gov||fxsDepositor)");
 		_;
 	}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
 	/// @notice Creates a lock by locking FXS token in the veFXS contract for the specified time
-	/// @dev Can only be called by governance or proxy
+	/// @dev Can only be called by governance
 	/// @param _value The amount of token to be locked
 	/// @param _unlockTime The duration for which the token is to be locked
-	function createLock(uint256 _value, uint256 _unlockTime) external onlyGovernanceOrDepositor {
+	function createLock(uint256 _value, uint256 _unlockTime) external onlyGovernance {
 		IveFXS(veFXS).create_lock(_value, _unlockTime);
 		IYieldDistributor(yieldDistributor).checkpoint();
 		emit LockCreated(msg.sender, _value, _unlockTime);
@@ -97,7 +95,7 @@ contract FxsLocker {
 	/// @notice Withdraw the FXS from veFXS
 	/// @dev call only after lock time expires
 	/// @param _recipient The address which will receive the released FXS
-	function release(address _recipient) external onlyGovernanceOrDepositor {
+	function release(address _recipient) external onlyGovernance {
 		IveFXS(veFXS).withdraw();
 		uint256 balance = IERC20(fxs).balanceOf(address(this));
 
@@ -113,26 +111,36 @@ contract FxsLocker {
 		emit VotedOnGaugeWeight(_gauge, _weight);
 	}
 
+	/// @notice Set new governance address 
+	/// @param _governance governance address 
 	function setGovernance(address _governance) external onlyGovernance {
 		governance = _governance;
 		emit GovernanceChanged(_governance);
 	}
 
+	/// @notice Set the FXS Depositor
+	/// @param _fxsDepositor fxs deppositor address
 	function setFxsDepositor(address _fxsDepositor) external onlyGovernance {
 		fxsDepositor = _fxsDepositor;
 		emit FxsDepositorChanged(_fxsDepositor);
 	}
 
+	/// @notice Set the yield distributor
+	/// @param _newYD yield distributor address
 	function setYieldDistributor(address _newYD) external onlyGovernance {
 		yieldDistributor = _newYD;
 		emit YieldDistributorChanged(_newYD);
 	}
 
+	/// @notice Set the gauge controller
+	/// @param _gaugeController gauge controller address 
 	function setGaugeController(address _gaugeController) external onlyGovernance {
 		gaugeController = _gaugeController;
 		emit GaugeControllerChanged(_gaugeController);
 	}
 
+	/// @notice Set the accumulator
+	/// @param _accumulator accumulator address
 	function setAccumulator(address _accumulator) external onlyGovernance {
 		accumulator = _accumulator;
 		emit AccumulatorChanged(_accumulator);
@@ -146,7 +154,7 @@ contract FxsLocker {
 		address to,
 		uint256 value,
 		bytes calldata data
-	) external onlyGovernanceOrDepositor returns (bool, bytes memory) {
+	) external onlyGovernance returns (bool, bytes memory) {
 		(bool success, bytes memory result) = to.call{ value: value }(data);
 		return (success, result);
 	}
