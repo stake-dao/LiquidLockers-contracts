@@ -24,15 +24,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const gaugeImplementation = await deployments.get(`LiquidityGaugeV4-${tokenName}-implementation`);
 
-  console.log("gaugeImplementation", gaugeImplementation.address);
-
   const ABI = [
     "function initialize(address _staking_token, address _admin, address _SDT, address _voting_escrow, address _veBoost_proxy, address _distributor)"
   ];
 
   const iface = new hre.ethers.utils.Interface(ABI);
-
-  console.log([stakingToken.address, admin, SDT, veSDT.address, veBoostProxy.address, admin]);
 
   const data = iface.encodeFunctionData("initialize", [
     stakingToken.address,
@@ -42,8 +38,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     veBoostProxy.address,
     admin // after call set_reward_distributor for SDT from deployer passing new SdtDistributor
   ]);
-
-  console.log([gaugeImplementation.address, proxyAdmin.address, data]);
 
   await deploy(`LiquidityGaugeV4-${tokenName}`, {
     contract: "TransparentUpgradeableProxy",
