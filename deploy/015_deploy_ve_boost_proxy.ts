@@ -6,15 +6,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const ANGLE = "0x31429d1856ad1377a8a0079410b297e1a9e214c2";
+  const ZERO = "0x0000000000000000000000000000000000000000";
+  const veSDT = await deployments.get("veSDT");
+  const admin = "0xb36a0671B3D49587236d7833B01E79798175875f"; // deployer
 
-  await deploy("ANGLEAccumulator", {
-    contract: "AngleAccumulator",
+  await deploy("veBoostProxy", {
     from: deployer,
-    args: [ANGLE],
+    args: [veSDT.address, ZERO, admin],
     log: true
   });
 };
 export default func;
 
-func.tags = ["AngleAccumulator"];
+func.tags = ["veBoostProxy"];
+func.dependencies = ["veSDT"];
