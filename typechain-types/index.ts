@@ -46,7 +46,6 @@ export type { SdToken } from "./SdToken";
 export type { ClaimRewards } from "./ClaimRewards";
 export type { MasterchefMasterToken } from "./MasterchefMasterToken";
 export type { SdtDistributor } from "./SdtDistributor";
-export type { SdtDistributor2 } from "./SdtDistributor2";
 export type { SdtDistributorEvents } from "./SdtDistributorEvents";
 
 export { Ownable__factory } from "./factories/Ownable__factory";
@@ -94,5 +93,4 @@ export { SdToken__factory } from "./factories/SdToken__factory";
 export { ClaimRewards__factory } from "./factories/ClaimRewards__factory";
 export { MasterchefMasterToken__factory } from "./factories/MasterchefMasterToken__factory";
 export { SdtDistributor__factory } from "./factories/SdtDistributor__factory";
-export { SdtDistributor2__factory } from "./factories/SdtDistributor2__factory";
 export { SdtDistributorEvents__factory } from "./factories/SdtDistributorEvents__factory";
