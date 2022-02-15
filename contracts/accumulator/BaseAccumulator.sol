@@ -77,16 +77,17 @@ contract BaseAccumulator {
 
     /// @notice Sets gauge for the accumulator which will receive and distribute the rewards
     /// @dev Can be called only by the governance
-    /// @param _gauge token address 
+    /// @param _gauge gauge address 
     function setGauge(address _gauge) external {
         require(msg.sender == governance, "!gov");
+        require(_gauge != address(0), "can't be zero address");
         emit GaugeSet(gauge, _gauge);
         gauge = _gauge;
     }
 
     /// @notice Allows the governance to set the new governance
     /// @dev Can be called only by the governance
-    /// @param _governance token address 
+    /// @param _governance governance address 
     function setGovernance(address _governance) external {
         require(msg.sender == governance, "!gov");
         require(_governance != address(0), "can't be zero address");
@@ -99,6 +100,7 @@ contract BaseAccumulator {
     /// @param _locker locker address 
     function setLocker(address _locker) external {
         require(msg.sender == governance, "!gov");
+        require(_locker != address(0), "can't be zero address");
         emit LockerSet(locker, _locker);
         locker = _locker;
     }
@@ -108,6 +110,7 @@ contract BaseAccumulator {
     /// @param _tokenReward token reward address 
     function setTokenReward(address _tokenReward) external {
         require(msg.sender == governance, "!gov");
+        require(_tokenReward != address(0), "can't be zero address");
         emit TokenRewardSet(tokenReward, _tokenReward);
         tokenReward = _tokenReward;
     }
@@ -122,6 +125,7 @@ contract BaseAccumulator {
 		address _recipient
 	) external {
         require(msg.sender == governance, "!gov");
+        require(_amount > 0, "set an amount > 0");
 		require(_recipient != address(0), "can't be zero address");
 		IERC20(_token).safeTransfer(_recipient, _amount);
 		emit ERC20Rescued(_token, _amount);

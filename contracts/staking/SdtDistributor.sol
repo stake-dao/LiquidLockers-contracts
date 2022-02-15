@@ -58,16 +58,23 @@ contract SdtDistributor is ReentrancyGuardUpgradeable, AccessControlUpgradeable,
 	/// @notice Maps the timestamp of last pull to the gauge addresses then keeps the data if particular gauge paid in the last pull
 	mapping(uint256 => mapping(address => bool)) public isGaugePaid;
 
+	/// @notice Initialize function 
+	/// @param _rewardToken token address used as reward
+	/// @param _controller gauge controller to manage votes
+	/// @param _masterchef masterchef address to redeem SDT
+	/// @param _governor governor address
+	/// @param _guardian guardian address
+	/// @param _delegateGauge delegate gauge address
 	function initialize(
 		address _rewardToken,
 		address _controller,
 		address _masterchef,
-		address governor,
-		address guardian,
+		address _governor,
+		address _guardian,
 		address _delegateGauge
 	) external initializer {
 		require(
-			_controller != address(0) && _rewardToken != address(0) && guardian != address(0) && governor != address(0),
+			_controller != address(0) && _rewardToken != address(0) && _guardian != address(0) && _governor != address(0),
 			"0"
 		);
 		rewardToken = IERC20(_rewardToken);
@@ -80,20 +87,24 @@ contract SdtDistributor is ReentrancyGuardUpgradeable, AccessControlUpgradeable,
 
 		_setRoleAdmin(GOVERNOR_ROLE, GOVERNOR_ROLE);
 		_setRoleAdmin(GUARDIAN_ROLE, GOVERNOR_ROLE);
-		_setupRole(GUARDIAN_ROLE, guardian);
-		_setupRole(GOVERNOR_ROLE, governor);
-		_setupRole(GUARDIAN_ROLE, governor);
+		_setupRole(GUARDIAN_ROLE, _guardian);
+		_setupRole(GOVERNOR_ROLE, _governor);
+		_setupRole(GUARDIAN_ROLE, _governor);
 	}
 
 	/// @custom:oz-upgrades-unsafe-allow constructor
 	constructor() initializer {}
 
+	/// @notice Initialize the masterchef depositing the master token
+	/// @param _pid pool id to deposit the token
 	function initializeMasterchef(uint256 _pid) external onlyRole(GOVERNOR_ROLE) {
 		masterchefPID = _pid;
 		masterchefToken.approve(address(masterchef), 1e18);
 		masterchef.deposit(_pid, 1e18);
 	}
 
+	/// @notice Distribute SDT rewards to gauges
+	/// @param gauges Array of gauges to distribute the rewards
 	function distributeMulti(address[] memory gauges) external nonReentrant {
 		require(distributionsOn == true, "not allowed");
 
@@ -109,6 +120,8 @@ contract SdtDistributor is ReentrancyGuardUpgradeable, AccessControlUpgradeable,
 		}
 	}
 
+	/// @notice Internal function used to distribute SDT rewards to a gauge
+	/// @param gaugeAddr gauge address where distribute the rewards
 	function _distributeReward(address gaugeAddr) internal {
 		int128 gaugeType = controller.gauge_types(gaugeAddr);
 		require(gaugeType >= 0 && !killedGauges[gaugeAddr], "Unrecognized or killed gauge");
@@ -149,10 +162,13 @@ contract SdtDistributor is ReentrancyGuardUpgradeable, AccessControlUpgradeable,
 		emit RewardDistributed(gaugeAddr, sdtDistributed);
 	}
 
+	/// @notice Internal function to pull SDT from the MasterChef
 	function _pullSDT() internal {
 		masterchef.withdraw(masterchefPID, 0);
 	}
 
+	/// @notice Sets the distribution state (on/off)
+	/// @param _state new distribution state
 	function setDistribution(bool _state) external onlyRole(GOVERNOR_ROLE) {
 		distributionsOn = _state;
 	}
@@ -226,18 +242,14 @@ contract SdtDistributor is ReentrancyGuardUpgradeable, AccessControlUpgradeable,
 		emit InterfaceKnownToggled(_delegateGauge, !isInterfaceKnownMem);
 	}
 
-	/**
-	@notice Gives max approvement to the gauge
-	@param gaugeAddr Address of the gauge
-	 */
+	/// @notice Gives max approvement to the gauge
+	/// @param gaugeAddr Address of the gauge
 	function approveGauge(address gaugeAddr) external onlyRole(GOVERNOR_ROLE) {
 		rewardToken.safeApprove(gaugeAddr, type(uint256).max);
 	}
 
-	/**
-	@notice Set the time period for pull SDT from Masterchef
-	@param _timePeriod new timePeriod value in seconds
-	 */
+	/// @notice Set the time period to pull SDT from Masterchef
+	/// @param _timePeriod new timePeriod value in seconds
 	function setTimePeriod(uint256 _timePeriod) external onlyRole(GOVERNOR_ROLE) {
 		timePeriod = _timePeriod;
 	}
