@@ -49,5 +49,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func;
 
+func.skip = async () => true;
 func.tags = ["LiquidityGaugeV4"];
 func.dependencies = ["veSDT", tokenName, "ProxyAdmin"];
