@@ -12,7 +12,6 @@ import "./interfaces/IAngleGaugeController.sol";
 /// @notice Locks the ANGLE tokens to veANGLE contract
 contract AngleLocker {
 	using SafeERC20 for IERC20;
-	using Address for address;
 
 	/* ========== STATE VARIABLES ========== */
 	address public governance;

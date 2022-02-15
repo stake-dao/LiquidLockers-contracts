@@ -12,7 +12,6 @@ import "./interfaces/IFraxGaugeController.sol";
 /// @notice Locks the FXS tokens to veFXS contract
 contract FxsLocker {
 	using SafeERC20 for IERC20;
-	using Address for address;
 
 	/* ========== STATE VARIABLES ========== */
 	address public governance;
