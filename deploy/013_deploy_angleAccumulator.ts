@@ -6,12 +6,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const ANGLE = "0x31429d1856ad1377a8a0079410b297e1a9e214c2";
+  const SAN_USDC_EUR = "0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad";
 
   await deploy("ANGLEAccumulator", {
     contract: "AngleAccumulator",
     from: deployer,
-    args: [ANGLE],
+    args: [SAN_USDC_EUR],
     log: true
   });
 };
