@@ -36,7 +36,7 @@ contract ClaimRewards {
 	event DepositorEnabled(address token, address depositor);
 	event DepositorDisabled(address token, address depositor);
 	event Recovered(address token, uint256 amount);
-	event RewardsClaimed(address claimer, address[] gauges);
+	event RewardsClaimed(address[] gauges);
 	event RewardClaimedAndLocked(address[] gauges, bool locks, bool stake);
 	event RewardClaimedAndSent(address user, address[] gauges);
 
@@ -57,7 +57,7 @@ contract ClaimRewards {
 			require(gauges[_gauges[index]], "Gauge not enabled");
 			ILiquidityGauge(_gauges[index]).claim_rewards_for(msg.sender, msg.sender);
 		}
-		emit RewardsClaimed(msg.sender, _gauges);
+		emit RewardsClaimed(_gauges);
 	}
 
 	/// @notice A function that allows the user to claim, lock and stake tokens retrieved from gauges
@@ -102,16 +102,17 @@ contract ClaimRewards {
 
 		// Lock SDT for veSDT or send to the user if any
 		uint256 balanceBefore = IERC20(SDT).balanceOf(address(this));
-		require(balanceBefore != 0);
-		if (lockStatus.lockSDT) {
-			IERC20(SDT).approve(veSDT, balanceBefore);
-			IVeSDT(veSDT).deposit_for_from(msg.sender, balanceBefore);
-		} else {
-			SafeERC20.safeTransfer(IERC20(SDT), msg.sender, balanceBefore);
+		if (balanceBefore != 0) {
+			if (lockStatus.lockSDT && IVeSDT(veSDT).balanceOf(msg.sender) > 0) {
+				IERC20(SDT).approve(veSDT, balanceBefore);
+				IVeSDT(veSDT).deposit_for_from(msg.sender, balanceBefore);
+			} else {
+				SafeERC20.safeTransfer(IERC20(SDT), msg.sender, balanceBefore);
+			}
+			require(IERC20(SDT).balanceOf(address(this)) == 0, "wrong amount sent");
 		}
-		require(IERC20(SDT).balanceOf(address(this)) == 0, "wrong amount sent");
 
-		// emit RewardClaimedAndLocked(_gauges, _lock, _stake);
+		emit RewardsClaimed(_gauges);
 	}
 
 	/// @notice A function that rescue any ERC20 token
