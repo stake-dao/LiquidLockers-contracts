@@ -3,7 +3,6 @@
 pragma solidity 0.8.7;
 
 import "./SdtDistributorEvents.sol";
-import "hardhat/console.sol";
 
 contract SdtDistributor is ReentrancyGuardUpgradeable, AccessControlUpgradeable, SdtDistributorEvents {
 	using SafeERC20 for IERC20;
@@ -58,7 +57,7 @@ contract SdtDistributor is ReentrancyGuardUpgradeable, AccessControlUpgradeable,
 	/// @notice Maps the timestamp of last pull to the gauge addresses then keeps the data if particular gauge paid in the last pull
 	mapping(uint256 => mapping(address => bool)) public isGaugePaid;
 
-	/// @notice Initialize function 
+	/// @notice Initialize function
 	/// @param _rewardToken token address used as reward
 	/// @param _controller gauge controller to manage votes
 	/// @param _masterchef masterchef address to redeem SDT
@@ -159,7 +158,7 @@ contract SdtDistributor is ReentrancyGuardUpgradeable, AccessControlUpgradeable,
 			ILiquidityGauge(gaugeAddr).deposit_reward_token(address(rewardToken), sdtDistributed);
 		}
 		isGaugePaid[lastMasterchefPull][gaugeAddr] = true;
-		emit RewardDistributed(gaugeAddr, sdtDistributed);
+		emit RewardDistributed(gaugeAddr, sdtDistributed, lastMasterchefPull);
 	}
 
 	/// @notice Internal function to pull SDT from the MasterChef

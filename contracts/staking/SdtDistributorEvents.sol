@@ -27,6 +27,6 @@ contract SdtDistributorEvents {
 	event InterfaceKnownToggled(address indexed _delegateGauge, bool _isInterfaceKnown);
 	event RateUpdated(uint256 _newRate);
 	event Recovered(address indexed tokenAddress, address indexed to, uint256 amount);
-	event RewardDistributed(address indexed gaugeAddr, uint256 sdtDistributed);
+	event RewardDistributed(address indexed gaugeAddr, uint256 sdtDistributed, uint256 lastMasterchefPull);
 	event UpdateMiningParameters(uint256 time, uint256 rate, uint256 supply);
 }
