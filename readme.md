@@ -130,3 +130,18 @@ At this step, users will be able to vote, using veSDT, via the GaugeController, 
 9. [veSDT Implementation](https://etherscan.io/address/0x4dcb5571024d14f017b99a7d3cedef670d4718c4#code)
 8. [ProxyAdmin.sol](https://etherscan.io/address/0xfE612c237A81527a86f2Cac1FD19939CF4F91B9B#code)
 9. [SmartWalletWhitelist.sol](https://etherscan.io/address/0x37E8386602d9EBEa2c56dd11d8E142290595f1b5#code)
+
+## Caution Points
+
+### AngleLocker:
+1) If the depositor needs to migrate -> setDepositor(new depositor) (already happened)
+The new depositor contract needs to define functions to call at least increaseAmount within the locker
+2) If the accumulator needs to migrate -> setAccumulator(new accumulator)
+The new accumulator contract needs to define functions to call claimRewards within the locker
+3) If the gaugeController needs to migrate (made by angle) -> setGaugeController(new controller)
+The new gauge controller needs to define the vote_for_gauge_weights()
+4) if the feeDistributor needs to migrate (made by angle) -> setFeeDistributor(new feeDistributor)
+The new feeDistributor needs to define the claim() function
+
+### sdToken Operator Contract
+1) There will be a standard interface that all sdToken operator contracts need to follow i.e they need to inherit it and implement all its methods (most importantly `setSdTokenOperator()`)
