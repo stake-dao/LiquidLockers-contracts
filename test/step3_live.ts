@@ -61,6 +61,9 @@ const PROXY_ADMIN = "0xfE612c237A81527a86f2Cac1FD19939CF4F91B9B";
 const ANGLE_DEPLOYER = "0xfdA462548Ce04282f4B6D6619823a7C64Fdc0185";
 const ANGLE_FEE_D = "0x7F82ff050128e29Fd89D85d01b93246F744E62A0";
 
+const SDT_DISTRIBUTOR = "0x06F66Bc79aeD1b49a393bF5fcF68a70499A2B5DC";
+const CLAIM_REWARDS = "0xf30f23B7FB233172A41b32f82D263c33a0c9F8c2";
+
 const getNow = async function () {
   let blockNum = await ethers.provider.getBlockNumber();
   let block = await ethers.provider.getBlock(blockNum);
@@ -237,35 +240,12 @@ describe("veSDT voting", () => {
     await network.provider.send("hardhat_setBalance", [sdAngleWhaleSigner._address, parseEther("10").toHexString()]);
     await network.provider.send("hardhat_setBalance", [dummyUser._address, parseEther("10").toHexString()]);
 
-    const SdtDistributor = await ethers.getContractFactory("SdtDistributor");
-    const Proxy = await ethers.getContractFactory("TransparentUpgradeableProxy");
-    const ClaimRewards = await ethers.getContractFactory("ClaimRewards");
-
-    // Deploy
-    claimRewards = await ClaimRewards.deploy();
-
     // set lockers into accumulators
     await fxsAccumulator.connect(sdtDeployerSigner).setLocker(fxsLocker.address);
     await angleAccumulator.connect(sdtDeployerSigner).setLocker(angleLocker.address);
 
-    // Contracts upgradeable
-    sdtDistributor = await SdtDistributor.deploy();
-
-    let ABI_SDTD = [
-      "function initialize(address _rewardToken, address _controller, address _masterchef, address governor, address guardian, address _delegate_gauge)"
-    ];
-    let iface = new ethers.utils.Interface(ABI_SDTD);
-    const dataSdtD = iface.encodeFunctionData("initialize", [
-      sdt.address,
-      gc.address,
-      masterchef.address,
-      deployer.address,
-      deployer.address,
-      deployer.address
-    ]);
-
-    sdtDProxy = await Proxy.connect(deployer).deploy(sdtDistributor.address, proxyAdmin.address, dataSdtD);
-    sdtDProxy = await ethers.getContractAt("SdtDistributor", sdtDProxy.address);
+    claimRewards = await ethers.getContractAt("ClaimRewards", CLAIM_REWARDS);
+    sdtDProxy = await ethers.getContractAt("SdtDistributor", SDT_DISTRIBUTOR);
 
     fxsPPSGaugeProxy = await ethers.getContractAt("LiquidityGaugeV4", SDFXS_GAUGE);
     anglePPSGaugeProxy = await ethers.getContractAt("LiquidityGaugeV4", SDANGLE_GAUGE);
@@ -279,10 +259,10 @@ describe("veSDT voting", () => {
     await angleAccumulator.connect(sdtDeployerSigner).setGauge(anglePPSGaugeProxy.address);
 
     // set gauges and depositors on claim reward contract
-    await claimRewards.enableGauge(fxsPPSGaugeProxy.address);
-    await claimRewards.enableGauge(anglePPSGaugeProxy.address);
-    await claimRewards.addDepositor(fxs.address, fxsDepositor.address);
-    await claimRewards.addDepositor(ANGLE, angleDepositor.address);
+    await claimRewards.connect(sdtDeployerSigner).enableGauge(fxsPPSGaugeProxy.address);
+    await claimRewards.connect(sdtDeployerSigner).enableGauge(anglePPSGaugeProxy.address);
+    await claimRewards.connect(sdtDeployerSigner).addDepositor(fxs.address, fxsDepositor.address);
+    await claimRewards.connect(sdtDeployerSigner).addDepositor(ANGLE, angleDepositor.address);
 
     // Lock SDT for 4 years
     const sdtToLock = parseEther("10");
@@ -295,8 +275,8 @@ describe("veSDT voting", () => {
     await masterchef.connect(timelock).add(1000, masterToken, false);
     const poolsLength = await masterchef.poolLength();
     const pidSdtD = poolsLength - 1;
-    await sdtDProxy.connect(deployer).initializeMasterchef(pidSdtD);
-    await sdtDProxy.connect(deployer).setDistribution(true);
+    await sdtDProxy.connect(sdtDeployerSigner).initializeMasterchef(pidSdtD);
+    await sdtDProxy.connect(sdtDeployerSigner).setDistribution(true);
 
     await sdfxs.connect(sdFXSWhaleSigner).transfer(SDTWHALE, parseEther("1"));
     await sdangle.connect(sdAngleWhaleSigner).transfer(SDTWHALE, parseEther("0.5"));
