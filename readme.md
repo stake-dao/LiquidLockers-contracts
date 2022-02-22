@@ -100,6 +100,29 @@ At this step, users will be able to vote, using veSDT, via the GaugeController, 
 6. **veBoostProxy.vy**: proxy contract to manage the veBoost contract (to be deployed in step 4) which will allow users to delegate their veSDT boost to other users. We need to deploy veBoostProxy in step 3 cause LiquidityGaugeV4 contract needs an immutable deployed veBoostProxy address as one of its deployment parameters. [Diffchecker](https://www.diffnow.com/report/tywlq) with Angle's veBoostProxy.
 7. [**Contracts for Upgradability**](https://github.com/StakeDAO/sd-frax-veSDT/tree/feature/step3#contracts-for-upgradability)
 
+### Gauge Types
+Type 0 - Mainnet LG, it will send SDT to the LiquidityGaugeV4 (sdAngle, sdFxs) <br/>
+Type 1 - Mainnet SR, it will send SDT to the classic Staking Reward that does not support veSDT boosting and delegation <br/>
+Type 2 - External, it will send SDT to the delegateGauge address (our multisig) if the delegate gauge for that gauge is not defined. If it is defined the SDT will be send to it and the reward notified
+
+### Caution Points
+
+#### For Depositor migration
+1. In Locker, setDepositor(new depositor) (already happened). The new depositor contract needs to define functions to call at least increaseAmount within the locker.
+#### For Accumulator migration
+1. In Locker, setAccumulator(new accumulator). The new accumulator contract needs to define functions to call claimRewards within the locker.
+#### For Gauge Controller migration
+1. In Locker, setGaugeController(new controller). The new gauge controller needs to define the vote_for_gauge_weights()
+#### For FeeDistributor migration
+1. In Locker, setFeeDistributor(new feeDistributor). The new feeDistributor needs to define the claim() function
+#### For LiquidityGaugeV4 migration
+1. In Accumulator, setGauge(new gauge)
+#### For Locker migration
+1. In Accumulator, setLocker(new locker) [very less likely to ever happen]
+#### For sdToken Operator Contract
+1. There will be a standard interface that all sdToken operator contracts need to follow i.e they need to inherit it and implement all its methods (most importantly `setSdTokenOperator()`)
+   
+
 ## Contracts for Upgradability
 1. **TransparentUpgradeableProxy.sol**: proxy contract that has an admin and the logic to upgrade an upgradable contract.
 2. **ProxyAdmin.sol**: the dedicated Admin contract of TransparentUpgradeableProxy contracts of all upgradable contracts. It allows calling `changeAdmin()` and `upgradeTo()`/`upgradeToAndCall()`  on TransparentUpgradeableProxy.
@@ -130,18 +153,3 @@ At this step, users will be able to vote, using veSDT, via the GaugeController, 
 9. [veSDT Implementation](https://etherscan.io/address/0x4dcb5571024d14f017b99a7d3cedef670d4718c4#code)
 8. [ProxyAdmin.sol](https://etherscan.io/address/0xfE612c237A81527a86f2Cac1FD19939CF4F91B9B#code)
 9. [SmartWalletWhitelist.sol](https://etherscan.io/address/0x37E8386602d9EBEa2c56dd11d8E142290595f1b5#code)
-
-## Caution Points
-
-### AngleLocker:
-1) If the depositor needs to migrate -> setDepositor(new depositor) (already happened)
-The new depositor contract needs to define functions to call at least increaseAmount within the locker
-2) If the accumulator needs to migrate -> setAccumulator(new accumulator)
-The new accumulator contract needs to define functions to call claimRewards within the locker
-3) If the gaugeController needs to migrate (made by angle) -> setGaugeController(new controller)
-The new gauge controller needs to define the vote_for_gauge_weights()
-4) if the feeDistributor needs to migrate (made by angle) -> setFeeDistributor(new feeDistributor)
-The new feeDistributor needs to define the claim() function
-
-### sdToken Operator Contract
-1) There will be a standard interface that all sdToken operator contracts need to follow i.e they need to inherit it and implement all its methods (most importantly `setSdTokenOperator()`)
