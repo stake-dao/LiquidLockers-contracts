@@ -26,7 +26,7 @@ const FXSAMO = "0xb524622901b3f7b5dea6501e9830700c847c7dc5";
 const SAN = "0xcc617c6f9725eacc993ac626c7efc6b96476916e";
 const BASESURPLUS = "0x2e2063080a05ffdaa6d57f9358c2a5e1c65c70ec";
 const USDCWHALE = "0x72a53cdbbcc1b9efa39c834a540550e23463aacb";
-const SANUSDCEURWHALE = "0x2298718F8C34aDb143BdCC017feAE24dE4a62653";
+const SANUSDCEURWHALE = "0xEa51Ccb352Aea7641fF4D88536F0F06Fd052EF8f";
 
 const FXS_LOCKER = "0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f";
 const ANGLE_LOCKER = "0xD13F8C25CceD32cdfA79EB5eD654Ce3e484dCAF5";
@@ -64,6 +64,8 @@ const ANGLE_FEE_D = "0x7F82ff050128e29Fd89D85d01b93246F744E62A0";
 const SDT_DISTRIBUTOR = "0x06F66Bc79aeD1b49a393bF5fcF68a70499A2B5DC";
 const CLAIM_REWARDS = "0xf30f23B7FB233172A41b32f82D263c33a0c9F8c2";
 
+const AG_EUR = "0x1a7e4e63778B4f12a199C062f3eFdD288afCBce8";
+
 const getNow = async function () {
   let blockNum = await ethers.provider.getBlockNumber();
   let block = await ethers.provider.getBlock(blockNum);
@@ -95,13 +97,16 @@ describe("veSDT voting", () => {
   let claimRewards: Contract;
   let angleDepositor: Contract;
   let fxsDepositor: Contract;
+  let angleAccNew: Contract;
   let angleFD: Contract;
+  let agEUR: Contract;
   let timelock: JsonRpcSigner;
   let sdtWhaleSigner: JsonRpcSigner;
   let sdFXSWhaleSigner: JsonRpcSigner;
   let sdAngleWhaleSigner: JsonRpcSigner;
   let sdtDeployerSigner: JsonRpcSigner;
   let angleDeployerSigner: JsonRpcSigner;
+  let sanUsdcEurWhale: JsonRpcSigner;
   let deployer: SignerWithAddress;
   let dummyUser: JsonRpcSigner;
   let surplusCaller: JsonRpcSigner;
@@ -129,6 +134,9 @@ describe("veSDT voting", () => {
     angleAccumulator = await ethers.getContractAt("AngleAccumulator", ANGLE_ACCUMULATOR);
     proxyAdmin = await ethers.getContractAt("ProxyAdmin", PROXY_ADMIN);
     angleFD = await ethers.getContractAt("FeeDistributor", ANGLE_FEE_D);
+    agEUR = await ethers.getContractAt(ERC20, AG_EUR);
+
+    const AngleAccNew = await ethers.getContractFactory("AngleAccumulatorNew");
 
     await network.provider.request({
       method: "hardhat_impersonateAccount",
@@ -233,16 +241,13 @@ describe("veSDT voting", () => {
     sdtDeployerSigner = await ethers.provider.getSigner(SDT_DEPLOYER);
     usdcWhale = await ethers.provider.getSigner(USDCWHALE);
     angleDeployerSigner = await ethers.provider.getSigner(ANGLE_DEPLOYER);
+    sanUsdcEurWhale = await ethers.provider.getSigner(SANUSDCEURWHALE);
 
     await network.provider.send("hardhat_setBalance", [sdtWhaleSigner._address, parseEther("10").toHexString()]);
     await network.provider.send("hardhat_setBalance", [timelock._address, parseEther("10").toHexString()]);
     await network.provider.send("hardhat_setBalance", [sdFXSWhaleSigner._address, parseEther("10").toHexString()]);
     await network.provider.send("hardhat_setBalance", [sdAngleWhaleSigner._address, parseEther("10").toHexString()]);
     await network.provider.send("hardhat_setBalance", [dummyUser._address, parseEther("10").toHexString()]);
-
-    // set lockers into accumulators
-    await fxsAccumulator.connect(sdtDeployerSigner).setLocker(fxsLocker.address);
-    await angleAccumulator.connect(sdtDeployerSigner).setLocker(angleLocker.address);
 
     claimRewards = await ethers.getContractAt("ClaimRewards", CLAIM_REWARDS);
     sdtDProxy = await ethers.getContractAt("SdtDistributor", SDT_DISTRIBUTOR);
@@ -251,18 +256,11 @@ describe("veSDT voting", () => {
     anglePPSGaugeProxy = await ethers.getContractAt("LiquidityGaugeV4", SDANGLE_GAUGE);
 
     // set reward distributor
-    await fxsPPSGaugeProxy.connect(sdtDeployerSigner).set_claimer(claimRewards.address);
     await anglePPSGaugeProxy.connect(sdtDeployerSigner).set_claimer(claimRewards.address);
 
-    // set gauge into the accumulator
-    await fxsAccumulator.connect(sdtDeployerSigner).setGauge(fxsPPSGaugeProxy.address);
-    await angleAccumulator.connect(sdtDeployerSigner).setGauge(anglePPSGaugeProxy.address);
-
     // set gauges and depositors on claim reward contract
-    await claimRewards.connect(sdtDeployerSigner).enableGauge(fxsPPSGaugeProxy.address);
     await claimRewards.connect(sdtDeployerSigner).enableGauge(anglePPSGaugeProxy.address);
-    await claimRewards.connect(sdtDeployerSigner).addDepositor(fxs.address, fxsDepositor.address);
-    await claimRewards.connect(sdtDeployerSigner).addDepositor(ANGLE, angleDepositor.address);
+    //await claimRewards.connect(sdtDeployerSigner).addDepositor(ANGLE, angleDepositor.address);
 
     // Lock SDT for 4 years
     const sdtToLock = parseEther("10");
@@ -270,52 +268,70 @@ describe("veSDT voting", () => {
     await sdt.connect(sdtWhaleSigner).approve(veSDTProxy.address, sdtToLock);
     await veSDTProxy.connect(sdtWhaleSigner).create_lock(sdtToLock, (await getNow()) + unlockTime);
 
-    /** Masterchef <> SdtDistributor setup */
-    const masterToken = await sdtDProxy.masterchefToken();
-    await masterchef.connect(timelock).add(1000, masterToken, false);
-    const poolsLength = await masterchef.poolLength();
-    const pidSdtD = poolsLength - 1;
-    await sdtDProxy.connect(sdtDeployerSigner).initializeMasterchef(pidSdtD);
-    await sdtDProxy.connect(sdtDeployerSigner).setDistribution(true);
-
     await sdfxs.connect(sdFXSWhaleSigner).transfer(SDTWHALE, parseEther("1"));
-    await sdangle.connect(sdAngleWhaleSigner).transfer(SDTWHALE, parseEther("0.5"));
 
     await sdfxs.connect(sdFXSWhaleSigner).transfer(DUMMYUSER, parseEther("1"));
-    await sdangle.connect(sdAngleWhaleSigner).transfer(DUMMYUSER, parseEther("0.5"));
     await sdt.connect(sdtWhaleSigner).transfer(DUMMYUSER, parseEther("1"));
 
     await sdfxs.connect(sdFXSWhaleSigner).transfer(DUMMYUSER2, parseEther("1"));
     await sdt.connect(sdtWhaleSigner).transfer(DUMMYUSER2, parseEther("1"));
-    await sdangle.connect(sdAngleWhaleSigner).transfer(DUMMYUSER2, parseEther("0.5"));
 
-    await sdfxs.connect(sdFXSWhaleSigner).transfer(DUMMYUSER3, parseEther("1"));
+    await sdfxs.connect(sdFXSWhaleSigner).transfer(DUMMYUSER3, parseEther("1"));  
     await sdt.connect(sdtWhaleSigner).transfer(DUMMYUSER3, parseEther("1"));
-    await sdangle.connect(sdAngleWhaleSigner).transfer(DUMMYUSER3, parseEther("0.5"));
 
     await usdc.connect(usdcWhale).transfer(surplusCaller._address, "100000000000");
     await usdc.connect(usdcWhale).transfer("0x5addc89785d75c86ab939e9e15bfbbb7fc086a87", "100000000000");
     await usdc.connect(usdcWhale).transfer(BASESURPLUS, "300000000000");
 
     // call checkpoint token in angle fee distributor
-    await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 2]);
-    await network.provider.send("evm_mine", []);
-    await angleFD.connect(angleDeployerSigner).checkpoint_token();
+    await sanUsdcEur.connect(sanUsdcEurWhale).transfer(ANGLE_FEE_D, parseUnits("10000", "6"))
+
+    // new angle accumulator
+    angleAccNew = await AngleAccNew.deploy(agEUR.address);
+    await angleAccNew.setLocker(angleLocker.address);
+    await angleAccNew.setGauge(anglePPSGaugeProxy.address);
+    await angleLocker.connect(sdtDeployerSigner).setAccumulator(angleAccNew.address);
+    await anglePPSGaugeProxy.connect(sdtDeployerSigner).add_reward(agEUR.address, angleAccNew.address);
   });
 
-  describe("Accumulator", async () => {
-    it("should get the yield", async function() {
-      this.enableTimeouts(false)
+  describe("Accumulators", async () => {
+    it("should get the yield from new angle acc and distribute it to the LGV4", async function() {
+      this.enableTimeouts(false);
       await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 2]);
       await network.provider.send("evm_mine", []);
-      await fxsAccumulator.claimAndNotifyAll();
-      const fxsBalance = await fxs.balanceOf(fxsPPSGaugeProxy.address);
-      console.log(fxsBalance.toString());
-      expect(fxsBalance).gt(0);
-      await angleAccumulator.claimAndNotifyAll();
-      const sanLPBalance = await sanUsdcEur.balanceOf(anglePPSGaugeProxy.address);
-      expect(sanLPBalance).gt(0);
-      console.log(sanLPBalance.toString());
+
+      await angleAccNew.claimAndNotifyAll();
+      const agEurAccBalance = await agEUR.balanceOf(angleAccNew.address);
+      expect(agEurAccBalance).eq(0);
+      const agEurGaugeBalance = await agEUR.balanceOf(anglePPSGaugeProxy.address);
+      expect(agEurGaugeBalance).gt(0);
+    });
+  });
+
+  describe("ClaimRewards", async () => {
+    it("should claim rewards from angle LGV4", async function() {
+      this.enableTimeouts(false);
+      
+      const balanceBeforeSdt = await sdt.balanceOf(sdAngleWhaleSigner._address);
+      const balanceBeforeSanLP = await sanUsdcEur.balanceOf(sdAngleWhaleSigner._address);
+      const balanceBeforeAgEur = await agEUR.balanceOf(sdAngleWhaleSigner._address);
+      await claimRewards.connect(sdAngleWhaleSigner).claimRewards([anglePPSGaugeProxy.address]);
+      const balanceAfterSdt = await sdt.balanceOf(sdAngleWhaleSigner._address);
+      const balanceAfterSanLP = await sanUsdcEur.balanceOf(sdAngleWhaleSigner._address);
+      const balanceAfterAgEur = await agEUR.balanceOf(sdAngleWhaleSigner._address);
+      expect(balanceAfterSdt.sub(balanceBeforeSdt)).gt(0);
+      expect(balanceAfterSanLP.sub(balanceBeforeSanLP)).gt(0);
+      expect(balanceAfterAgEur.sub(balanceBeforeAgEur)).gt(0);
+
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 1]);
+      await network.provider.send("evm_mine", []);
+
+      const lockStatus = {locked: [true], staked: [true], lockSDT: false};
+      await claimRewards.connect(sdAngleWhaleSigner).claimAndLock([anglePPSGaugeProxy.address], lockStatus);
+      const balanceFinalSdt = await sdt.balanceOf(sdAngleWhaleSigner._address);
+      const balanceFinalAgEur = await agEUR.balanceOf(sdAngleWhaleSigner._address);
+      expect(balanceFinalSdt.sub(balanceAfterSdt)).gt(0);
+      expect(balanceFinalAgEur.sub(balanceAfterAgEur)).gt(0);
     });
   });
 });
