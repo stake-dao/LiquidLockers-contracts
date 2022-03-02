@@ -51,8 +51,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true
   });
 
-  const lgv4_sdCRV = await deployments.get(`LiquidityGaugeV4-${tokenName}-implementation`);
-
+  const lgv4_sdCRV = await deployments.get(`LiquidityGaugeV4-${tokenName}`);
+  
   // Setting the rewards
   var lgv4_sdCRVProxy = await hre.ethers.getContractAt("LiquidityGaugeV4", lgv4_sdCRV.address);
   await lgv4_sdCRVProxy.add_reward(THREECRV, THREECRVDISTRIBUTOR);
