@@ -1571,6 +1571,393 @@
         }
       ]
     },
+    "ClaimRewards": {
+      "address": "0xf30f23B7FB233172A41b32f82D263c33a0c9F8c2",
+      "abi": [
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "depositor",
+              "type": "address"
+            }
+          ],
+          "name": "DepositorDisabled",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "depositor",
+              "type": "address"
+            }
+          ],
+          "name": "DepositorEnabled",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "gauge",
+              "type": "address"
+            }
+          ],
+          "name": "GaugeDisabled",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "gauge",
+              "type": "address"
+            }
+          ],
+          "name": "GaugeEnabled",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "Recovered",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address[]",
+              "name": "gauges",
+              "type": "address[]"
+            },
+            {
+              "indexed": false,
+              "internalType": "bool",
+              "name": "locks",
+              "type": "bool"
+            },
+            {
+              "indexed": false,
+              "internalType": "bool",
+              "name": "stake",
+              "type": "bool"
+            }
+          ],
+          "name": "RewardClaimedAndLocked",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "user",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address[]",
+              "name": "gauges",
+              "type": "address[]"
+            }
+          ],
+          "name": "RewardClaimedAndSent",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address[]",
+              "name": "gauges",
+              "type": "address[]"
+            }
+          ],
+          "name": "RewardsClaimed",
+          "type": "event"
+        },
+        {
+          "inputs": [],
+          "name": "SDT",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_token",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "_depositor",
+              "type": "address"
+            }
+          ],
+          "name": "addDepositor",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address[]",
+              "name": "_gauges",
+              "type": "address[]"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bool[]",
+                  "name": "locked",
+                  "type": "bool[]"
+                },
+                {
+                  "internalType": "bool[]",
+                  "name": "staked",
+                  "type": "bool[]"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "lockSDT",
+                  "type": "bool"
+                }
+              ],
+              "internalType": "struct ClaimRewards.LockStatus",
+              "name": "_lockStatus",
+              "type": "tuple"
+            }
+          ],
+          "name": "claimAndLock",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address[]",
+              "name": "_gauges",
+              "type": "address[]"
+            }
+          ],
+          "name": "claimRewards",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "name": "depositors",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "depositorsCount",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "name": "depositorsIndex",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_gauge",
+              "type": "address"
+            }
+          ],
+          "name": "disableGauge",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_gauge",
+              "type": "address"
+            }
+          ],
+          "name": "enableGauge",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "name": "gauges",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "governance",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_token",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "_recipient",
+              "type": "address"
+            }
+          ],
+          "name": "rescueERC20",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_governance",
+              "type": "address"
+            }
+          ],
+          "name": "setGovernance",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "veSDT",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        }
+      ]
+    },
     "FXSAccumulator": {
       "address": "0x1CC16bEdaaCD15848bcA5eB80188e0931bC59fB2",
       "abi": [
@@ -9781,11 +10168,17 @@
         }
       ]
     },
-    "ClaimRewards": {
-      "address": "0xf30f23B7FB233172A41b32f82D263c33a0c9F8c2",
+    "AngleAccumulatorV2": {
+      "address": "0x943671e6c3A98E28ABdBc60a7ac703b3c0C6aA51",
       "abi": [
         {
-          "inputs": [],
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_tokenReward",
+              "type": "address"
+            }
+          ],
           "stateMutability": "nonpayable",
           "type": "constructor"
         },
@@ -9800,12 +10193,12 @@
             },
             {
               "indexed": false,
-              "internalType": "address",
-              "name": "depositor",
-              "type": "address"
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
             }
           ],
-          "name": "DepositorDisabled",
+          "name": "ERC20Rescued",
           "type": "event"
         },
         {
@@ -9814,17 +10207,55 @@
             {
               "indexed": false,
               "internalType": "address",
-              "name": "token",
+              "name": "oldGauge",
               "type": "address"
             },
             {
               "indexed": false,
               "internalType": "address",
-              "name": "depositor",
+              "name": "newGauge",
               "type": "address"
             }
           ],
-          "name": "DepositorEnabled",
+          "name": "GaugeSet",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "oldGov",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "newGov",
+              "type": "address"
+            }
+          ],
+          "name": "GovernanceSet",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "oldLocker",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "newLocker",
+              "type": "address"
+            }
+          ],
+          "name": "LockerSet",
           "type": "event"
         },
         {
@@ -9835,22 +10266,21 @@
               "internalType": "address",
               "name": "gauge",
               "type": "address"
-            }
-          ],
-          "name": "GaugeDisabled",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
+            },
             {
               "indexed": false,
               "internalType": "address",
-              "name": "gauge",
+              "name": "tokenReward",
               "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
             }
           ],
-          "name": "GaugeEnabled",
+          "name": "RewardNotified",
           "type": "event"
         },
         {
@@ -9869,32 +10299,7 @@
               "type": "uint256"
             }
           ],
-          "name": "Recovered",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": false,
-              "internalType": "address[]",
-              "name": "gauges",
-              "type": "address[]"
-            },
-            {
-              "indexed": false,
-              "internalType": "bool",
-              "name": "locks",
-              "type": "bool"
-            },
-            {
-              "indexed": false,
-              "internalType": "bool",
-              "name": "stake",
-              "type": "bool"
-            }
-          ],
-          "name": "RewardClaimedAndLocked",
+          "name": "TokenDeposited",
           "type": "event"
         },
         {
@@ -9903,35 +10308,22 @@
             {
               "indexed": false,
               "internalType": "address",
-              "name": "user",
+              "name": "oldTr",
               "type": "address"
             },
             {
               "indexed": false,
-              "internalType": "address[]",
-              "name": "gauges",
-              "type": "address[]"
+              "internalType": "address",
+              "name": "newTr",
+              "type": "address"
             }
           ],
-          "name": "RewardClaimedAndSent",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": false,
-              "internalType": "address[]",
-              "name": "gauges",
-              "type": "address[]"
-            }
-          ],
-          "name": "RewardsClaimed",
+          "name": "TokenRewardSet",
           "type": "event"
         },
         {
           "inputs": [],
-          "name": "SDT",
+          "name": "POOL_MANAGER",
           "outputs": [
             {
               "internalType": "address",
@@ -9940,6 +10332,65 @@
             }
           ],
           "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "SAN_USDC_EUR",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "STABLE_MASTER",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "USDC",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "_amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "claimAndNotify",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "claimAndNotifyAll",
+          "outputs": [],
+          "stateMutability": "nonpayable",
           "type": "function"
         },
         {
@@ -9950,155 +10401,24 @@
               "type": "address"
             },
             {
-              "internalType": "address",
-              "name": "_depositor",
-              "type": "address"
+              "internalType": "uint256",
+              "name": "_amount",
+              "type": "uint256"
             }
           ],
-          "name": "addDepositor",
+          "name": "depositToken",
           "outputs": [],
           "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {
-              "internalType": "address[]",
-              "name": "_gauges",
-              "type": "address[]"
-            },
-            {
-              "components": [
-                {
-                  "internalType": "bool[]",
-                  "name": "locked",
-                  "type": "bool[]"
-                },
-                {
-                  "internalType": "bool[]",
-                  "name": "staked",
-                  "type": "bool[]"
-                },
-                {
-                  "internalType": "bool",
-                  "name": "lockSDT",
-                  "type": "bool"
-                }
-              ],
-              "internalType": "struct ClaimRewards.LockStatus",
-              "name": "_lockStatus",
-              "type": "tuple"
-            }
-          ],
-          "name": "claimAndLock",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {
-              "internalType": "address[]",
-              "name": "_gauges",
-              "type": "address[]"
-            }
-          ],
-          "name": "claimRewards",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {
-              "internalType": "address",
-              "name": "",
-              "type": "address"
-            }
-          ],
-          "name": "depositors",
-          "outputs": [
-            {
-              "internalType": "address",
-              "name": "",
-              "type": "address"
-            }
-          ],
-          "stateMutability": "view",
           "type": "function"
         },
         {
           "inputs": [],
-          "name": "depositorsCount",
+          "name": "gauge",
           "outputs": [
             {
-              "internalType": "uint256",
-              "name": "",
-              "type": "uint256"
-            }
-          ],
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {
               "internalType": "address",
               "name": "",
               "type": "address"
-            }
-          ],
-          "name": "depositorsIndex",
-          "outputs": [
-            {
-              "internalType": "uint256",
-              "name": "",
-              "type": "uint256"
-            }
-          ],
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {
-              "internalType": "address",
-              "name": "_gauge",
-              "type": "address"
-            }
-          ],
-          "name": "disableGauge",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {
-              "internalType": "address",
-              "name": "_gauge",
-              "type": "address"
-            }
-          ],
-          "name": "enableGauge",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {
-              "internalType": "address",
-              "name": "",
-              "type": "address"
-            }
-          ],
-          "name": "gauges",
-          "outputs": [
-            {
-              "internalType": "bool",
-              "name": "",
-              "type": "bool"
             }
           ],
           "stateMutability": "view",
@@ -10115,6 +10435,50 @@
             }
           ],
           "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "locker",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_tokenReward",
+              "type": "address"
+            }
+          ],
+          "name": "notifyAllExtraReward",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_tokenReward",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "notifyExtraReward",
+          "outputs": [],
+          "stateMutability": "nonpayable",
           "type": "function"
         },
         {
@@ -10144,6 +10508,19 @@
           "inputs": [
             {
               "internalType": "address",
+              "name": "_gauge",
+              "type": "address"
+            }
+          ],
+          "name": "setGauge",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
               "name": "_governance",
               "type": "address"
             }
@@ -10154,8 +10531,34 @@
           "type": "function"
         },
         {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_locker",
+              "type": "address"
+            }
+          ],
+          "name": "setLocker",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_tokenReward",
+              "type": "address"
+            }
+          ],
+          "name": "setTokenReward",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
           "inputs": [],
-          "name": "veSDT",
+          "name": "tokenReward",
           "outputs": [
             {
               "internalType": "address",

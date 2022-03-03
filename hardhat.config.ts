@@ -78,14 +78,14 @@ export default {
   networks: {
     hardhat: {
       forking: {
-        url: process.env.MAINNET,
+        url: process.env.MAINNET
         //blockNumber: 14133625
       }
     },
     mainnet: {
       url: process.env.MAINNET,
       accounts: [`0x${process.env.DEPLOYER_PKEY}`],
-      gasPrice: 225000000000
+      gasPrice: 100000000000
     }
   },
   namedAccounts: {
