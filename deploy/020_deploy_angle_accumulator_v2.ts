@@ -6,13 +6,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy("ClaimRewards", {
+  const agEUR = "0x1a7e4e63778B4f12a199C062f3eFdD288afCBce8";
+
+  await deploy("AngleAccumulatorV2", {
+    contract: "AngleAccumulatorV2",
     from: deployer,
-    args: [],
+    args: [agEUR],
     log: true
   });
 };
 export default func;
 
-func.skip = async () => false;
-func.tags = ["ClaimRewards"];
+func.tags = ["AngleAccumulatorV2"];
