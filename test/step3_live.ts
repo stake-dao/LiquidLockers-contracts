@@ -26,6 +26,7 @@ const FXSAMO = "0xb524622901b3f7b5dea6501e9830700c847c7dc5";
 const SAN = "0xcc617c6f9725eacc993ac626c7efc6b96476916e";
 const BASESURPLUS = "0x2e2063080a05ffdaa6d57f9358c2a5e1c65c70ec";
 const USDCWHALE = "0x72a53cdbbcc1b9efa39c834a540550e23463aacb";
+const CRVWHALE = "0x7a16ff8270133f063aab6c9977183d9e72835428";
 const SANUSDCEURWHALE = "0xEa51Ccb352Aea7641fF4D88536F0F06Fd052EF8f";
 
 const FXS_LOCKER = "0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f";
@@ -95,6 +96,7 @@ describe("veSDT voting", () => {
   let fxsLocker: Contract;
   let angleLocker: Contract;
   let fxs: Contract;
+  let crv: Contract;
   let sanUsdcEur: Contract;
   let usdc: Contract;
   let claimRewards: Contract;
@@ -116,6 +118,8 @@ describe("veSDT voting", () => {
   let dummyUser: JsonRpcSigner;
   let surplusCaller: JsonRpcSigner;
   let usdcWhale: JsonRpcSigner;
+  let crvWhale: JsonRpcSigner;
+
   before(async function () {
     this.enableTimeouts(false);
 
@@ -130,6 +134,7 @@ describe("veSDT voting", () => {
     fxsLocker = await ethers.getContractAt("FxsLocker", FXS_LOCKER);
     angleLocker = await ethers.getContractAt("AngleLocker", ANGLE_LOCKER);
     fxs = await ethers.getContractAt(ERC20, FXS);
+    crv = await ethers.getContractAt(ERC20, CRV);
     sanUsdcEur = await ethers.getContractAt(ERC20, SAN_USDC_EUR);
     usdc = await ethers.getContractAt(ERC20, "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
     fxsDepositor = await ethers.getContractAt("Depositor", FXS_DEPOSITOR);
@@ -202,6 +207,10 @@ describe("veSDT voting", () => {
     });
     await network.provider.request({
       method: "hardhat_impersonateAccount",
+      params: [CRVWHALE]
+    });
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
       params: [SANUSDCEURWHALE]
     });
     await network.provider.request({
@@ -235,6 +244,10 @@ describe("veSDT voting", () => {
       value: ethers.utils.parseEther("100") // 1 ether
     });
     await deployer.sendTransaction({
+      to: CRVWHALE,
+      value: ethers.utils.parseEther("100") // 1 ether
+    });
+    await deployer.sendTransaction({
       to: SANUSDCEURWHALE,
       value: ethers.utils.parseEther("100") // 1 ether
     });
@@ -247,6 +260,7 @@ describe("veSDT voting", () => {
     surplusCaller = await ethers.provider.getSigner(SAN);
     sdtDeployerSigner = await ethers.provider.getSigner(SDT_DEPLOYER);
     usdcWhale = await ethers.provider.getSigner(USDCWHALE);
+    crvWhale = await ethers.provider.getSigner(USDCWHALE);
     angleDeployerSigner = await ethers.provider.getSigner(ANGLE_DEPLOYER);
     sanUsdcEurWhale = await ethers.provider.getSigner(SANUSDCEURWHALE);
 
@@ -266,7 +280,7 @@ describe("veSDT voting", () => {
     await anglePPSGaugeProxy.connect(sdtDeployerSigner).set_claimer(claimRewards.address);
 
     // set gauges and depositors on claim reward contract
-    await claimRewards.connect(sdtDeployerSigner).enableGauge(anglePPSGaugeProxy.address);
+    // await claimRewards.connect(sdtDeployerSigner).enableGauge(anglePPSGaugeProxy.address);
     //await claimRewards.connect(sdtDeployerSigner).addDepositor(ANGLE, angleDepositor.address);
 
     // Lock SDT for 4 years
@@ -295,15 +309,20 @@ describe("veSDT voting", () => {
 
     // new angle accumulator
     angleAccNew = await AngleAccNew.deploy(agEUR.address);
-    await angleAccNew.setLocker(angleLocker.address);
-    await angleAccNew.setGauge(anglePPSGaugeProxy.address);
-    await angleLocker.connect(sdtDeployerSigner).setAccumulator(angleAccNew.address);
-    await anglePPSGaugeProxy.connect(sdtDeployerSigner).add_reward(agEUR.address, angleAccNew.address);
 
+    await angleAccNew.setLocker(angleLocker.address);
+
+    await angleAccNew.setGauge(anglePPSGaugeProxy.address);
+
+    await angleLocker.connect(sdtDeployerSigner).setAccumulator(angleAccNew.address);
+
+    // await anglePPSGaugeProxy.connect(sdAngleWhaleSigner).add_reward(agEUR.address, angleAccNew.address);
+    console.log("here8");
     // new sdCrv token
     sdCrv = await SdToken.deploy("Stake DAO CURVE", "sdCRV");
     // new sdCrv depositor
     crvDepositor = await CrvDepositor.deploy(CRV, CRV_LOCKER, sdCrv.address);
+    await sdCrv.setOperator(crvDepositor.address);
   });
 
   describe("Accumulators", async () => {
@@ -348,6 +367,14 @@ describe("veSDT voting", () => {
       const balanceFinalAgEur = await agEUR.balanceOf(sdAngleWhaleSigner._address);
       expect(balanceFinalSdt.sub(balanceAfterSdt)).gt(0);
       expect(balanceFinalAgEur.sub(balanceAfterAgEur)).gt(0);
+    });
+  });
+
+  describe("sdCRV", async () => {
+    it("lockToken", async function () {
+      await crv.connect(crvWhale).approve(crvDepositor.address, parseEther("1"));
+      await crvDepositor.connect(crvWhale).deposit(parseEther("1"), false, false, CRVWHALE);
+      expect(await sdCrv.balanceOf(CRVWHALE)).to.be.gt(0)
     });
   });
 });
