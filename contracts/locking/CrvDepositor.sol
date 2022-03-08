@@ -8,6 +8,7 @@ import "../interfaces/ILocker.sol";
 import "../interfaces/ISdToken.sol";
 import "../interfaces/ILiquidityGauge.sol";
 
+
 /// @title Contract that accepts tokens and locks them
 /// @author StakeDAO
 contract CrvDepositor {
@@ -26,10 +27,8 @@ contract CrvDepositor {
 	address public immutable locker;
 	address public immutable minter;
 	uint256 public incentiveToken = 0;
-    uint256 public migrationAllowance = 10000**18;
 
-    address public constant SD_VE_CRV = 0x478bBC744811eE8310B461514BDc29D03739084D;
-
+	address public constant SD_VE_CRV = 0x478bBC744811eE8310B461514BDc29D03739084D;
 	/* ========== EVENTS ========== */
 	event Deposited(address indexed caller, address indexed user, uint256 amount, bool lock, bool stake);
 	event IncentiveReceived(address indexed caller, uint256 amount);
@@ -52,7 +51,7 @@ contract CrvDepositor {
 
 	/* ========== RESTRICTED FUNCTIONS ========== */
 	/// @notice Set the new governance
-	/// @param _governance governance address 
+	/// @param _governance governance address
 	function setGovernance(address _governance) external {
 		require(msg.sender == governance, "!auth");
 		governance = _governance;
@@ -68,7 +67,7 @@ contract CrvDepositor {
 	}
 
 	/// @notice Set the gauge to deposit token yielded
-	/// @param _gauge gauge address 
+	/// @param _gauge gauge address
 	function setGauge(address _gauge) external {
 		require(msg.sender == governance, "!auth");
 		gauge = _gauge;
@@ -84,13 +83,6 @@ contract CrvDepositor {
 			emit FeesChanged(_lockIncentive);
 		}
 	}
-
-    /// @notice set a new sdveCrv migration allowance amount
-	/// @param _amount amount to set
-    function setMigrationAllowance(uint256 _amount) external {
-        require(msg.sender == governance, "!auth");
-        migrationAllowance = _amount;
-    }
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
 
@@ -177,7 +169,7 @@ contract CrvDepositor {
 	/// @dev User needs to approve the contract to transfer Token tokens
 	/// @param _lock Whether to lock the token
 	/// @param _stake Whether to stake the token
-	/// @param _user User to deposit for 
+	/// @param _user User to deposit for
 	function depositAll(
 		bool _lock,
 		bool _stake,
@@ -187,13 +179,12 @@ contract CrvDepositor {
 		deposit(tokenBal, _lock, _stake, _user);
 	}
 
-    /// @notice Lock forever (irreversible action) old sdveCrv to sdCrv with 1:1 rate
+	/// @notice Lock forever (irreversible action) old sdveCrv to sdCrv with 1:1 rate
 	/// @dev User needs to approve the contract to transfer Token tokens
-	/// @param _amount amount to lock 
-    function lockSdveCrvToSdCrv(uint256 _amount) external {
-        IERC20(SD_VE_CRV).transferFrom(msg.sender, address(this), _amount);
-        // mint new sdCrv
-        ITokenMinter(minter).mint(address(this), _amount);
-        migrationAllowance -= _amount;
-    }
+	/// @param _amount amount to lock
+	function lockSdveCrvToSdCrv(uint256 _amount) external {
+		IERC20(SD_VE_CRV).transferFrom(msg.sender, address(this), _amount);
+		// mint new sdCrv
+		ITokenMinter(minter).mint(address(this), _amount);
+	}
 }
