@@ -47,6 +47,10 @@ describe("CRV Migration", function () {
       method: "hardhat_impersonateAccount",
       params: [SDVECRVWHALE2]
     });
+    await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [CRVWHALE]
+      });
 
     sdVeCrvWhale1 = ethers.provider.getSigner(SDVECRVWHALE1);
     sdVeCrvWhale2 = ethers.provider.getSigner(SDVECRVWHALE2);
@@ -103,5 +107,6 @@ describe("CRV Migration", function () {
   it("user should be able to deposit CRV", async function () {
     await crv.connect(crvWhale).approve(crvDepositor.address, parseEther("1"));
     await crvDepositor.connect(crvWhale).deposit(parseEther("1"), false, false, crvWhale._address);
+    expect(await sdCRVToken.balanceOf(crvWhale._address)).to.equal(parseEther("0.999"));
   });
 });
