@@ -7,6 +7,7 @@ import { JsonRpcSigner } from "@ethersproject/providers";
 
 import ERC20ABI from "./fixtures/ERC20.json";
 import VECRVABI from "./fixtures/veCRV.json";
+import SDVECRVABI from "./fixtures/sdVeCrv.json";
 import WalletCheckerABI from "./fixtures/WalletChecker.json";
 import VeFXSABI from "./fixtures/veFXS.json";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -20,6 +21,8 @@ const CRV = "0xD533a949740bb3306d119CC777fa900bA034cd52";
 const SDVECRV = "0x478bBC744811eE8310B461514BDc29D03739084D";
 const VECRV = "0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2";
 const OLD_LOCKER = "0x52f541764E6e90eeBc5c21Ff570De0e2D63766B6";
+const SDVECRV_GOVERNANCE_MULTI = "0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063";
+const SDT_DEPLOYER = "0xb36a0671B3D49587236d7833B01E79798175875f";
 
 const ACC = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0"; // StakeDAO multisig
 const SDT = "0x73968b9a57c6e53d41345fd57a6e6ae27d6cdb2f";
@@ -28,6 +31,7 @@ describe("CRV Migration", function () {
   let sdVeCrvWhale1: JsonRpcSigner;
   let sdVeCrvWhale2: JsonRpcSigner;
   let crvWhale: JsonRpcSigner;
+  let sdtDeployer: JsonRpcSigner;
   let deployer: SignerWithAddress;
   let crvDepositor: Contract;
   let crv: Contract;
@@ -50,20 +54,36 @@ describe("CRV Migration", function () {
     await network.provider.request({
         method: "hardhat_impersonateAccount",
         params: [CRVWHALE]
-      });
+    });
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [SDT_DEPLOYER]
+    });
 
     sdVeCrvWhale1 = ethers.provider.getSigner(SDVECRVWHALE1);
     sdVeCrvWhale2 = ethers.provider.getSigner(SDVECRVWHALE2);
     crvWhale = ethers.provider.getSigner(CRVWHALE);
+    sdtDeployer = ethers.provider.getSigner(SDT_DEPLOYER);
     crv = await ethers.getContractAt(ERC20ABI, CRV);
-    sdVeCrv = await ethers.getContractAt(ERC20ABI, SDVECRV);
+    sdVeCrv = await ethers.getContractAt(SDVECRVABI, SDVECRV);
     veCrv = await ethers.getContractAt(VECRVABI, VECRV);
     const SdCRVToken = await ethers.getContractFactory("sdCRV");
     sdCRVToken = await SdCRVToken.deploy("Stake DAO CRV", "sdCRV");
 
+    // change the sdveCrv governance address to a EOA
+    // the actual governance is a multisig contract, it should require some signers to execute it
+    await network.provider.send("hardhat_setStorageAt", [
+      sdVeCrv.address,
+      "0x7",
+      "0x000000000000000000000000b36a0671B3D49587236d7833B01E79798175875f",
+    ]);
+
     const CrvDepositor = await ethers.getContractFactory("CrvDepositor");
     const LiquidityGauge = await ethers.getContractFactory("LiquidityGaugeV4");
     const VeBoostProxy = await ethers.getContractFactory("veBoostProxy");
+
+    // disable sdveCrv minting
+    await sdVeCrv.connect(sdtDeployer).setProxy("0x0000000000000000000000000000000000000000");
 
     crvDepositor = await CrvDepositor.deploy(crv.address, OLD_LOCKER, sdCRVToken.address);
     liquidityGauge = await LiquidityGauge.deploy();
@@ -81,6 +101,13 @@ describe("CRV Migration", function () {
     // await crvDepositor.setGauge(liquidityGauge.address);
 
     await sdCRVToken.setOperator(crvDepositor.address);
+  });
+
+  it("sdveCrv minting should be disable", async function () {
+    this.enableTimeouts(false);
+    const crvToDeposit = parseEther("10");
+    await crv.connect(crvWhale).approve(sdVeCrv.address, crvToDeposit);
+    await expect(sdVeCrv.connect(crvWhale).deposit(crvToDeposit)).to.be.reverted;
   });
 
   it("the balance sdCRV should be minted to DAO", async function () {
