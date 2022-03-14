@@ -11,7 +11,7 @@ The first version of audit was done on commit hash [`7e702aba329d5780ef5841f44ad
 2. sdFXSToken.sol - unchanged since that hash
 3. FxsDepositor - has been modified. [Diffchecker](https://www.diffnow.com/report/4ug2a) between previous and current version.
 
-Since then, Step 2, Step 3 as described in detail below, have been developed which need to be audited, along with Depositor.sol, which also has been modified. Contracts with `Risk` as `High` and `To Audit?` as ✅, need to be audited with special attention.
+Since then, Step 2, Step 3 and Step 3.5 as described in detail below, have been developed which need to be audited. Contracts with `Risk` as `High` and `To Audit?` as ✅, need to be audited with special attention and high priority i.e. line by line audit along with inter-contract interactions testing is strictly necessary. The ones marked with `Risk` as `Low` might be skipped for line by line audit and could be focused for inter-contract interactions testing.
 
 Sr. No. | Contract | Step | Risk | WIP | Audited? | To Audit?
 --- | --- | --- | --- | --- | --- | --- |
