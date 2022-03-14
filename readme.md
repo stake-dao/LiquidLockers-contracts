@@ -11,30 +11,48 @@ The first version of audit was done on commit hash [`7e702aba329d5780ef5841f44ad
 2. sdFXSToken.sol - unchanged since that hash
 3. FxsDepositor - has been modified. [Diffchecker](https://www.diffnow.com/report/4ug2a) between previous and current version.
 
-Since then, Step 2, Step 3 and Step 3.5 as described in detail below, have been developed which need to be audited. Contracts with `Risk` as `High` and `To Audit?` as ✅, need to be audited with special attention and high priority i.e. line by line audit along with inter-contract interactions testing is strictly necessary. The ones marked with `Risk` as `Low` might be skipped for line by line audit and could be focused for inter-contract interactions testing.
+Since then, Step 2, Step 3 and Step 3.5 as described in detail below, have been developed which need to be audited. 
 
-Sr. No. | Contract | Step | Risk | WIP | Audited? | To Audit?
+### Legend (for the table below)
+
+Risk-level <br />
+1: low <br />
+2: low-medium <br />
+3: medium <br />
+4: medium-high <br />
+5: high <br />
+
+For contracts with `Risk-level >= 3` and `To Audit?` as ✅, 
+1. line by line audit
+2. inter-contract interaction tests <br />
+are required
+
+For contracts with `Risk-level < 3` and `To Audit?` as ✅, 
+1. only inter-contract interaction tests <br />
+are required, because these contracts are forks with very minimal changes, of already audited contracts.
+
+Sr. No. | Contract | Step | Risk-level | WIP | Audited? | To Audit?
 --- | --- | --- | --- | --- | --- | --- |
-1 | Depositor.sol | 1 | High | :x: | ✅ | :x:
-2 | sdToken.sol | 1 | Low | :x: | ✅ | :x:
-3 | FxsLocker.sol | 1 | High | :x: | ✅ | :x:
-4 | AngleLocker.sol | 1 | High | :x: | :x: | ✅
-5 | veSDT.vy | 2 | Low | :x: | :x: | ✅
-6 | SmartWalletWhitelist.sol | 2 | Low | :x: | :x: | ✅
-7 | FeeDistributor.vy | 2 | Low | :x: | :x: | ✅
-8 | TransparentUpgradeableProxy.sol | 2, 3 | Low | :x: | :x: | ✅
-9 | ProxyAdmin.sol | 2, 3 | Low | :x: | :x: | ✅
-10 | AccessControlUpgradeable.sol | 2, 3 | Low | :x: | :x: | ✅
-11 | SdtDistributor.sol | 3 | High | :x: | :x: | ✅
-12 | GaugeController.vy | 3 | Low | :x: | :x: | ✅
-13 | LiquidityGaugeV4.vy | 3 | High | :x: | :x: | ✅
-14 | FxsAccumulator.sol | 3 | High | :x: | :x: | ✅
-15 | AngleAccumulator.sol | 3 | High | :x: | :x: | ✅
-16 | ClaimRewards.sol | 3 | High | :x: | :x: | ✅
-17 | veBoostProxy.vy | 3 | Low | :x: | :x: | ✅
-19 | CrvAccumulator.sol | 3.5 | High | :x: | :x: | ✅
-20 | CrvDepositor.sol | 3.5 | Low | :x: | :x: | ✅
-21 | sdCrv.sol | 3.5 | Low | :x: | :x: | ✅
+1 | Depositor.sol | 1 | 5 | :x: | ✅ | :x:
+2 | sdToken.sol | 1 | 1 | :x: | ✅ | :x:
+3 | FxsLocker.sol | 1 | 5 | :x: | ✅ | :x:
+4 | AngleLocker.sol | 1 | 3 | :x: | :x: | ✅
+5 | veSDT.vy | 2 | 3 | :x: | :x: | ✅
+6 | SmartWalletWhitelist.sol | 2 | 1 | :x: | :x: | ✅
+7 | FeeDistributor.vy | 2 | 1 | :x: | :x: | ✅
+8 | TransparentUpgradeableProxy.sol | 2, 3 | 1 | :x: | :x: | ✅
+9 | ProxyAdmin.sol | 2, 3 | 1 | :x: | :x: | ✅
+10 | AccessControlUpgradeable.sol | 2, 3 | 1 | :x: | :x: | ✅
+11 | SdtDistributor.sol | 3 | 5 | :x: | :x: | ✅
+12 | GaugeController.vy | 3 | 1 | :x: | :x: | ✅
+13 | LiquidityGaugeV4.vy | 3 | 5 | :x: | :x: | ✅
+14 | FxsAccumulator.sol | 3 | 5 | :x: | :x: | ✅
+15 | AngleAccumulator.sol | 3 | 5 | :x: | :x: | ✅
+16 | ClaimRewards.sol | 3 | 5 | :x: | :x: | ✅
+17 | veBoostProxy.vy | 3 | 1 | :x: | :x: | ✅
+19 | CrvAccumulator.sol | 3.5 | 5 | :x: | :x: | ✅
+20 | CrvDepositor.sol | 3.5 | 1 | :x: | :x: | ✅
+21 | sdCrv.sol | 3.5 | 1 | :x: | :x: | ✅
 
 ## Step 1
 
@@ -109,7 +127,7 @@ At this step, users will be able to vote, using veSDT, via the GaugeController, 
 
 At this step, we add another liquid locker i.e. CRV locker. Its only difference with previous lockers is that its locking contract was already deployed, just that the user interface contract i.e. (CrvDepositor) is now available, which provides users with 3CRV and SDT rewards. It will enable the existing sdveCRV holders to migrate to the new sdCRV token, by forever locking their sdveCRV tokens in the CrvDepositor contract. </br>
 
-### 1 Core Components:
+### 1 Core Component:
 
 ![photo_2022-03-14 14 38 20](https://user-images.githubusercontent.com/22425782/158140180-284efd02-d462-4cfb-bc54-a9145679d334.jpeg)</br>
 
