@@ -15,7 +15,7 @@ Since then, Step 2, Step 3 as described in detail below, have been developed whi
 
 Sr. No. | Contract | Step | Risk | WIP | Audited? | To Audit?
 --- | --- | --- | --- | --- | --- | --- |
-1 | Depositor.sol | 1 | High | :x: | ✅ | ✅
+1 | Depositor.sol | 1 | High | :x: | ✅ | :x:
 2 | sdToken.sol | 1 | Low | :x: | ✅ | :x:
 3 | FxsLocker.sol | 1 | High | :x: | ✅ | :x:
 4 | AngleLocker.sol | 1 | High | :x: | :x: | ✅
@@ -32,10 +32,9 @@ Sr. No. | Contract | Step | Risk | WIP | Audited? | To Audit?
 15 | AngleAccumulator.sol | 3 | High | :x: | :x: | ✅
 16 | ClaimRewards.sol | 3 | High | :x: | :x: | ✅
 17 | veBoostProxy.vy | 3 | Low | :x: | :x: | ✅
-18 | AngleDepositor.sol | 3.5 | High | :x: | ✅ | ✅
 19 | CrvAccumulator.sol | 3.5 | High | :x: | :x: | ✅
-20 | CrvDepositor.sol | 3.5 | High | :x: | :x: | ✅
-21 | CrvLocker.sol | 3.5 | High | :x: | :x: | ✅
+20 | CrvDepositor.sol | 3.5 | Low | :x: | :x: | ✅
+21 | sdCrv.sol | 3.5 | Low | :x: | :x: | ✅
 
 ## Step 1
 
@@ -103,6 +102,24 @@ At this step, users will be able to vote, using veSDT, via the GaugeController, 
 5. [Risky] **ClaimRewards.sol**: helper contract that will allow users to claim all their reward tokens i.e. (FXS, SDT) for frax locker and (sanUSDC_EUR, SDT) for angle locker in a single transaction. It also gives them the option to auto-lock reward tokens are lockable i.e. FXS in frax locker, SDT in veSDT contract.
 6. **veBoostProxy.vy**: proxy contract to manage the veBoost contract (to be deployed in step 4) which will allow users to delegate their veSDT boost to other users. We need to deploy veBoostProxy in step 3 cause LiquidityGaugeV4 contract needs an immutable deployed veBoostProxy address as one of its deployment parameters. [Diffchecker](https://www.diffnow.com/report/tywlq) with Angle's veBoostProxy.
 7. [**Contracts for Upgradability**](https://github.com/StakeDAO/sd-frax-veSDT/tree/feature/step3#contracts-for-upgradability)
+
+## Step 3.5
+
+### General Understanding
+
+At this step, we add another liquid locker i.e. CRV locker. Its only difference with previous lockers is that its locking contract was already deployed, just that the user interface contract i.e. (CrvDepositor) is now available, which provides users with 3CRV and SDT rewards. It will enable the existing sdveCRV holders to migrate to the new sdCRV token, by forever locking their sdveCRV tokens in the CrvDepositor contract. </br>
+
+### 1 Core Components:
+
+![photo_2022-03-14 14 38 20](https://user-images.githubusercontent.com/22425782/158140180-284efd02-d462-4cfb-bc54-a9145679d334.jpeg)</br>
+
+**CRV locker**: current sdveCRV holders, who locked their CRV using [veCurveVault](https://etherscan.io/address/0x478bBC744811eE8310B461514BDc29D03739084D#code), can now migrate to the new sdCRV token by locking their sdveCRV tokens inside CRVDepositor.sol forever, minting with 1:1 rate. And this will enable them and the new CRV locking users (who will lock CRV using CRVDepositor) to receive 3CRV and SDT rewards.
+      
+### Smart Contracts (general intended behaviour)
+
+1. **CrvDepositor.sol**: contract responsible for collecting CRV from users and locking them in curve. This is low risk because it's forked with very small differences from Depositor contract which is already audited [Diffchecker](https://www.diffnow.com/report/5i68z) with Depositor of Step 1.
+2. **sdCRV.sol**: resultant token received by users, on locking CRV via CrvDepositor. [Diffchecker](https://www.diffchecker.com/iq52c) with sdToken.
+3. **CrvAccumulator.sol**: it's a helper contract to LiquidityGaugeV4, which collects 3CRV rewards from multiple sources i.e. locker and strategies (for curve locker), and feeds them to LiquidityGaugeV4. It was needed cause LiquidityGaugeV4 can only have 1 source for a given reward token.
 
 ### Gauge Types
 Type 0 - Mainnet LG, it will send SDT to the LiquidityGaugeV4 (sdAngle, sdFxs) <br/>
