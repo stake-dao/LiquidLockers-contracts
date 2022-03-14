@@ -32,10 +32,10 @@ Sr. No. | Contract | Step | Risk | WIP | Audited? | To Audit?
 15 | AngleAccumulator.sol | 3 | High | :x: | :x: | ✅
 16 | ClaimRewards.sol | 3 | High | :x: | :x: | ✅
 17 | veBoostProxy.vy | 3 | Low | :x: | :x: | ✅
-18 | AngleDepositor.sol | 3 | High | :x: | ✅ | ✅
-19 | CrvAccumulator.sol | 3 | High | :x: | :x: | ✅
-20 | CrvDepositor.sol | 3 | High | :x: | :x: | ✅
-21 | CrvLocker.sol | 3 | High | :x: | :x: | ✅
+18 | AngleDepositor.sol | 3.5 | High | :x: | ✅ | ✅
+19 | CrvAccumulator.sol | 3.5 | High | :x: | :x: | ✅
+20 | CrvDepositor.sol | 3.5 | High | :x: | :x: | ✅
+21 | CrvLocker.sol | 3.5 | High | :x: | :x: | ✅
 
 ## Step 1
 
