@@ -14,16 +14,24 @@ contract sdToken is ERC20 {
 		operator = msg.sender;
 	}
 
+	/// @notice Set a new operator that can mint and burn sdToken
+    /// @param _operator new operator address
 	function setOperator(address _operator) external {
 		require(msg.sender == operator, "!authorized");
 		operator = _operator;
 	}
 
+	/// @notice mint new sdToken, callable only by the operator
+    /// @param _to recipient to mint for 
+    /// @param _amount amount to mint
 	function mint(address _to, uint256 _amount) external {
 		require(msg.sender == operator, "!authorized");
 		_mint(_to, _amount);
 	}
 
+	/// @notice burn sdToken, callable only by the operator
+    /// @param _from sdToken holder
+    /// @param _amount amount to burn
 	function burn(address _from, uint256 _amount) external {
 		require(msg.sender == operator, "!authorized");
 		_burn(_from, _amount);
