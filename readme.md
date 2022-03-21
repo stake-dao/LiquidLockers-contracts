@@ -4,14 +4,7 @@ _Contracts marked **[Risky]** are either freshly developed contracts from scratc
 
 ## State of Continuous Auditing
 
-We have considered your review suggestions from the first version of the audit and have made the necessary fixes in subsequent developments. Please find our comments to your suggestions [here](https://docs.google.com/document/d/1EHn3lKTkW_fw3_TCx6B95HJGtQrMp1i74YQ06SQwpgk/edit?usp=sharing)
-
-The first version of audit was done on commit hash [`7e702aba329d5780ef5841f44ad699385b8b428f`](https://github.com/StakeDAO/sd-frax-veSDT/tree/7e702aba329d5780ef5841f44ad699385b8b428f), which mainly included contracts as described in Step 1 below. Specifically,
-1. FxsLocker - unchanged since that hash
-2. sdFXSToken.sol - unchanged since that hash
-3. FxsDepositor - has been modified. [Diffchecker](https://www.diffnow.com/report/4ug2a) between previous and current version.
-
-Since then, Step 2, Step 3 and Step 3.5 as described in detail below, have been developed which need to be audited. 
+Since the first version of audit on commit hash [`7e702aba329d5780ef5841f44ad699385b8b428f`](https://github.com/StakeDAO/sd-frax-veSDT/tree/7e702aba329d5780ef5841f44ad699385b8b428f), AngleLocker.sol (in Step1), Step 2, Step 3 and Step 3.5 as described in detail below, have been developed which need to be audited. 
 
 ### Legend (for the table below)
 
@@ -77,6 +70,7 @@ Users can start to lock their FXS in Frax finance via Stake DAO, getting sdFXS t
 1. [Risky] **Depositor.sol**: contract responsible for collecting FXS from users and locking them in frax. [Diffchecker](https://www.diffnow.com/report/5apbh) with Convex's FxsDepositor.
 2. **sdToken.sol**: resultant token received by users, on locking FXS via FxsDepositor. [Diffchecker](https://www.diffchecker.com/QFoCaRAo) with Convex's cvxFXSToken.
 3. [Risky] **FxsLocker.sol**: contract that directly interacts with frax's protocol contracts to lock FXS and also claim FXS rewards for FXS lockers. Basically manages Stake DAO's FXS lock in frax (increasing lock amount, time, etc). FxsDepositor locks FXS from users using this contract. This contract will own all the veFXS, which will then be used to vote on and boost the upcoming frax gauges, using the `execute()` function. [Diffchecker](https://www.diffnow.com/report/hp2ug) with Stake DAO's CRV locker [here](https://etherscan.io/address/0x52f541764E6e90eeBc5c21Ff570De0e2D63766B6#code).
+4. [Risky] **AngleLocker.sol**: contract that directly interacts with angle's protocol contracts to lock ANGLE and also claim sanUSDC_EUR rewards for ANGLE lockers. Basically manages Stake DAO's ANGLE lock in angle (increasing lock amount, time, etc). Depositor locks ANGLE from users using this contract. This contract will own all the veANGLE, which will then be used to vote on and boost the upcoming angle gauges, using the `execute()` function. [Diffchecker](https://www.diffnow.com/report/f7hdv) with Stake DAO's FXS locker.
 
 ## Step 2
 
@@ -137,7 +131,7 @@ At this step, we add another liquid locker i.e. CRV locker. Its only difference 
 
 1. **CrvDepositor.sol**: contract responsible for collecting CRV from users and locking them in curve. This is low risk because it's forked with very small differences from Depositor contract which is already audited [Diffchecker](https://www.diffnow.com/report/5i68z) with Depositor of Step 1.
 2. **sdCRV.sol**: resultant token received by users, on locking CRV via CrvDepositor. [Diffchecker](https://www.diffchecker.com/iq52c) with sdToken.
-3. **CrvAccumulator.sol**: it's a helper contract to LiquidityGaugeV4, which collects 3CRV rewards from multiple sources i.e. locker and strategies (for curve locker), and feeds them to LiquidityGaugeV4. It was needed cause LiquidityGaugeV4 can only have 1 source for a given reward token.
+3. **CrvAccumulator.sol**: it's a helper contract to LiquidityGaugeV4, which receives 3CRV rewards from curve locker (StrategyProxy contract to be precise, which is being developed) and CRV rewards from strategies, and notifies them to LiquidityGaugeV4.
 
 ### Gauge Types
 Type 0 - Mainnet LG, it will send SDT to the LiquidityGaugeV4 (sdAngle, sdFxs) <br/>
