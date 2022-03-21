@@ -202,7 +202,7 @@ describe("CRV Migration", function () {
     //await crvLocker.connect(sdtDeployer).setStrategy(crvAcc.address);
     const strategy = await crvLocker.strategy();
     console.log(strategy)
-    await crvAcc.claimAndNotifyAll();
+    await crvAcc.notifyAll();
     //await crvDepositor.connect(crvWhale).deposit(parseEther("1"), false, false, crvWhale._address);
     //expect(await sdCRVToken.balanceOf(crvWhale._address)).to.equal(parseEther("0.999"));
   });
