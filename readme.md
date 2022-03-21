@@ -4,14 +4,7 @@ _Contracts marked **[Risky]** are either freshly developed contracts from scratc
 
 ## State of Continuous Auditing
 
-We have considered your review suggestions from the first version of the audit and have made the necessary fixes in subsequent developments. Please find our comments to your suggestions [here](https://docs.google.com/document/d/1EHn3lKTkW_fw3_TCx6B95HJGtQrMp1i74YQ06SQwpgk/edit?usp=sharing)
-
-The first version of audit was done on commit hash [`7e702aba329d5780ef5841f44ad699385b8b428f`](https://github.com/StakeDAO/sd-frax-veSDT/tree/7e702aba329d5780ef5841f44ad699385b8b428f), which mainly included contracts as described in Step 1 below. Specifically,
-1. FxsLocker - unchanged since that hash
-2. sdFXSToken.sol - unchanged since that hash
-3. FxsDepositor - has been modified. [Diffchecker](https://www.diffnow.com/report/4ug2a) between previous and current version.
-
-Since then, Step 2, Step 3 and Step 3.5 as described in detail below, have been developed which need to be audited. 
+Since the first version of audit on commit hash [`7e702aba329d5780ef5841f44ad699385b8b428f`](https://github.com/StakeDAO/sd-frax-veSDT/tree/7e702aba329d5780ef5841f44ad699385b8b428f), AngleLocker.sol (in Step1), Step 2, Step 3 and Step 3.5 as described in detail below, have been developed which need to be audited. 
 
 ### Legend (for the table below)
 
@@ -77,6 +70,7 @@ Users can start to lock their FXS in Frax finance via Stake DAO, getting sdFXS t
 1. [Risky] **Depositor.sol**: contract responsible for collecting FXS from users and locking them in frax. [Diffchecker](https://www.diffnow.com/report/5apbh) with Convex's FxsDepositor.
 2. **sdToken.sol**: resultant token received by users, on locking FXS via FxsDepositor. [Diffchecker](https://www.diffchecker.com/QFoCaRAo) with Convex's cvxFXSToken.
 3. [Risky] **FxsLocker.sol**: contract that directly interacts with frax's protocol contracts to lock FXS and also claim FXS rewards for FXS lockers. Basically manages Stake DAO's FXS lock in frax (increasing lock amount, time, etc). FxsDepositor locks FXS from users using this contract. This contract will own all the veFXS, which will then be used to vote on and boost the upcoming frax gauges, using the `execute()` function. [Diffchecker](https://www.diffnow.com/report/hp2ug) with Stake DAO's CRV locker [here](https://etherscan.io/address/0x52f541764E6e90eeBc5c21Ff570De0e2D63766B6#code).
+4. [Risky] **AngleLocker.sol**: contract that directly interacts with angle's protocol contracts to lock ANGLE and also claim sanUSDC_EUR rewards for ANGLE lockers. Basically manages Stake DAO's ANGLE lock in angle (increasing lock amount, time, etc). Depositor locks ANGLE from users using this contract. This contract will own all the veANGLE, which will then be used to vote on and boost the upcoming angle gauges, using the `execute()` function. [Diffchecker](https://www.diffnow.com/report/f7hdv) with Stake DAO's FXS locker.
 
 ## Step 2
 
@@ -137,7 +131,7 @@ At this step, we add another liquid locker i.e. CRV locker. Its only difference 
 
 1. **CrvDepositor.sol**: contract responsible for collecting CRV from users and locking them in curve. This is low risk because it's forked with very small differences from Depositor contract which is already audited [Diffchecker](https://www.diffnow.com/report/5i68z) with Depositor of Step 1.
 2. **sdCRV.sol**: resultant token received by users, on locking CRV via CrvDepositor. [Diffchecker](https://www.diffchecker.com/iq52c) with sdToken.
-3. **CrvAccumulator.sol**: it's a helper contract to LiquidityGaugeV4, which collects 3CRV rewards from multiple sources i.e. locker and strategies (for curve locker), and feeds them to LiquidityGaugeV4. It was needed cause LiquidityGaugeV4 can only have 1 source for a given reward token.
+3. **CrvAccumulator.sol**: it's a helper contract to LiquidityGaugeV4, which receives 3CRV rewards from curve locker (StrategyProxy contract to be precise, which is being developed) and CRV rewards from strategies, and notifies them to LiquidityGaugeV4.
 
 ### Gauge Types
 Type 0 - Mainnet LG, it will send SDT to the LiquidityGaugeV4 (sdAngle, sdFxs) <br/>
@@ -181,14 +175,25 @@ Type 2 - External, it will send SDT to the delegateGauge address (our multisig) 
 
 ## ETH Mainnet Deployed Contract Addresses
 
-1. [FXS Depositor](https://etherscan.io/address/0x070df1b96059f5dc34fcb140ffdc8c41d6eef1ca#code)
+1. [FXS Depositor](https://etherscan.io/address/0xFaF3740167B866b571465B063c6B3A71Ba9b6285#code)
 2. [FXSLocker](https://etherscan.io/address/0xcd3a267de09196c48bbb1d9e842d7d7645ce448f#code)
 3. [FXS sdToken](https://etherscan.io/address/0x402f878bdd1f5c66fdaf0fababcf74741b68ac36#code)
-4. [ANGLE Depositor](https://etherscan.io/address/0x3449599Ff9Ae8459a7a24D33eee518627e8C88C9#code)
+4. [ANGLE Depositor](https://etherscan.io/address/0x8A97e8B3389D431182aC67c0DF7D46FF8DCE7121#code)
 5. [AngleLocker](https://etherscan.io/address/0xD13F8C25CceD32cdfA79EB5eD654Ce3e484dCAF5#code)
 6. [ANGLE sdToken](https://etherscan.io/address/0x752B4c6e92d96467fE9b9a2522EF07228E00F87c#code)
 7. [FeeDistributor.vy](https://etherscan.io/address/0x29f3dd38dB24d3935CF1bf841e6b2B461A3E5D92#code)
 8. [veSDT TransparentUpgradeableProxy](https://etherscan.io/address/0x0C30476f66034E11782938DF8e4384970B6c9e8a#code)
 9. [veSDT Implementation](https://etherscan.io/address/0x4dcb5571024d14f017b99a7d3cedef670d4718c4#code)
-8. [ProxyAdmin.sol](https://etherscan.io/address/0xfE612c237A81527a86f2Cac1FD19939CF4F91B9B#code)
-9. [SmartWalletWhitelist.sol](https://etherscan.io/address/0x37E8386602d9EBEa2c56dd11d8E142290595f1b5#code)
+10. [ProxyAdmin.sol](https://etherscan.io/address/0xfE612c237A81527a86f2Cac1FD19939CF4F91B9B#code)
+11. [SmartWalletWhitelist.sol](https://etherscan.io/address/0x37E8386602d9EBEa2c56dd11d8E142290595f1b5#code)
+12. [SdtDistributor.sol](https://etherscan.io/address/0x06F66Bc79aeD1b49a393bF5fcF68a70499A2B5DC#code)
+13. [SdtDistributor-implementation](https://etherscan.io/address/0x216E1894687061C8E6bCEa8D08482a14DA388272#code)
+14. [LiquidityGaugeV4-sdFXS](https://etherscan.io/address/0xF3C6e8fbB946260e8c2a55d48a5e01C82fD63106#code)
+15. [LiquidityGaugeV4-sdFXS-implementation](https://etherscan.io/address/0x0accA1bd515c191e1A4A81AA406dCa1e75CEfD76#code)
+16. [LiquidityGaugeV4-sdANGLE-implementation](https://etherscan.io/address/0x93c951D3281Cc79e9FE1B1C87e50693D202F4C17#code)
+17. [GaugeController](https://etherscan.io/address/0x75f8f7fa4b6DA6De9F4fE972c811b778cefce882#code)
+18. [FXSAccumulator](https://etherscan.io/address/0x1CC16bEdaaCD15848bcA5eB80188e0931bC59fB2#code)
+19. [ClaimRewards](https://etherscan.io/address/0xf30f23B7FB233172A41b32f82D263c33a0c9F8c2#code)
+20. [ANGLEAccumulator](https://etherscan.io/address/0x943671e6c3A98E28ABdBc60a7ac703b3c0C6aA51#code)
+21. [veBoostProxy](https://etherscan.io/address/0xD67bdBefF01Fc492f1864E61756E5FBB3f173506#code)
+22. [LiquidityGaugeV4-sdANGLE](https://etherscan.io/address/0xE55843a90672f7d8218285e51EE8fF8E233F35d5#code)
