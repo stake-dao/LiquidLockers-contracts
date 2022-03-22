@@ -86,7 +86,7 @@ Users can start to lock their FXS in Frax finance via Stake DAO, getting sdFXS t
       
 ### Smart Contracts (general intended behaviour)
 1. **veSDT.vy** [upgradable] (not covered by coverage plugin): allows users to lock their SDT for a specified amount of time (max 4 years). Also allows them to increase their locked SDT amount and lock time. Additional function on top of Angle's contract is the `deposit_for_from()` method, which allows any address (contract or EOA) to lock more SDT for an existing address with a lock, by itself supplying those SDT. [Diffchecker](https://www.diffnow.com/report/zhef8) with veANGLE
-2. **FeeDistributor.vy** (not covered by coverage plugin): contract that distributes sd3CRV (Stake DAO stablecoin LP token) to all SDT lockers in veSDT. These sd3CRV are supposed to be automatically received on harvests from all strategies built on top of all lockers, but they can also be manually ERC20 transferred, until the strategies are live. [Diffchecker](https://www.diffnow.com/report/jbkz4) with Angle's FeeDistributor.
+2. **FeeDistributor.vy** (not covered by coverage plugin): contract that distributes sd3CRV (Stake DAO stablecoin LP token) to all SDT lockers in veSDT. These sdFRAX3CRV are supposed to be automatically received on harvests from all strategies built on top of all lockers, but they can also be manually ERC20 transferred, until the strategies are live. [Diffchecker](https://www.diffnow.com/report/jbkz4) with Angle's FeeDistributor.
 3. **SmartWalletWhitelist.sol**: contract to whitelist smart contracts to allow them to lock SDT in the veSDT contract. It can also revoke existing SDT-locking rights of contracts. [Diffchecker](https://www.diffnow.com/report/0k8fm) with Angle's SmartWalletWhitelist.
 4. [**Contracts for Upgradability**](https://github.com/StakeDAO/sd-frax-veSDT/tree/feature/step3#contracts-for-upgradability)
 
@@ -102,7 +102,7 @@ At this step, users will be able to vote, using veSDT, via the GaugeController, 
 
 1. **Gauge Voting**: users who hold veSDT, can now vote for locker gauges of frax, angle (this release) and curve (next release), to allocate proportion of SDT to each of these gauges. They'll be allowed to vote once in 10 days, which will decide the proportion of SDT going to each gauge but do note that the amount of SDT that goes to each gauge w.r.t. this proportion, can be altered daily (to start with, but this interval can also be changed).
 
-2. **Locker Rewards**: users who have locked their FXS in frax locker and ANGLE in angle locker, receive sdX token (sdFXS, sdANGLE, sdCRV) as receipts, which they can now stake in LiquidityGaugeV4 contract, to start earning FXS, sanUSDC_EUR rewards respectively, along with SDT (coming from Masterchef). NOTE: users can boost their SDT rewards by locking more SDT in the veSDT contract.
+2. **Locker Rewards**: users who have locked their FXS in frax locker and ANGLE in angle locker, receive sdX token (sdFXS, sdANGLE, sdCRV) as receipts, which they can now stake in LiquidityGaugeV4 contract, to start earning FXS, agEUR rewards respectively, along with SDT (coming from Masterchef). NOTE: users can boost their SDT rewards by locking more SDT in the veSDT contract.
       
 ### Smart Contracts (general intended behaviour)
 
