@@ -43,6 +43,7 @@ export type { ISurplusConverterSanTokens } from "./ISurplusConverterSanTokens";
 export type { ITokenGaugeController } from "./ITokenGaugeController";
 export type { ITokenMinter } from "./ITokenMinter";
 export type { IVeANGLE } from "./IVeANGLE";
+export type { IVeCRV } from "./IVeCRV";
 export type { IveFXS } from "./IveFXS";
 export type { IVeSDT } from "./IVeSDT";
 export type { IYieldDistributor } from "./IYieldDistributor";
@@ -101,6 +102,7 @@ export { ISurplusConverterSanTokens__factory } from "./factories/ISurplusConvert
 export { ITokenGaugeController__factory } from "./factories/ITokenGaugeController__factory";
 export { ITokenMinter__factory } from "./factories/ITokenMinter__factory";
 export { IVeANGLE__factory } from "./factories/IVeANGLE__factory";
+export { IVeCRV__factory } from "./factories/IVeCRV__factory";
 export { IveFXS__factory } from "./factories/IveFXS__factory";
 export { IVeSDT__factory } from "./factories/IVeSDT__factory";
 export { IYieldDistributor__factory } from "./factories/IYieldDistributor__factory";
