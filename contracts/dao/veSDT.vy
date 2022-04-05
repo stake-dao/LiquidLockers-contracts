@@ -140,6 +140,8 @@ def initialize(_admin: address, token_addr: address, _smart_wallet_checker: addr
     assert self.initialized == False #dev: contract is already initialized
     self.initialized = True
     assert _admin!= ZERO_ADDRESS #dev: admin cannot be the 0 address
+    assert token_addr != ZERO_ADDRESS
+    assert _smart_wallet_checker != ZERO_ADDRESS
     self.admin = _admin
     self.token = token_addr
     self.smart_wallet_checker = _smart_wallet_checker
