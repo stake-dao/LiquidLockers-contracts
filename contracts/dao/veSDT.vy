@@ -64,8 +64,6 @@ DEPOSIT_FOR_TYPE: constant(int128) = 0
 CREATE_LOCK_TYPE: constant(int128) = 1
 INCREASE_LOCK_AMOUNT: constant(int128) = 2
 INCREASE_UNLOCK_TIME: constant(int128) = 3
-DEPOSIT_FOR_FROM_TYPE: constant(int128) = 4
-
 
 event CommitOwnership:
     admin: address
@@ -407,41 +405,6 @@ def _deposit_for(_addr: address, _value: uint256, unlock_time: uint256, locked_b
     log Deposit(_addr, _value, _locked.end, type, block.timestamp)
     log Supply(supply_before, supply_before + _value)
 
-@internal
-def _deposit_for_from(_addr: address, _value: uint256, _from_account: address, unlock_time: uint256, locked_balance: LockedBalance, type: int128):
-    """
-    @notice Deposit and lock tokens for a user
-    This function is different from the original _deposit_for in terms of where the token is transferred from.
-    @param _addr User's wallet address
-    @param _value Amount to deposit
-    @param _from_account Account from which to deposit
-    @param unlock_time New time when to unlock the tokens, or 0 if unchanged
-    @param locked_balance Previous locked amount / timestamp
-    """
-    _locked: LockedBalance = locked_balance
-    supply_before: uint256 = self.supply
-
-    self.supply = supply_before + _value
-    old_locked: LockedBalance = _locked
-    # Adding to existing lock, or if a lock is expired - creating a new one
-    _locked.amount += convert(_value, int128)
-    if unlock_time != 0:
-        _locked.end = unlock_time
-    self.locked[_addr] = _locked
-
-    # Possibilities:
-    # Both old_locked.end could be current or expired (>/< block.timestamp)
-    # value == 0 (extend lock) or value > 0 (add to lock or extend lock)
-    # _locked.end > block.timestamp (always)
-    self._checkpoint(_addr, old_locked, _locked)
-
-    if _value != 0:
-        assert ERC20(self.token).transferFrom(_from_account, self, _value)
-
-    log Deposit(_addr, _value, _locked.end, type, block.timestamp)
-    log Supply(supply_before, supply_before + _value)
-
-
 @external
 def checkpoint():
     """
@@ -467,28 +430,6 @@ def deposit_for(_addr: address, _value: uint256):
     assert _locked.end > block.timestamp, "Cannot add to expired lock. Withdraw"
 
     self._deposit_for(_addr, _value, 0, self.locked[_addr], DEPOSIT_FOR_TYPE, msg.sender)
-
-
-@external
-@nonreentrant('lock')
-def deposit_for_from(_addr: address, _value: uint256):
-    """
-    @notice Deposit `_value` tokens for `_addr` and add to the lock
-    @dev Anyone (even a smart contract), can deposit for the `_addr`, except the `_addr`,
-        but cannot extend their locktime and deposit for a brand new user
-    @param _addr User's wallet address
-    @param _value Amount to add to user's lock
-    """
-    _locked: LockedBalance = self.locked[_addr]
-
-    assert _value > 0  # dev: need non-zero value
-    assert _locked.amount > 0, "No existing lock found"
-    assert _locked.end > block.timestamp, "Cannot add to expired lock. Withdraw"
-    assert _addr != msg.sender, "cannot call it on own account"
-
-    self._deposit_for_from(_addr, _value, msg.sender, 0, self.locked[_addr], DEPOSIT_FOR_FROM_TYPE)
-
-
 
 
 @external
