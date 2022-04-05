@@ -474,7 +474,8 @@ def deposit_for(_addr: address, _value: uint256):
 def deposit_for_from(_addr: address, _value: uint256):
     """
     @notice Deposit `_value` tokens for `_addr` and add to the lock
-    @dev Anyone (even a smart contract) can deposit for someone else from their account
+    @dev Anyone (even a smart contract), can deposit for the `_addr`, except the `_addr`,
+        but cannot extend their locktime and deposit for a brand new user
     @param _addr User's wallet address
     @param _value Amount to add to user's lock
     """
