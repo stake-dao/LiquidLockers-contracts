@@ -134,7 +134,7 @@ def initialize(_admin: address, token_addr: address, _smart_wallet_checker: addr
     """
     @notice Contract initializer
     @param _admin Future veSDT admin
-    @param token_addr `ERC20ANGLE` token address
+    @param token_addr `ERC20SDT` token address
     @param _smart_wallet_checker Future smart wallet checker contract
     @param _name Token name
     @param _symbol Token symbol
