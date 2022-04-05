@@ -104,7 +104,7 @@ contract ClaimRewards {
 		if (balanceBefore != 0) {
 			if (lockStatus.lockSDT && IVeSDT(veSDT).balanceOf(msg.sender) > 0) {
 				IERC20(SDT).approve(veSDT, balanceBefore);
-				IVeSDT(veSDT).deposit_for_from(msg.sender, balanceBefore);
+				IVeSDT(veSDT).deposit_for(msg.sender, balanceBefore);
 			} else {
 				SafeERC20.safeTransfer(IERC20(SDT), msg.sender, balanceBefore);
 			}
