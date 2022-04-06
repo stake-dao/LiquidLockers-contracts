@@ -434,6 +434,24 @@ def deposit_for(_addr: address, _value: uint256):
 
     self._deposit_for(_addr, _value, 0, self.locked[_addr], DEPOSIT_FOR_TYPE, msg.sender)
 
+@external
+@nonreentrant('lock')
+def deposit_for_from(_addr: address, _value: uint256):
+    """
+    @notice Deposit `_value` tokens for `_addr` and add to the lock
+    @dev Anyone (even a smart contract), can deposit for the `_addr`, except the `_addr`,
+        but cannot extend their locktime and deposit for a brand new user
+    @param _addr User's wallet address
+    @param _value Amount to add to user's lock
+    """
+    _locked: LockedBalance = self.locked[_addr]
+
+    assert _value > 0  # dev: need non-zero value
+    assert _locked.amount > 0, "No existing lock found"
+    assert _locked.end > block.timestamp, "Cannot add to expired lock. Withdraw"
+    assert _addr != msg.sender, "cannot call it on own account"
+
+    self._deposit_for_from(_addr, _value, 0, self.locked[_addr], DEPOSIT_FOR_FROM_TYPE,msg.sender)
 
 @external
 @nonreentrant('lock')
