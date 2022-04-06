@@ -64,6 +64,7 @@ DEPOSIT_FOR_TYPE: constant(int128) = 0
 CREATE_LOCK_TYPE: constant(int128) = 1
 INCREASE_LOCK_AMOUNT: constant(int128) = 2
 INCREASE_UNLOCK_TIME: constant(int128) = 3
+DEPOSIT_FOR_FROM_TYPE: constant(int128) = 4
 
 event CommitOwnership:
     admin: address
