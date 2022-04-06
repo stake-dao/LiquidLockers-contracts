@@ -451,7 +451,7 @@ def deposit_for_from(_addr: address, _value: uint256):
     assert _locked.end > block.timestamp, "Cannot add to expired lock. Withdraw"
     assert _addr != msg.sender, "cannot call it on own account"
 
-    self._deposit_for_from(_addr, _value, 0, self.locked[_addr], DEPOSIT_FOR_FROM_TYPE,msg.sender)
+    self._deposit_for(_addr, _value, 0, self.locked[_addr], DEPOSIT_FOR_FROM_TYPE,msg.sender)
 
 @external
 @nonreentrant('lock')
