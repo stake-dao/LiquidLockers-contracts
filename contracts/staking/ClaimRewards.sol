@@ -28,7 +28,7 @@ contract ClaimRewards {
 
 	uint256 public depositorsCount;
 
-	uint256 private immutable MAX_REWARDS = 8;
+	uint256 private constant MAX_REWARDS = 8;
 
 	event GaugeEnabled(address gauge);
 	event GaugeDisabled(address gauge);
