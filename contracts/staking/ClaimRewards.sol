@@ -38,6 +38,7 @@ contract ClaimRewards {
 	event RewardsClaimed(address[] gauges);
 	event RewardClaimedAndLocked(address[] gauges, bool locks, bool stake);
 	event RewardClaimedAndSent(address user, address[] gauges);
+	event GovernanceChanged(address oldG, address newG);
 
 	constructor() {
 		governance = msg.sender;
@@ -164,6 +165,7 @@ contract ClaimRewards {
 	/// @param _governance governance address
 	function setGovernance(address _governance) external onlyGovernance {
 		require(_governance != address(0), "can't be zero address");
+		emit GovernanceChanged(governance, _governance);
 		governance = _governance;
 	}
 }
