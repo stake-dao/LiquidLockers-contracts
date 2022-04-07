@@ -19,11 +19,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const veSdtProxy = await deployments.get("veSDT");
   const veSDTImplementationNew = await deployments.get("veSDTImplementationNew");
 
-  await proxyAdmin.upgrade(veSdtProxy.address, veSDTImplementationNew.address);
+  console.log("veSdtProxy.address", veSdtProxy.address);
+  console.log("veSDTImplementationNew.address", veSDTImplementationNew.address);
+
+  //await proxyAdmin.upgrade(veSdtProxy.address, veSDTImplementationNew.address);
 };
 
 export default func;
 
 func.skip = async () => false;
-func.tags = ["veSDT"];
+func.tags = ["veSDTImplementationNew"];
 func.dependencies = ["ProxyAdmin", "veSDT"];
