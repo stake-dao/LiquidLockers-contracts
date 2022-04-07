@@ -83,9 +83,9 @@ contract ClaimRewards {
 				address depositor = depositors[token];
 				uint256 balance = IERC20(token).balanceOf(address(this));
 				if (balance != 0) {
-					if (depositor != address(0) && lockStatus.locked[depositorsIndex[token]]) {
+					if (depositor != address(0) && lockStatus.locked[depositorsIndex[depositor]]) {
 						IERC20(token).approve(depositor, balance);
-						if (lockStatus.staked[depositorsIndex[token]]) {
+						if (lockStatus.staked[depositorsIndex[depositor]]) {
 							IDepositor(depositor).deposit(balance, false, true, msg.sender);
 						} else {
 							IDepositor(depositor).deposit(balance, false, false, msg.sender);
