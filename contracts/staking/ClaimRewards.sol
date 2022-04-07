@@ -33,11 +33,8 @@ contract ClaimRewards {
 	event GaugeEnabled(address gauge);
 	event GaugeDisabled(address gauge);
 	event DepositorEnabled(address token, address depositor);
-	event DepositorDisabled(address token, address depositor);
 	event Recovered(address token, uint256 amount);
 	event RewardsClaimed(address[] gauges);
-	event RewardClaimedAndLocked(address[] gauges, bool locks, bool stake);
-	event RewardClaimedAndSent(address user, address[] gauges);
 	event GovernanceChanged(address oldG, address newG);
 
 	constructor() {
