@@ -5,6 +5,14 @@ contract BaseStrategy {
 	/* ========== STATE VARIABLES ========== */
 	ILocker locker;
 	address governance;
+	address rewardsReceiver;
+
+	/* ========== EVENTS ========== */
+	event Deposited(address _gauge, address _token, uint256 _amount);
+	event Withdrawn(address _gauge, address _token, uint256 _amount);
+	event Claimed(address _gauge);
+	event Boosted(address _gauge, address _user);
+	event RewardReceiverSet(address _gauge, address _receiver);
 
 	/* ========== MODIFIERS ========== */
 	modifier onlyGovernance() {
@@ -37,7 +45,9 @@ contract BaseStrategy {
 
 	function disableGauge(address _gauge) external virtual onlyGovernance {}
 
-	function boost(address _gauge) external {}
+	function boost(address _gauge, address _user) external virtual {}
 
-	function set_rewards_receiver(address _receiver, address _gauge) external virtual onlyGovernance {}
+	function set_rewards_receiver(address _gauge, address _receiver) external virtual onlyGovernance {}
+
+	function claim(address _gauge) external virtual {}
 }
