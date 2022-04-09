@@ -18,7 +18,7 @@ contract ClaimRewards {
 
 	mapping(address => address) public depositors;
 	mapping(address => uint256) public depositorsIndex;
-	mapping(address => bool) public gauges;
+	mapping(address => uint256) public gauges;
 
 	struct LockStatus {
 		bool[] locked;
@@ -51,7 +51,7 @@ contract ClaimRewards {
 	function claimRewards(address[] calldata _gauges) external {
 		uint256 gaugeLength = _gauges.length;
 		for (uint256 index = 0; index < gaugeLength; ++index) {
-			require(gauges[_gauges[index]], "Gauge not enabled");
+			require(gauges[_gauges[index]] > 0, "Gauge not enabled");
 			ILiquidityGauge(_gauges[index]).claim_rewards_for(msg.sender, msg.sender);
 		}
 		emit RewardsClaimed(_gauges);
@@ -69,7 +69,7 @@ contract ClaimRewards {
 		// Claim rewards token from gauges
 		for (uint256 index = 0; index < gaugeLength; ++index) {
 			address gauge = _gauges[index];
-			require(gauges[gauge], "Gauge not enabled");
+			require(gauges[gauge] > 0, "Gauge not enabled");
 			ILiquidityGauge(gauge).claim_rewards_for(msg.sender, address(this));
 			// skip the first reward token, it is SDT for any LGV4
 			// it loops at most until max rewards, it is hardcoded on LGV4
@@ -131,8 +131,8 @@ contract ClaimRewards {
 	/// @param _gauge gauge address to enable
 	function enableGauge(address _gauge) external onlyGovernance {
 		require(_gauge != address(0), "can't be zero address");
-		require(gauges[_gauge] == false, "already enabled");
-		gauges[_gauge] = true;
+		require(gauges[_gauge] == 0, "already enabled");
+		++gauges[_gauge];
 		emit GaugeEnabled(_gauge);
 	}
 
@@ -140,8 +140,8 @@ contract ClaimRewards {
 	/// @param _gauge gauge address to disable
 	function disableGauge(address _gauge) external onlyGovernance {
 		require(_gauge != address(0), "can't be zero address");
-		require(gauges[_gauge], "already disabled");
-		gauges[_gauge] = false;
+		require(gauges[_gauge] == 1, "already disabled");
+		--gauges[_gauge];
 		emit GaugeDisabled(_gauge);
 	}
 
