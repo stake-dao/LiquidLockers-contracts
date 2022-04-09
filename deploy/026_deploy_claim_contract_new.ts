@@ -7,7 +7,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
 
   await deploy("ClaimRewardsNew", {
-    contract: "ClaimRewards"
+    contract: "ClaimRewards",
     from: deployer,
     args: [],
     log: true
