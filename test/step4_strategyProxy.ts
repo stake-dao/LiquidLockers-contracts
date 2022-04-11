@@ -115,7 +115,7 @@ describe("ANGLE Depositor", function () {
     await sanDaiEur.connect(sanDAILPHolder).transfer(deployer._address, parseUnits("10000", "18"));
   });
 
-  describe("strateg for san usdc gauge", function () {
+  describe("san usdc gauge tests", function () {
     it("should be able to deposit", async function () {
       await strategy.connect(deployer).deposit(sanUSDC_EUR_GAUGE, SAN_USDC_EUR, parseUnits("1", "6"));
     });
@@ -135,7 +135,7 @@ describe("ANGLE Depositor", function () {
     });
   });
 
-  describe("strateg for san dai gauge", function () {
+  describe("strateg for san dai gauge tests", function () {
     it("should be able to deposit", async function () {
       await strategy.connect(deployer).deposit(sanDAI_EUR_GAUGE, SAN_DAI_EUR, parseUnits("1", "6"));
     });
