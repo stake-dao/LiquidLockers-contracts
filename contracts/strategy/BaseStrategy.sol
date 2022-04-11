@@ -21,9 +21,14 @@ contract BaseStrategy {
 	}
 
 	/* ========== CONSTRUCTOR ========== */
-	constructor(ILocker _locker, address _governance) public {
+	constructor(
+		ILocker _locker,
+		address _governance,
+		address _receiver
+	) public {
 		locker = _locker;
 		governance = _governance;
+		rewardsReceiver = _receiver;
 	}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */

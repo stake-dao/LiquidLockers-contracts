@@ -3,13 +3,17 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./BaseStrategy.sol";
 import "../accumulator/AngleAccumulator.sol";
-
+import '../interfaces/ILiquidityGauge.sol';
 contract AngleStrategy is BaseStrategy {
 	using SafeERC20 for IERC20;
 	AngleAccumulator public accumulator;
 
 	/* ========== CONSTRUCTOR ========== */
-	constructor(ILocker _locker, address _governance) BaseStrategy(_locker, _governance) {}
+	constructor(
+		ILocker _locker,
+		address _governance,
+		address _receiver
+	) BaseStrategy(_locker, _governance, _receiver) {}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
 	function deposit(
@@ -49,7 +53,7 @@ contract AngleStrategy is BaseStrategy {
 	}
 
 	function withdrawAll(address _gauge, address _token) external override onlyGovernance {
-		withdraw(_gauge, _token, IERC20(_token).balanceOf(_gauge));
+		withdraw(_gauge, _token, ILiquidityGauge(_gauge).balanceOf(address(locker)));
 	}
 
 	function sendToAccumulator(address _token, uint256 _amount) external onlyGovernance {

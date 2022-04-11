@@ -29,4 +29,6 @@ interface ILiquidityGauge {
 
     // solhint-disable-next-line
     function reward_data(address _tokenReward) external view returns(Reward memory);
+
+    function balanceOf(address) external returns(uint256); 
 }
