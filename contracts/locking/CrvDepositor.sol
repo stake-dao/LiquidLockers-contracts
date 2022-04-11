@@ -78,7 +78,7 @@ contract CrvDepositor {
 	function setFees(uint256 _lockIncentive) external {
 		require(msg.sender == governance, "!auth");
 
-		if (_lockIncentive >= 0 && _lockIncentive <= 30) {
+		if (_lockIncentive <= 30) {
 			lockIncentive = _lockIncentive;
 			emit FeesChanged(_lockIncentive);
 		}
