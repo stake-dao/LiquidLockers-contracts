@@ -155,8 +155,7 @@ contract CrvDepositor {
 
 		if (_stake && gauge != address(0)) {
 			ITokenMinter(minter).mint(address(this), _amount);
-			IERC20(minter).safeApprove(gauge, 0);
-			IERC20(minter).safeApprove(gauge, _amount);
+			IERC20(minter).safeIncreaseAllowance(gauge, _amount);
 			ILiquidityGauge(gauge).deposit(_amount, _user);
 		} else {
 			ITokenMinter(minter).mint(_user, _amount);
