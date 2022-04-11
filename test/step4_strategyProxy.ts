@@ -34,6 +34,8 @@ const GAUGE = "0x3785Ce82be62a342052b9E5431e9D3a839cfB581"; // G-UNI LP gauge
 
 const ACC = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0"; // StakeDAO multisig
 
+const ANGLEACCUMULATOR = "0x943671e6c3a98e28abdbc60a7ac703b3c0c6aa51";
+
 const SAN_USDC_EUR = "0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad"; // sanUSDC_EUR
 const SAN_DAI_EUR = "0x7b8e89b0ce7bac2cfec92a371da899ea8cbdb450"; // sanDAI_EUR
 
@@ -45,6 +47,7 @@ const STDDEPLOYER = "0xb36a0671b3d49587236d7833b01e79798175875f";
 
 const sanUSDC_EUR_GAUGE = "0x51fE22abAF4a26631b2913E417c0560D547797a7";
 const sanDAI_EUR_GAUGE = "0x8E2c0CbDa6bA7B65dbcA333798A3949B07638026";
+
 const getNow = async function () {
   let blockNum = await ethers.provider.getBlockNumber();
   let block = await ethers.provider.getBlock(blockNum);
@@ -52,7 +55,7 @@ const getNow = async function () {
   return time;
 };
 
-describe("ANGLE Depositor", function () {
+describe("ANGLE Strategy", function () {
   let locker: Contract;
   let angle: Contract;
   let sanUsdcEur: Contract;
@@ -62,18 +65,9 @@ describe("ANGLE Depositor", function () {
   let sanLPHolder: JsonRpcSigner;
   let sanDAILPHolder: JsonRpcSigner;
 
-  let liquidityGauge: Contract;
-
   let strategy: Contract;
 
   before(async function () {
-    // this.enableTimeouts(false);
-
-    // [deployer] = await ethers.getSigners();
-    // const temp = await ethers.getSigners();
-
-    // baseOwner = temp[0];
-
     await network.provider.request({
       method: "hardhat_impersonateAccount",
       params: [STDDEPLOYER]
@@ -102,7 +96,7 @@ describe("ANGLE Depositor", function () {
     sanDaiEur = await ethers.getContractAt(ERC20ABI, SAN_DAI_EUR);
     angle = await ethers.getContractAt(ERC20ABI, ANGLE);
 
-    strategy = await AngleStrategy.deploy(locker.address, deployer._address, deployer._address);
+    strategy = await AngleStrategy.deploy(locker.address, deployer._address, ANGLEACCUMULATOR);
 
     await locker.connect(deployer).setGovernance(strategy.address);
 
@@ -121,9 +115,9 @@ describe("ANGLE Depositor", function () {
     });
 
     it("should be able to claim", async function () {
-      const beforeBalance = await angle.balanceOf(deployer._address);
+      const beforeBalance = await angle.balanceOf(ANGLEACCUMULATOR);
       await strategy.claim(sanUSDC_EUR_GAUGE);
-      const afterBalance = await angle.balanceOf(deployer._address);
+      const afterBalance = await angle.balanceOf(ANGLEACCUMULATOR);
       expect(afterBalance.gt(beforeBalance));
     });
 
@@ -135,15 +129,15 @@ describe("ANGLE Depositor", function () {
     });
   });
 
-  describe("strateg for san dai gauge tests", function () {
+  describe("san dai gauge tests", function () {
     it("should be able to deposit", async function () {
       await strategy.connect(deployer).deposit(sanDAI_EUR_GAUGE, SAN_DAI_EUR, parseUnits("1", "6"));
     });
 
     it("should be able to claim", async function () {
-      const beforeBalance = await angle.balanceOf(deployer._address);
+      const beforeBalance = await angle.balanceOf(ANGLEACCUMULATOR);
       await strategy.claim(sanDAI_EUR_GAUGE);
-      const afterBalance = await angle.balanceOf(deployer._address);
+      const afterBalance = await angle.balanceOf(ANGLEACCUMULATOR);
       expect(afterBalance.gt(beforeBalance));
     });
 
