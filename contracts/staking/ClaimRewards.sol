@@ -18,7 +18,7 @@ contract ClaimRewards {
 
 	mapping(address => address) public depositors;
 	mapping(address => uint256) public depositorsIndex;
-	mapping(address => bool) public gauges;
+	mapping(address => uint256) public gauges;
 
 	struct LockStatus {
 		bool[] locked;
@@ -28,16 +28,14 @@ contract ClaimRewards {
 
 	uint256 public depositorsCount;
 
-	uint256 private immutable MAX_REWARDS = 8;
+	uint256 private constant MAX_REWARDS = 8;
 
 	event GaugeEnabled(address gauge);
 	event GaugeDisabled(address gauge);
 	event DepositorEnabled(address token, address depositor);
-	event DepositorDisabled(address token, address depositor);
 	event Recovered(address token, uint256 amount);
 	event RewardsClaimed(address[] gauges);
-	event RewardClaimedAndLocked(address[] gauges, bool locks, bool stake);
-	event RewardClaimedAndSent(address user, address[] gauges);
+	event GovernanceChanged(address oldG, address newG);
 
 	constructor() {
 		governance = msg.sender;
@@ -53,7 +51,7 @@ contract ClaimRewards {
 	function claimRewards(address[] calldata _gauges) external {
 		uint256 gaugeLength = _gauges.length;
 		for (uint256 index = 0; index < gaugeLength; ++index) {
-			require(gauges[_gauges[index]], "Gauge not enabled");
+			require(gauges[_gauges[index]] > 0, "Gauge not enabled");
 			ILiquidityGauge(_gauges[index]).claim_rewards_for(msg.sender, msg.sender);
 		}
 		emit RewardsClaimed(_gauges);
@@ -71,7 +69,7 @@ contract ClaimRewards {
 		// Claim rewards token from gauges
 		for (uint256 index = 0; index < gaugeLength; ++index) {
 			address gauge = _gauges[index];
-			require(gauges[gauge], "Gauge not enabled");
+			require(gauges[gauge] > 0, "Gauge not enabled");
 			ILiquidityGauge(gauge).claim_rewards_for(msg.sender, address(this));
 			// skip the first reward token, it is SDT for any LGV4
 			// it loops at most until max rewards, it is hardcoded on LGV4
@@ -83,9 +81,9 @@ contract ClaimRewards {
 				address depositor = depositors[token];
 				uint256 balance = IERC20(token).balanceOf(address(this));
 				if (balance != 0) {
-					if (depositor != address(0) && lockStatus.locked[depositorsIndex[token]]) {
+					if (depositor != address(0) && lockStatus.locked[depositorsIndex[depositor]]) {
 						IERC20(token).approve(depositor, balance);
-						if (lockStatus.staked[depositorsIndex[token]]) {
+						if (lockStatus.staked[depositorsIndex[depositor]]) {
 							IDepositor(depositor).deposit(balance, false, true, msg.sender);
 						} else {
 							IDepositor(depositor).deposit(balance, false, false, msg.sender);
@@ -133,8 +131,8 @@ contract ClaimRewards {
 	/// @param _gauge gauge address to enable
 	function enableGauge(address _gauge) external onlyGovernance {
 		require(_gauge != address(0), "can't be zero address");
-		require(gauges[_gauge] == false, "already enabled");
-		gauges[_gauge] = true;
+		require(gauges[_gauge] == 0, "already enabled");
+		++gauges[_gauge];
 		emit GaugeEnabled(_gauge);
 	}
 
@@ -142,8 +140,8 @@ contract ClaimRewards {
 	/// @param _gauge gauge address to disable
 	function disableGauge(address _gauge) external onlyGovernance {
 		require(_gauge != address(0), "can't be zero address");
-		require(gauges[_gauge], "already disabled");
-		gauges[_gauge] = false;
+		require(gauges[_gauge] == 1, "already disabled");
+		--gauges[_gauge];
 		emit GaugeDisabled(_gauge);
 	}
 
@@ -164,6 +162,7 @@ contract ClaimRewards {
 	/// @param _governance governance address
 	function setGovernance(address _governance) external onlyGovernance {
 		require(_governance != address(0), "can't be zero address");
+		emit GovernanceChanged(governance, _governance);
 		governance = _governance;
 	}
 }

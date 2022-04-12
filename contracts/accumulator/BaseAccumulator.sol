@@ -57,7 +57,7 @@ contract BaseAccumulator {
 		require(_amount > 0, "set an amount > 0");
 		uint256 balanceBefore = IERC20(_tokenReward).balanceOf(address(this));
 		require(balanceBefore >= _amount, "amount not enough");
-		if (ILiquidityGauge(gauge).reward_data(_tokenReward).distributor != address(0)) {
+		if (ILiquidityGauge(gauge).reward_data(_tokenReward).distributor == address(this)) {
 			IERC20(_tokenReward).approve(gauge, _amount);
 			ILiquidityGauge(gauge).deposit_reward_token(_tokenReward, _amount);
 			uint256 balanceAfter = IERC20(_tokenReward).balanceOf(address(this));
