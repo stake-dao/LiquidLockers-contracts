@@ -146,7 +146,7 @@ describe("CRV Migration", function () {
     let iface_gv4 = new ethers.utils.Interface(ABI_LGV4);
     const dataCrvGauge = iface_gv4.encodeFunctionData("initialize", [
       sdCRVToken.address,
-      deployer.address,
+      sdtDeployer._address,
       sdt.address,
       veSDTProxy.address,
       veBoostProxy.address,
@@ -165,14 +165,14 @@ describe("CRV Migration", function () {
     ]);
     
     // Setter functions
-    await crvDepositor.setGauge(crvPPSGaugeProxy.address);
+    await crvDepositor.connect(sdtDeployer).setGauge(crvPPSGaugeProxy.address);
 
-    await sdCRVToken.setOperator(crvDepositor.address);
+    await sdCRVToken.connect(sdtDeployer).setOperator(crvDepositor.address);
 
-    await crvAcc.setLocker(OLD_LOCKER);
-    await crvAcc.setGauge(crvPPSGaugeProxy.address);
+    await crvAcc.connect(sdtDeployer).setLocker(OLD_LOCKER);
+    await crvAcc.connect(sdtDeployer).setGauge(crvPPSGaugeProxy.address);
 
-    await crvPPSGaugeProxy.add_reward(crv3.address, crvAcc.address);
+    await crvPPSGaugeProxy.connect(sdtDeployer).add_reward(crv3.address, crvAcc.address);
   });
 
   it("sdveCrv minting should be disable", async function () {
@@ -243,7 +243,7 @@ describe("CRV Migration", function () {
 
     // simulate new reward
     await crv3.connect(crv3Whale).transfer(CRV_FEE_D, parseEther("10000"))
-    // change crvLocker strategy address to the crvDepositor
+    // change crvLocker strategy address to the crvStrategyProxy
     await network.provider.send("hardhat_setStorageAt", [
       crvLocker.address,
       "0x1",
@@ -274,13 +274,8 @@ describe("CRV Migration", function () {
     await network.provider.send("evm_mine", []);
 
     const crv3BalanceBefore = await crv3.balanceOf(crvWhale._address); 
-    console.log(crv3BalanceBefore.toString());
-    const balance = await crvPPSGaugeProxy["balanceOf(address)"](crvWhale._address);
-    const reward = await crvPPSGaugeProxy.reward_data(crv3.address);
-    console.log(reward);
-    console.log(balance.toString())
-    await crvPPSGaugeProxy.connect(crvWhale)["claim_reward()"];
+    await crvPPSGaugeProxy.connect(crvWhale)["claim_rewards()"]();
     const crv3BalanceAfter = await crv3.balanceOf(crvWhale._address); 
-    console.log(crv3BalanceAfter.toString());
+    expect(crv3BalanceAfter.sub(crv3BalanceBefore)).gt(0);
   });
 });
