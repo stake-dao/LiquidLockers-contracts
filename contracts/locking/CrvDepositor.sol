@@ -183,7 +183,7 @@ contract CrvDepositor {
 	/// @param _amount amount to lock
 	function lockSdveCrvToSdCrv(uint256 _amount) external {
 		IERC20(SD_VE_CRV).transferFrom(msg.sender, address(this), _amount);
-		// mint new sdCrv
-		ITokenMinter(minter).mint(address(this), _amount);
+		// mint new sdCrv to the user
+		ITokenMinter(minter).mint(msg.sender, _amount);
 	}
 }
