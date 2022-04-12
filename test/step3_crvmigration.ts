@@ -15,7 +15,7 @@ import STRATEGYPROXYABI from "./fixtures/StrategyProxy.json";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { parseEther } from "@ethersproject/units";
 
-const SDVECRVWHALE1 = "0xb0e83c2d71a991017e0116d58c5765abc57384af";
+const SDVECRVWHALE1 = "0x82b8b659A4A98f69cB7899e1A07089EA3B90a894";
 const SDVECRVWHALE2 = "0xddb50ffdba4d89354e1088e4ea402de895562173";
 const CRVWHALE = "0x7a16ff8270133f063aab6c9977183d9e72835428";
 const CRV3_WHALE = "0x701aEcF92edCc1DaA86c5E7EdDbAD5c311aD720C";
@@ -176,47 +176,73 @@ describe("CRV Migration", function () {
   });
 
   it("sdveCrv minting should be disable", async function () {
-    //this.enableTimeouts(false);
     const crvToDeposit = parseEther("10");
     await crv.connect(crvWhale).approve(sdVeCrv.address, crvToDeposit);
     await expect(sdVeCrv.connect(crvWhale).deposit(crvToDeposit)).to.be.reverted;
   });
 
   it("the balance sdCRV should be minted to DAO", async function () {
-    const balance = await sdVeCrv.totalSupply();
-    var locked = await veCrv.locked(OLD_LOCKER);
+    const balance = await sdVeCrv.totalSupply(); // 2.737M sdveCrv
+    var locked = await veCrv.locked(OLD_LOCKER); //3.358M crv
     var lockedAmount = locked["amount"];
     const daoBalance = await sdCRVToken.balanceOf(DAO) // 620K sdCrv
     expect(daoBalance).to.equal(lockedAmount.sub(balance));
   });
 
   it("user with sdVeCRV should be able to lock & receive equal amount in sdCRV", async function () {
-    //this.enableTimeouts(false);
     await sdVeCrv.connect(sdVeCrvWhale1).approve(crvDepositor.address, parseEther("1"));
     await crvDepositor.connect(sdVeCrvWhale1).lockSdveCrvToSdCrv(parseEther("1"));
-    expect(await sdCRVToken.balanceOf(crvDepositor.address)).to.equal(parseEther("1"));
+    expect(await sdCRVToken.balanceOf(sdVeCrvWhale1._address)).to.equal(parseEther("1"));
   });
 
   it("user with sdVeCRV should be able to lock sdVeCRV a second time & receive equal amount in sdCRV", async function () {
-    //this.enableTimeouts(false);
     await sdVeCrv.connect(sdVeCrvWhale1).approve(crvDepositor.address, parseEther("1"));
     await crvDepositor.connect(sdVeCrvWhale1).lockSdveCrvToSdCrv(parseEther("1"));
-    expect(await sdCRVToken.balanceOf(crvDepositor.address)).to.equal(parseEther("2"));
+    expect(await sdCRVToken.balanceOf(sdVeCrvWhale1._address)).to.equal(parseEther("2"));
   });
 
-  it("user should be able to deposit CRV", async function () {
+  it("user should be able to claim 3crv even after the migration", async function () {
+    const crv3BalanceBefore = await crv3.balanceOf(sdVeCrvWhale1._address);
+    await sdVeCrv.connect(sdVeCrvWhale1).claim();
+    const crv3BalanceAfter = await crv3.balanceOf(sdVeCrvWhale1._address);
+    expect(crv3BalanceAfter.sub(crv3BalanceBefore)).gt(0);
+  });
+
+  it("user should be able to deposit CRV to mint sdCRV, but neither lock and stake it", async function () {
     const amountToLock = parseEther("1");
     await crv.connect(crvWhale).approve(crvDepositor.address, amountToLock);
+    const sdCRVBalanceBefore = await sdCRVToken.balanceOf(crvWhale._address);
+    await crvDepositor.connect(crvWhale).deposit(amountToLock, false, false, crvWhale._address);
+    const sdCRVBalanceAfter = await sdCRVToken.balanceOf(crvWhale._address);
+    expect(sdCRVBalanceAfter.sub(sdCRVBalanceBefore)).gt(0);
+    expect(await sdCRVToken.balanceOf(crvWhale._address)).to.gt(0);
+    expect(await sdCRVToken.balanceOf(crvWhale._address)).to.lt(parseEther("1"));
+  });
+
+  it("user should be able to deposit CRV to mint sdCRV, and lock it but not stake", async function () {
+    const amountToLock = parseEther("1");
+    await crv.connect(crvWhale).approve(crvDepositor.address, amountToLock);
+    const sdCRVBalanceBefore = await sdCRVToken.balanceOf(crvWhale._address);
+    await crvDepositor.connect(crvWhale).deposit(amountToLock, true, false, crvWhale._address);
+    const sdCRVBalanceAfter = await sdCRVToken.balanceOf(crvWhale._address);
+    expect(sdCRVBalanceAfter.sub(sdCRVBalanceBefore)).eq(amountToLock.add(parseEther("0.001")));
+  });
+
+  it("user should be able to deposit CRV to mint sdCRV, and lock, stake them", async function () {
+    const amountToLock = parseEther("1");
+    await crv.connect(crvWhale).approve(crvDepositor.address, amountToLock);
+    const sdCRVBalanceBefore = await sdCRVToken.balanceOf(crvWhale._address);
     await crvDepositor.connect(crvWhale).deposit(amountToLock, true, true, crvWhale._address);
-    expect(await sdCRVToken.balanceOf(crvWhale._address)).to.equal(0);
-    const lockerBalance = await sdCRVToken.balanceOf(crvLocker.address);
-    expect(lockerBalance).to.equal(0);
+    const sdCRVBalanceAfter = await sdCRVToken.balanceOf(crvWhale._address);
+    expect(sdCRVBalanceAfter.sub(sdCRVBalanceBefore)).eq(0);
     const gaugeBalance = await sdCRVToken.balanceOf(crvPPSGaugeProxy.address);
     expect(gaugeBalance).to.equal(amountToLock);
   });
 
   it("should claim 3crv via the strategyProxy and send them to the accumulator", async function () {
 
+    // simulate new reward
+    await crv3.connect(crv3Whale).transfer(CRV_FEE_D, parseEther("10000"))
     // change crvLocker strategy address to the crvDepositor
     await network.provider.send("hardhat_setStorageAt", [
       crvLocker.address,
@@ -224,13 +250,13 @@ describe("CRV Migration", function () {
       "0x000000000000000000000000" + crvStrategyProxy.address.substring(2),
     ]);
 
-    await network.provider.send("evm_increaseTime", [60 * 60 * 12]); // + 12 hours
+    await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 3]); // + 12 hours
     await network.provider.send("evm_mine", []);
 
     await crvStrategyProxy.connect(sdtDeployer).setSdveCRV(sdtDeployer._address);
     await crvStrategyProxy.connect(sdtDeployer).claim(crvAcc.address);
     const crv3Balance = await crv3.balanceOf(crvAcc.address)
-    expect(crv3Balance).gt(parseEther("8500"))
+    expect(crv3Balance).gt(0)
   });
 
   it("should notify 3crv to the LGV4", async function () {
@@ -240,5 +266,21 @@ describe("CRV Migration", function () {
     expect(crv3BalanceAfter).eq(0);
     const crv3BalanceGauge = await crv3.balanceOf(crvPPSGaugeProxy.address);
     expect(crv3BalanceGauge).eq(crv3BalanceBefore);
+  });
+
+  it("should claim 3crv reward from LGV4", async function () {
+
+    await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 3]); // + 12 hours
+    await network.provider.send("evm_mine", []);
+
+    const crv3BalanceBefore = await crv3.balanceOf(crvWhale._address); 
+    console.log(crv3BalanceBefore.toString());
+    const balance = await crvPPSGaugeProxy["balanceOf(address)"](crvWhale._address);
+    const reward = await crvPPSGaugeProxy.reward_data(crv3.address);
+    console.log(reward);
+    console.log(balance.toString())
+    await crvPPSGaugeProxy.connect(crvWhale)["claim_reward()"];
+    const crv3BalanceAfter = await crv3.balanceOf(crvWhale._address); 
+    console.log(crv3BalanceAfter.toString());
   });
 });
