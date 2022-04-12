@@ -73,7 +73,11 @@ contract SdtDistributor is ReentrancyGuardUpgradeable, AccessControlUpgradeable,
 		address _delegateGauge
 	) external initializer {
 		require(
-			_controller != address(0) && _rewardToken != address(0) && _guardian != address(0) && _governor != address(0),
+			_controller != address(0) &&
+				_rewardToken != address(0) &&
+				_guardian != address(0) &&
+				_governor != address(0) &&
+				_masterchef != address(0),
 			"0"
 		);
 		rewardToken = IERC20(_rewardToken);

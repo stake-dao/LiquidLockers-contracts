@@ -94,6 +94,7 @@ def __init__(
     assert _token != ZERO_ADDRESS
     assert _admin != ZERO_ADDRESS
     assert _emergency_return != ZERO_ADDRESS
+    assert _start_time < WEEK * WEEK
 
     t: uint256 = _start_time / WEEK * WEEK
     self.start_time = t
