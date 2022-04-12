@@ -127,6 +127,10 @@ describe("ANGLE Strategy", function () {
       const afterBalance = await sanUsdcEur.balanceOf(deployer._address);
       expect(afterBalance.gt(beforeBalance));
     });
+
+    it("should be able to set rewards receiver", async function () {
+      await strategy.connect(deployer).set_rewards_receiver(sanUSDC_EUR_GAUGE, deployer._address);
+    });
   });
 
   describe("san dai gauge tests", function () {
@@ -146,6 +150,10 @@ describe("ANGLE Strategy", function () {
       await strategy.connect(deployer).withdrawAll(sanDAI_EUR_GAUGE, SAN_DAI_EUR);
       const afterBalance = await sanDaiEur.balanceOf(deployer._address);
       expect(afterBalance.gt(beforeBalance));
+    });
+
+    it("should be able to set rewards receiver", async function () {
+      await strategy.connect(deployer).set_rewards_receiver(sanDAI_EUR_GAUGE, deployer._address);
     });
   });
 });
