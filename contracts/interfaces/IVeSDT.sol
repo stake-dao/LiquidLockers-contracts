@@ -17,7 +17,7 @@ interface IVeSDT {
 
 	function deposit_for(address, uint256) external;
 
-	function locked(address) external returns(LockedBalance memory);
+	function locked(address) external returns (LockedBalance memory);
 
-	function balanceOf(address) external returns(uint256); 
+	function balanceOf(address) external returns (uint256);
 }
