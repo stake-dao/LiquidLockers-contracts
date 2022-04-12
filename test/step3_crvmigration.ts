@@ -81,8 +81,8 @@ describe("CRV Migration", function () {
       params: [SDVECRVWHALE2]
     });
     await network.provider.request({
-        method: "hardhat_impersonateAccount",
-        params: [CRVWHALE]
+      method: "hardhat_impersonateAccount",
+      params: [CRVWHALE]
     });
     await network.provider.request({
       method: "hardhat_impersonateAccount",
@@ -103,11 +103,11 @@ describe("CRV Migration", function () {
     veCrv = await ethers.getContractAt(VECRVABI, VECRV);
     sdt = await ethers.getContractAt(ERC20ABI, SDT);
     veSDTProxy = await ethers.getContractAt("veSDT", VESDTP);
-    proxyAdmin = await ethers.getContractAt("ProxyAdmin", PROXY_AD)
-    sdtDProxy = await ethers.getContractAt("SdtDistributor", SDTD_PROXY)
-    crvLocker = await ethers.getContractAt(CRVLOCKERABI, OLD_LOCKER)
-    veBoostProxy = await ethers.getContractAt("veBoostProxy", VE_BOOST_PROXY)
-    crvStrategyProxy = await ethers.getContractAt(STRATEGYPROXYABI, CRV_STRATEGY_PROXY)
+    proxyAdmin = await ethers.getContractAt("ProxyAdmin", PROXY_AD);
+    sdtDProxy = await ethers.getContractAt("SdtDistributor", SDTD_PROXY);
+    crvLocker = await ethers.getContractAt(CRVLOCKERABI, OLD_LOCKER);
+    veBoostProxy = await ethers.getContractAt("veBoostProxy", VE_BOOST_PROXY);
+    crvStrategyProxy = await ethers.getContractAt(STRATEGYPROXYABI, CRV_STRATEGY_PROXY);
     crv3 = await ethers.getContractAt(ERC20ABI, THREECRV);
 
     await network.provider.send("hardhat_setBalance", [sdtDeployer._address, parseEther("10").toHexString()]);
@@ -119,7 +119,7 @@ describe("CRV Migration", function () {
     await network.provider.send("hardhat_setStorageAt", [
       sdVeCrv.address,
       "0x7",
-      "0x000000000000000000000000b36a0671B3D49587236d7833B01E79798175875f",
+      "0x000000000000000000000000b36a0671B3D49587236d7833B01E79798175875f"
     ]);
 
     const SdCRVToken = await ethers.getContractFactory("sdCRV");
@@ -152,7 +152,11 @@ describe("CRV Migration", function () {
       veBoostProxy.address,
       sdtDProxy.address
     ]);
-    crvPPSGaugeProxy = await Proxy.connect(sdtDeployer).deploy(liquidityGauge.address, proxyAdmin.address, dataCrvGauge);
+    crvPPSGaugeProxy = await Proxy.connect(sdtDeployer).deploy(
+      liquidityGauge.address,
+      proxyAdmin.address,
+      dataCrvGauge
+    );
     crvPPSGaugeProxy = await ethers.getContractAt("LiquidityGaugeV4", crvPPSGaugeProxy.address);
 
     crvAcc = await Accumulator.connect(sdtDeployer).deploy(THREECRV);
@@ -161,9 +165,9 @@ describe("CRV Migration", function () {
     await network.provider.send("hardhat_setStorageAt", [
       crvLocker.address,
       "0x1",
-      "0x000000000000000000000000" + crvDepositor.address.substring(2),
+      "0x000000000000000000000000" + crvDepositor.address.substring(2)
     ]);
-    
+
     // Setter functions
     await crvDepositor.connect(sdtDeployer).setGauge(crvPPSGaugeProxy.address);
 
@@ -185,7 +189,7 @@ describe("CRV Migration", function () {
     const balance = await sdVeCrv.totalSupply(); // 2.737M sdveCrv
     var locked = await veCrv.locked(OLD_LOCKER); //3.358M crv
     var lockedAmount = locked["amount"];
-    const daoBalance = await sdCRVToken.balanceOf(DAO) // 620K sdCrv
+    const daoBalance = await sdCRVToken.balanceOf(DAO); // 620K sdCrv
     expect(daoBalance).to.equal(lockedAmount.sub(balance));
   });
 
@@ -240,14 +244,13 @@ describe("CRV Migration", function () {
   });
 
   it("should claim 3crv via the strategyProxy and send them to the accumulator", async function () {
-
     // simulate new reward
-    await crv3.connect(crv3Whale).transfer(CRV_FEE_D, parseEther("10000"))
+    await crv3.connect(crv3Whale).transfer(CRV_FEE_D, parseEther("10000"));
     // change crvLocker strategy address to the crvStrategyProxy
     await network.provider.send("hardhat_setStorageAt", [
       crvLocker.address,
       "0x1",
-      "0x000000000000000000000000" + crvStrategyProxy.address.substring(2),
+      "0x000000000000000000000000" + crvStrategyProxy.address.substring(2)
     ]);
 
     await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 3]); // + 12 hours
@@ -255,8 +258,8 @@ describe("CRV Migration", function () {
 
     await crvStrategyProxy.connect(sdtDeployer).setSdveCRV(sdtDeployer._address);
     await crvStrategyProxy.connect(sdtDeployer).claim(crvAcc.address);
-    const crv3Balance = await crv3.balanceOf(crvAcc.address)
-    expect(crv3Balance).gt(0)
+    const crv3Balance = await crv3.balanceOf(crvAcc.address);
+    expect(crv3Balance).gt(0);
   });
 
   it("should notify 3crv to the LGV4", async function () {
@@ -269,13 +272,12 @@ describe("CRV Migration", function () {
   });
 
   it("should claim 3crv reward from LGV4", async function () {
-
     await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 3]); // + 12 hours
     await network.provider.send("evm_mine", []);
 
-    const crv3BalanceBefore = await crv3.balanceOf(crvWhale._address); 
+    const crv3BalanceBefore = await crv3.balanceOf(crvWhale._address);
     await crvPPSGaugeProxy.connect(crvWhale)["claim_rewards()"]();
-    const crv3BalanceAfter = await crv3.balanceOf(crvWhale._address); 
+    const crv3BalanceAfter = await crv3.balanceOf(crvWhale._address);
     expect(crv3BalanceAfter.sub(crv3BalanceBefore)).gt(0);
   });
 });
