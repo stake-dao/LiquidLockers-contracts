@@ -51,7 +51,7 @@ contract BaseStrategy {
 
 	function disableGauge(address _gauge) external virtual onlyGovernance {}
 
-	function boost(address _gauge, address _user) external virtual {}
+	function boost(address _gauge) external virtual onlyGovernance {}
 
 	function set_rewards_receiver(address _gauge, address _receiver) external virtual onlyGovernance {}
 

@@ -4,7 +4,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./BaseStrategy.sol";
 import "../accumulator/AngleAccumulator.sol";
-import '../interfaces/ILiquidityGauge.sol';
+import "../interfaces/ILiquidityGauge.sol";
+
 contract AngleStrategy is BaseStrategy {
 	using SafeERC20 for IERC20;
 	AngleAccumulator public accumulator;
@@ -72,10 +73,10 @@ contract AngleStrategy is BaseStrategy {
 		emit Claimed(_gauge);
 	}
 
-	function boost(address _gauge, address _user) external override {
-		(bool success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("user_checkpoint(address)", _user));
+	function boost(address _gauge) external override onlyGovernance {
+		(bool success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("user_checkpoint(address)", address(locker)));
 		require(success, "Boost failed!");
-		emit Boosted(_gauge, _user);
+		emit Boosted(_gauge, address(locker));
 	}
 
 	function set_rewards_receiver(address _gauge, address _receiver) external override onlyGovernance {

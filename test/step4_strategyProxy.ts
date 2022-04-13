@@ -133,7 +133,7 @@ describe("ANGLE Strategy", function () {
     });
 
     it("should be able to boost", async function () {
-      await strategy.connect(deployer).boost(deployer._address);
+      await strategy.connect(deployer).boost(sanUSDC_EUR_GAUGE);
     });
   });
 
@@ -161,7 +161,7 @@ describe("ANGLE Strategy", function () {
     });
 
     it("should be able to boost", async function () {
-      await strategy.connect(deployer).boost(deployer._address);
+      await strategy.connect(deployer).boost(sanDAI_EUR_GAUGE);
     });
   });
 });
