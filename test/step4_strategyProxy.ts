@@ -66,6 +66,8 @@ describe("ANGLE Strategy", function () {
   let sanDAILPHolder: JsonRpcSigner;
 
   let strategy: Contract;
+  let sanUSDCEurVault: Contract;
+  let sanUSDCEurMultiGauge: Contract;
 
   before(async function () {
     await network.provider.request({
@@ -107,6 +109,30 @@ describe("ANGLE Strategy", function () {
     await sanDaiEur.connect(sanDAILPHolder).transfer(locker.address, parseUnits("10000", "18"));
     await sanDaiEur.connect(sanDAILPHolder).transfer(strategy.address, parseUnits("10000", "18"));
     await sanDaiEur.connect(sanDAILPHolder).transfer(deployer._address, parseUnits("10000", "18"));
+    const angleVaultFactory = await ethers.getContractFactory("AngleVault");
+    const multiGaugeRewardsFactory = await ethers.getContractFactory("GaugeMultiRewards");
+    sanUSDCEurVault = await angleVaultFactory.deploy(SAN_USDC_EUR, "Stake Dao sanUSDCEUR", "sdSanUsdcEur");
+    sanUSDCEurMultiGauge = await multiGaugeRewardsFactory.deploy(
+      sanUSDCEurVault.address,
+      sanUSDCEurVault.address,
+      "Stake Dao sanUSDCEUR gauge",
+      "sdSanUsdcEur-gauge"
+    );
+    await sanUSDCEurVault.setGaugeMultiRewards(sanUSDCEurMultiGauge.address);
+    await sanUSDCEurVault.setAngleStrategy(strategy.address);
+  });
+
+  describe("Angle Vault tests", function () {
+    it("it should deposit sanUSDC-EUR to vault and get gauge tokens", async function () {
+      const vaultSanUsdcEurBalanceBeforeDeposit = await sanUsdcEur.balanceOf(sanUSDCEurVault.address);
+      await sanUsdcEur.connect(sanLPHolder).approve(sanUSDCEurVault.address, parseUnits("1000", 6));
+      await sanUSDCEurVault.connect(sanLPHolder).deposit(parseUnits("1000", 6));
+      const vaultSanUsdcEurBalanceAfterDeposit = await sanUsdcEur.balanceOf(sanUSDCEurVault.address);
+      const gaugeTokenBalanceOfDepositor = await sanUSDCEurMultiGauge.balanceOf(sanLPHolder._address);
+      expect(vaultSanUsdcEurBalanceBeforeDeposit).to.be.eq(0);
+      expect(vaultSanUsdcEurBalanceAfterDeposit).to.be.equal(parseUnits("1000", 6).toString());
+      expect(gaugeTokenBalanceOfDepositor).to.be.equal(parseUnits("1000", 6).toString());
+    });
   });
 
   describe("san usdc gauge tests", function () {

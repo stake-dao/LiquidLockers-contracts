@@ -7,6 +7,8 @@ contract BaseStrategy {
 	ILocker locker;
 	address governance;
 	address rewardsReceiver;
+	mapping(address => address) public gauges;
+	mapping(address => bool) public vaults;
 
 	/* ========== EVENTS ========== */
 	event Deposited(address _gauge, address _token, uint256 _amount);
@@ -14,10 +16,16 @@ contract BaseStrategy {
 	event Claimed(address _gauge);
 	event Boosted(address _gauge, address _user);
 	event RewardReceiverSet(address _gauge, address _receiver);
+	event VaultToggled(address _vault, bool _newState);
+	event GaugeSet(address _gauge, address _token);
 
 	/* ========== MODIFIERS ========== */
 	modifier onlyGovernance() {
 		require(msg.sender == governance, "!governance");
+		_;
+	}
+	modifier onlyApprovedVault() {
+		require(vaults[msg.sender], "!approved vault");
 		_;
 	}
 
@@ -33,21 +41,13 @@ contract BaseStrategy {
 	}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
-	function deposit(
-		address _gauge,
-		address _token,
-		uint256 _amount
-	) external virtual onlyGovernance {}
+	function deposit(address _token, uint256 _amount) external virtual onlyApprovedVault {}
 
-	function depositAll(address _gauge, address _token) external virtual onlyGovernance {}
+	function depositAll(address _token) external virtual onlyGovernance {}
 
-	function withdraw(
-		address _gauge,
-		address _token,
-		uint256 _amount
-	) external virtual onlyGovernance {}
+	function withdraw(address _token, uint256 _amount) external virtual onlyApprovedVault {}
 
-	function withdrawAll(address _gauge, address _token) external virtual onlyGovernance {}
+	function withdrawAll(address _token) external virtual onlyGovernance {}
 
 	function disableGauge(address _gauge) external virtual onlyGovernance {}
 
@@ -56,4 +56,8 @@ contract BaseStrategy {
 	function set_rewards_receiver(address _gauge, address _receiver) external virtual onlyGovernance {}
 
 	function claim(address _gauge) external virtual {}
+
+	function toggleVault(address _vault) external virtual onlyGovernance {}
+
+	function setGauge(address _token, address _gauge) external virtual onlyGovernance {}
 }

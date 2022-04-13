@@ -18,44 +18,38 @@ contract AngleStrategy is BaseStrategy {
 	) BaseStrategy(_locker, _governance, _receiver) {}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
-	function deposit(
-		address _gauge,
-		address _token,
-		uint256 _amount
-	) public override onlyGovernance {
+	function deposit(address _token, uint256 _amount) public override onlyApprovedVault {
 		IERC20(_token).safeTransfer(address(locker), _amount);
+		address gauge = gauges[_token];
+		require(gauge != address(0), "!gauge");
+		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, 0));
+		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, _amount));
 
-		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", _gauge, 0));
-		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", _gauge, _amount));
-
-		(bool success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("deposit(uint256)", _amount));
+		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("deposit(uint256)", _amount));
 		require(success, "Deposit failed!");
-		emit Deposited(_gauge, _token, _amount);
+		emit Deposited(gauge, _token, _amount);
 	}
 
-	function depositAll(address _gauge, address _token) external override onlyGovernance {
-		deposit(_gauge, _token, IERC20(_token).balanceOf(address(this)));
+	function depositAll(address _token) external override onlyGovernance {
+		deposit(_token, IERC20(_token).balanceOf(address(this)));
 	}
 
-	function withdraw(
-		address _gauge,
-		address _token,
-		uint256 _amount
-	) public override onlyGovernance {
+	function withdraw(address _token, uint256 _amount) public override onlyApprovedVault {
 		uint256 _before = IERC20(_token).balanceOf(address(locker));
-
-		(bool success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("withdraw(uint256)", _amount));
+		address gauge = gauges[_token];
+		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("withdraw(uint256)", _amount));
 		require(success, "Transfer failed!");
 		uint256 _after = IERC20(_token).balanceOf(address(locker));
 
 		uint256 _net = _after - _before;
 		(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _net));
 		require(success, "Transfer failed!");
-		emit Withdrawn(_gauge, _token, _amount);
+		emit Withdrawn(gauge, _token, _amount);
 	}
 
-	function withdrawAll(address _gauge, address _token) external override onlyGovernance {
-		withdraw(_gauge, _token, ILiquidityGauge(_gauge).balanceOf(address(locker)));
+	function withdrawAll(address _token) external override onlyGovernance {
+		address gauge = gauges[_token];
+		withdraw(_token, ILiquidityGauge(gauge).balanceOf(address(locker)));
 	}
 
 	function sendToAccumulator(address _token, uint256 _amount) external onlyGovernance {
@@ -83,5 +77,15 @@ contract AngleStrategy is BaseStrategy {
 		(bool success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("set_rewards_receiver(address)", _receiver));
 		require(success, "Set rewards receiver failed!");
 		emit RewardReceiverSet(_gauge, _receiver);
+	}
+
+	function toggleVault(address _vault) external override onlyGovernance {
+		vaults[_vault] = !vaults[_vault];
+		emit VaultToggled(_vault, vaults[_vault]);
+	}
+
+	function setGauge(address _token, address _gauge) external override onlyGovernance {
+		gauges[_token] = _gauge;
+		emit GaugeSet(_gauge, _token);
 	}
 }
