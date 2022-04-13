@@ -131,6 +131,10 @@ describe("ANGLE Strategy", function () {
     it("should be able to set rewards receiver", async function () {
       await strategy.connect(deployer).set_rewards_receiver(sanUSDC_EUR_GAUGE, deployer._address);
     });
+
+    it("should be able to boost", async function () {
+      await strategy.connect(deployer).boost(deployer._address);
+    });
   });
 
   describe("san dai gauge tests", function () {
@@ -154,6 +158,10 @@ describe("ANGLE Strategy", function () {
 
     it("should be able to set rewards receiver", async function () {
       await strategy.connect(deployer).set_rewards_receiver(sanDAI_EUR_GAUGE, deployer._address);
+    });
+
+    it("should be able to boost", async function () {
+      await strategy.connect(deployer).boost(deployer._address);
     });
   });
 });
