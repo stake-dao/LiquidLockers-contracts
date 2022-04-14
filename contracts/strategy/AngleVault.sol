@@ -15,19 +15,22 @@ contract AngleVault is ERC20 {
 
 	ERC20 public token;
 	address public governance;
+	uint256 public withdrawalFee;
 	address public multiRewardsGauge;
 	AngleStrategy public angleStrategy;
-
+	uint256 public min = 10000;
+	uint256 public constant max = 10000;
 	event Earn(address _token, uint256 _amount);
 	event Deposit(address _depositor, uint256 _amount);
 
 	constructor(
 		address _token,
+		address _governance,
 		string memory name_,
 		string memory symbol_
 	) ERC20(name_, symbol_) {
 		token = ERC20(_token);
-		governance = msg.sender;
+		governance = _governance;
 	}
 
 	function deposit(uint256 _amount) public {
@@ -45,16 +48,21 @@ contract AngleVault is ERC20 {
 	}
 
 	function withdraw(uint256 _shares) public {
-		uint256 userTotalShares = IMultiRewards(multiRewardsGauge).balanceOf(msg.sender);
+		uint256 userTotalShares = IMultiRewards(multiRewardsGauge).stakeOf(msg.sender);
 		require(_shares <= userTotalShares, "Not enough staked");
 		IMultiRewards(multiRewardsGauge).withdrawFor(msg.sender, _shares);
 		_burn(address(this), _shares);
 		uint256 tokenBalance = token.balanceOf(address(this));
+		uint256 withdrawFee;
 		if (_shares > tokenBalance) {
+			uint256 beforeBal = token.balanceOf(address(this));
 			angleStrategy.withdraw(address(token), _shares);
+			uint256 withdrawn = token.balanceOf(address(this)) - beforeBal;
+			withdrawFee = (withdrawn * withdrawalFee) / 10000;
+			token.safeTransfer(governance, withdrawFee);
 		}
 		IMultiRewards(multiRewardsGauge).burnFrom(msg.sender, _shares);
-		token.safeTransfer(msg.sender, _shares);
+		token.safeTransfer(msg.sender, _shares - withdrawFee);
 	}
 
 	function withdrawAll() external {
@@ -80,9 +88,23 @@ contract AngleVault is ERC20 {
 		return token.decimals();
 	}
 
+	function setWithdrawnFee(uint256 _newFee) external {
+		require(msg.sender == governance, "!governance");
+		withdrawalFee = _newFee;
+	}
+
+	function setMin(uint256 _min) external {
+		require(msg.sender == governance, "!governance");
+		min = _min;
+	}
+
+	function available() public view returns (uint256) {
+		return (token.balanceOf(address(this)) * min) / max;
+	}
+
 	function earn() external {
 		require(msg.sender == governance, "!governance");
-		uint256 tokenBalance = token.balanceOf(address(this));
+		uint256 tokenBalance = available();
 		token.approve(address(angleStrategy), tokenBalance);
 		angleStrategy.deposit(address(token), tokenBalance);
 		emit Earn(address(token), tokenBalance);

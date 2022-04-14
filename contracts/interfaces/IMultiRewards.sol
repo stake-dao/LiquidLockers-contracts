@@ -13,4 +13,6 @@ interface IMultiRewards {
 	function mintFor(address recipient, uint256 amount) external;
 
 	function burnFrom(address _from, uint256 _amount) external;
+
+	function stakeOf(address account) external view returns (uint256);
 }

@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./BaseStrategy.sol";
 import "../accumulator/AngleAccumulator.sol";
 import "../interfaces/ILiquidityGauge.sol";
+import "../interfaces/IMultiRewards.sol";
 
 contract AngleStrategy is BaseStrategy {
 	using SafeERC20 for IERC20;
@@ -30,13 +31,10 @@ contract AngleStrategy is BaseStrategy {
 		emit Deposited(gauge, _token, _amount);
 	}
 
-	function depositAll(address _token) external override onlyGovernance {
-		deposit(_token, IERC20(_token).balanceOf(address(this)));
-	}
-
 	function withdraw(address _token, uint256 _amount) public override onlyApprovedVault {
 		uint256 _before = IERC20(_token).balanceOf(address(locker));
 		address gauge = gauges[_token];
+		require(gauge != address(0), "!gauge");
 		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("withdraw(uint256)", _amount));
 		require(success, "Transfer failed!");
 		uint256 _after = IERC20(_token).balanceOf(address(locker));
@@ -47,24 +45,33 @@ contract AngleStrategy is BaseStrategy {
 		emit Withdrawn(gauge, _token, _amount);
 	}
 
-	function withdrawAll(address _token) external override onlyGovernance {
-		address gauge = gauges[_token];
-		withdraw(_token, ILiquidityGauge(gauge).balanceOf(address(locker)));
-	}
-
 	function sendToAccumulator(address _token, uint256 _amount) external onlyGovernance {
 		IERC20(_token).approve(address(accumulator), _amount);
 		accumulator.depositToken(_token, _amount);
 	}
 
-	function claim(address _gauge) external override {
+	function claim(address _token) external override {
+		address gauge = gauges[_token];
+		require(gauge != address(0), "!gauge");
 		(bool success, ) = locker.execute(
-			_gauge,
+			gauge,
 			0,
-			abi.encodeWithSignature("claim_rewards(address,address)", address(locker), rewardsReceiver)
+			abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
 		);
 		require(success, "Claim failed!");
-		emit Claimed(_gauge);
+		for (uint8 i = 0; i < 8; i++) {
+			address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
+			if (rewardToken == address(0)) {
+				break;
+			}
+			uint256 rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
+			uint256 performanceFee = (rewardsBalance * perfFee[gauge]) / BASE_FEE;
+			uint256 accumulatorPart = (performanceFee * 800) / BASE_FEE;
+			IERC20(rewardToken).transfer(address(accumulator), accumulatorPart);
+			IERC20(rewardToken).transfer(rewardsReceiver, performanceFee - accumulatorPart);
+			IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, rewardsBalance - performanceFee);
+			emit Claimed(gauge, rewardToken, rewardsBalance);
+		}
 	}
 
 	function boost(address _gauge) external override onlyGovernance {
@@ -87,5 +94,13 @@ contract AngleStrategy is BaseStrategy {
 	function setGauge(address _token, address _gauge) external override onlyGovernance {
 		gauges[_token] = _gauge;
 		emit GaugeSet(_gauge, _token);
+	}
+
+	function setMultiGauge(address _gauge, address _multiGauge) external override onlyGovernance {
+		multiGauges[_gauge] = _multiGauge;
+	}
+
+	function setPerfFee(address _gauge, uint256 _newFee) external override onlyGovernance {
+		perfFee[_gauge] = _newFee;
 	}
 }

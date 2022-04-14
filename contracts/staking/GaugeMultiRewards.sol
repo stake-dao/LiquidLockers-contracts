@@ -44,10 +44,11 @@ contract GaugeMultiRewards is ReentrancyGuard, Pausable, ERC20 {
 	constructor(
 		address _stakingToken,
 		address _vault,
+		address _governance,
 		string memory _name,
 		string memory _symbol
 	) ERC20(_name, _symbol) {
-		governance = msg.sender;
+		governance = _governance;
 		stakingToken = ERC20(_stakingToken);
 		vault = _vault;
 	}
