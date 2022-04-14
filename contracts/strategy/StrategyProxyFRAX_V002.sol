@@ -15,20 +15,31 @@ interface ILiquidLocker {
 	) external returns (bool, bytes memory);
 }
 
+interface ILPLocker {
+	struct LockedStake {
+		bytes32 kek_id;
+		uint256 start_timestamp;
+		uint256 liquidity;
+		uint256 ending_timestamp;
+		uint256 lock_multiplier; // 6 decimals of precision. 1x = 1000000
+	}
+
+	function lockedStakesOf(address) external view returns (LockedStake[] memory);
+}
+
 contract StrategyProxyFRAX {
 	address public governance;
 	address public constant LIQUIDLOCKER = 0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f;
 
 	mapping(address => LPInformations) public lpInfos;
-	mapping(address => bytes32[]) public kekIdUser;
-	mapping(address => uint256[]) public tokenIdUser;
+	mapping(address => bytes32[]) public kekIdUser; // TODO : find a way to make it transferable (i.e. minting token)
 
 	struct LPInformations {
 		address lpLocker;
 		address[] rewards;
 		uint256 lpType; // 0: ERC20 or 1: ERC721, find something better!!
 		uint256 stakeLockedType; // 0: "stakeLocked(uint256,uint256)"
-		uint256 withdrawLockedType;
+		uint256 withdrawLockedType; // 0: "withdrawLocked(bytes32)" 1: "withdrawLocked(uint256)" 2: "withdrawLocked(bytes32,address)"
 	}
 
 	/* ==== Constructor ==== */
@@ -42,17 +53,39 @@ contract StrategyProxyFRAX {
 		_;
 	}
 
+	/* ==== Views ==== */
+	function isKekIdOwner(address _address, bytes32 _kek_id) public view returns (bool) {
+		bool isOwner = false;
+		for (uint256 i; i < kekIdUser[_address].length; i++) {
+			if (kekIdUser[_address][i] == _kek_id) {
+				isOwner = true;
+			}
+		}
+		return (isOwner);
+	}
+
+	function getLPInfos(address _lpToken) public view returns (LPInformations memory) {
+		return (lpInfos[_lpToken]);
+	}
+
+	function getKekID(address _address) public view returns (bytes32[] memory) {
+		return (kekIdUser[_address]);
+	}
+
 	/* ==== Only Governance ==== */
 	function setLPInfos(
 		address _lpToken,
 		address _lpLocker,
 		address[] memory _rewards,
-		uint256 _lpType, // 0: ERC20 or 1: ERC721, find something better!!
-		uint256 _stakeLockedType, // 0: "stakeLocked(uint256,uint256)"
-		uint256 _withdrawLockedType // 0: "withdrawLocked(bytes32)" 1: "withdrawLocked(uint256)" 2: "withdrawLocked(bytes32,address)"
+		uint256 _lpType,
+		uint256 _stakeLockedType,
+		uint256 _withdrawLockedType
 	) public onlyGovernance {
+		require(lpInfos[_lpToken].lpLocker == address(0), "!already exist");
 		lpInfos[_lpToken] = LPInformations(_lpLocker, _rewards, _lpType, _stakeLockedType, _withdrawLockedType);
 	}
+
+	// TODO : LPInformation updater for an already existing LP Token
 
 	// TODO : Mirror ALL governance functions from the Liquid Locker
 
@@ -68,10 +101,13 @@ contract StrategyProxyFRAX {
 		if (lpInfos[_lpToken].lpType == 0) {
 			IERC20(_lpToken).transferFrom(msg.sender, LIQUIDLOCKER, _liquidity);
 		}
+
+		// To be implemented later
+		/*
 		if (lpInfos[_lpToken].lpType == 1) {
 			IERC721(_lpToken).transferFrom(msg.sender, LIQUIDLOCKER, _liquidity);
 			// TODO : verify if the Liquid Locker can accept ERC721
-		}
+		}*/
 
 		// Set approval from Liquid Locker to Frax Staking
 		bytes memory _approve = abi.encodeWithSignature("approve(address,uint256)", lpInfos[_lpToken].lpLocker, _liquidity);
@@ -87,7 +123,9 @@ contract StrategyProxyFRAX {
 		(bool _successStakeLocked, ) = ILiquidLocker(LIQUIDLOCKER).execute(lpInfos[_lpToken].lpLocker, 0, _stakeLocked);
 		require(_successStakeLocked, "!call stakeLocked failed");
 
-		// TODO : Find a way to get back the kekId or the deposit, then push it on the mapping kekIdUser
+		uint256 _length = ILPLocker(lpInfos[_lpToken].lpLocker).lockedStakesOf(LIQUIDLOCKER).length;
+		bytes32 _kek_id = ILPLocker(lpInfos[_lpToken].lpLocker).lockedStakesOf(LIQUIDLOCKER)[_length - 1].kek_id;
+		kekIdUser[msg.sender].push(_kek_id);
 	}
 
 	/* ==== Withdraw ==== */
@@ -96,8 +134,8 @@ contract StrategyProxyFRAX {
 		bytes32 _kekid,
 		uint256 _tokenId
 	) public {
-		// TODO : Require the kekId is owned by the msg.sender
 		require(lpInfos[_lpToken].lpLocker != address(0), "LP token not valid!");
+		require(isKekIdOwner(msg.sender, _kekid) == true, "Not owner of this kekId");
 
 		// Interacte with withdrawLocked function
 		bytes memory _withdrawLocked;
@@ -110,10 +148,22 @@ contract StrategyProxyFRAX {
 		if (lpInfos[_lpToken].withdrawLockedType == 2) {
 			_withdrawLocked = abi.encodeWithSignature("withdrawLocked(bytes32,address)", _kekid, msg.sender);
 		}
+		uint256 _balanceBefore = IERC20(_lpToken).balanceOf(LIQUIDLOCKER);
 		(bool _successWithdraw, ) = ILiquidLocker(LIQUIDLOCKER).execute(lpInfos[_lpToken].lpLocker, 0, _withdrawLocked);
 		require(_successWithdraw, "withdraw failed");
+		uint256 _balanceAfter = IERC20(_lpToken).balanceOf(LIQUIDLOCKER);
+		uint256 _bal = _balanceAfter - _balanceBefore;
 
-		// TODO : Withdraw the rewards token send by FRAX, using for loo and lpInfos[_lpToken].reward
+		// TODO : Send LP token from Liquid Locker to user with abi.encodeWithSignature
+		//IERC20(_lpToken).transfer(msg.sender, amount);
+
+		// Send reward token to the user
+		for (uint256 i = 0; i < lpInfos[_lpToken].rewards.length; i++) {
+			uint256 _reward = IERC20(lpInfos[_lpToken].rewards[i]).balanceOf(LIQUIDLOCKER);
+			if (_reward > 0) {
+				IERC20(lpInfos[_lpToken].rewards[i]).transfer(msg.sender, _reward); // TODO : deal with fees
+			}
+		}
 	}
 
 	/* NEEDED ON LIQUID LOCKER ?

@@ -23,8 +23,8 @@ const SUSHI_ADDRESS = "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2"; // Token Sus
 /* ==== Time ==== */
 const DAY = 60 * 60 * 24;
 const WEEK = 60 * 60 * 24 * 7;
-const YEARS = 60 * 60 * 24 * 365;
-const MAXLOCK = 3 * YEARS;
+const YEAR = 60 * 60 * 24 * 365;
+const MAXLOCK = 3 * 60 * 60 * 24 * 365;
 
 describe("Testing the Strategy Proxy for FRAX", function () {
   /* ==== JsonRpcSigner ==== */
@@ -52,7 +52,7 @@ describe("Testing the Strategy Proxy for FRAX", function () {
 
     /* ==== Deploye Strategy Proxy FRAX ==== */
     StrategyProxyFRAX = await ethers.getContractFactory("StrategyProxyFRAX");
-    strategyProxyFRAX = await StrategyProxyFRAX.connect(deployer).deploy(FXS_SUSHI_ADDRESS);
+    strategyProxyFRAX = await StrategyProxyFRAX.connect(deployer).deploy();
     await strategyProxyFRAX.deployed();
 
     /* ==== Other Contract ==== */
@@ -101,12 +101,25 @@ describe("Testing the Strategy Proxy for FRAX", function () {
 
   /* ==== With StakeDAO Liquid Lockers ==== */
   describe("Should interact with FRAX, through Liquid Locker", function () {
+    it("Should add a new LP token on LP Informations", async function () {
+      await strategyProxyFRAX
+        .connect(deployer)
+        .setLPInfos(FXS_SUSHI_ADDRESS, LPLOCKER_ADDRESS, [FXS_ADDRESS, SUSHI_ADDRESS], 0, 0, 0);
+      const INFOS = await strategyProxyFRAX.lpInfos(FXS_SUSHI_ADDRESS);
+      //console.log(INFOS);
+    });
+
     it("Should deposit LP on FRAX locker for 1 week", async function () {
       const bal = lpToken.balanceOf(account_1._address);
       await lpToken.connect(account_1).approve(strategyProxyFRAX.address, bal);
-      await strategyProxyFRAX.connect(account_1).deposit(lpLocker.address, bal, WEEK);
+      await strategyProxyFRAX.connect(account_1).deposit(FXS_SUSHI_ADDRESS, bal, WEEK);
+      const LL_KEKIDLIST = await lpLocker.lockedStakesOf(LIQUIDLOCKER_ADDRESS);
+      const USER_KEKIDLIST = await strategyProxyFRAX.getKekID(account_1._address);
+      //console.log("LL_KEKIDLIST: ", LL_KEKIDLIST);
+      //console.log("USER_KEKIDLIST: ", USER_KEKIDLIST);
+      expect(LL_KEKIDLIST[0].kek_id == USER_KEKIDLIST[0]);
     });
-
+    /*
     it("Should withdraw 100% after locked period ended", async function () {
       await network.provider.send("evm_increaseTime", [WEEK]);
       const KEK_ID = await lpLocker.lockedStakesOf(liquidLocker.address);
@@ -118,6 +131,6 @@ describe("Testing the Strategy Proxy for FRAX", function () {
 
       console.log("Balance FXS: \t", (BAL_FXS / 10 ** 18).toString());
       console.log("Balance SUSHI: \t", (BAL_SUSHI / 10 ** 18).toString());
-    });
+    });*/
   });
 });
