@@ -137,7 +137,7 @@ contract StrategyProxyFRAX {
 		require(lpInfos[_lpToken].lpLocker != address(0), "LP token not valid!");
 		require(isKekIdOwner(msg.sender, _kekid) == true, "Not owner of this kekId");
 
-		// Interacte with withdrawLocked function
+		// Encode with Signature withdraw function
 		bytes memory _withdrawLocked;
 		if (lpInfos[_lpToken].withdrawLockedType == 0) {
 			_withdrawLocked = abi.encodeWithSignature("withdrawLocked(bytes32)", _kekid);
@@ -148,20 +148,31 @@ contract StrategyProxyFRAX {
 		if (lpInfos[_lpToken].withdrawLockedType == 2) {
 			_withdrawLocked = abi.encodeWithSignature("withdrawLocked(bytes32,address)", _kekid, msg.sender);
 		}
+
+		// Call Withdraw function 
 		uint256 _balanceBefore = IERC20(_lpToken).balanceOf(LIQUIDLOCKER);
 		(bool _successWithdraw, ) = ILiquidLocker(LIQUIDLOCKER).execute(lpInfos[_lpToken].lpLocker, 0, _withdrawLocked);
 		require(_successWithdraw, "withdraw failed");
-		uint256 _balanceAfter = IERC20(_lpToken).balanceOf(LIQUIDLOCKER);
-		uint256 _bal = _balanceAfter - _balanceBefore;
+		uint256 _bal = IERC20(_lpToken).balanceOf(LIQUIDLOCKER) - _balanceBefore;
 
-		// TODO : Send LP token from Liquid Locker to user with abi.encodeWithSignature
-		//IERC20(_lpToken).transfer(msg.sender, amount);
+		// Send LP back to the user
+		bytes memory _sendLPToken = abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _bal);
+		(bool _successTransfer, ) = ILiquidLocker(LIQUIDLOCKER).execute(_lpToken, 0, _sendLPToken);
+		require(_successTransfer, "Transfer LP failed");
 
 		// Send reward token to the user
+		_sendRewards(_lpToken);
+	}
+
+
+	function _sendRewards(address _lpToken) private {
 		for (uint256 i = 0; i < lpInfos[_lpToken].rewards.length; i++) {
 			uint256 _reward = IERC20(lpInfos[_lpToken].rewards[i]).balanceOf(LIQUIDLOCKER);
 			if (_reward > 0) {
-				IERC20(lpInfos[_lpToken].rewards[i]).transfer(msg.sender, _reward); // TODO : deal with fees
+				console.log("rewards: ", _reward);
+				bytes memory _sendReward = abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _reward);
+				(bool _successSendReward, ) = ILiquidLocker(LIQUIDLOCKER).execute(lpInfos[_lpToken].rewards[i], 0, _sendReward);
+				require(_successSendReward, "Send reward failed"); // TODO : deal with fees
 			}
 		}
 	}

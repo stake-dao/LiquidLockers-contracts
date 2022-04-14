@@ -119,18 +119,18 @@ describe("Testing the Strategy Proxy for FRAX", function () {
       //console.log("USER_KEKIDLIST: ", USER_KEKIDLIST);
       expect(LL_KEKIDLIST[0].kek_id == USER_KEKIDLIST[0]);
     });
-    /*
+
     it("Should withdraw 100% after locked period ended", async function () {
       await network.provider.send("evm_increaseTime", [WEEK]);
       const KEK_ID = await lpLocker.lockedStakesOf(liquidLocker.address);
 
-      await strategyProxyFRAX.connect(account_1).withdraw(lpLocker.address, KEK_ID[0].kek_id);
+      await strategyProxyFRAX.connect(account_1).withdraw(FXS_SUSHI_ADDRESS, KEK_ID[0].kek_id, 0);
 
       const BAL_FXS = await fxs.balanceOf(liquidLocker.address);
       const BAL_SUSHI = await sushi.balanceOf(liquidLocker.address);
 
       console.log("Balance FXS: \t", (BAL_FXS / 10 ** 18).toString());
       console.log("Balance SUSHI: \t", (BAL_SUSHI / 10 ** 18).toString());
-    });*/
+    });
   });
 });
