@@ -104,12 +104,12 @@ describe("ANGLE Strategy", function () {
 
     await locker.connect(deployer).setGovernance(strategy.address);
 
-    await sanUsdcEur.connect(sanLPHolder).transfer(locker.address, parseUnits("10000", "6"));
-    await sanUsdcEur.connect(sanLPHolder).transfer(strategy.address, parseUnits("10000", "6"));
+    // await sanUsdcEur.connect(sanLPHolder).transfer(locker.address, parseUnits("10000", "6"));
+    // await sanUsdcEur.connect(sanLPHolder).transfer(strategy.address, parseUnits("10000", "6"));
     await sanUsdcEur.connect(sanLPHolder).transfer(deployer._address, parseUnits("10000", "6"));
 
-    await sanDaiEur.connect(sanDAILPHolder).transfer(locker.address, parseUnits("10000", "18"));
-    await sanDaiEur.connect(sanDAILPHolder).transfer(strategy.address, parseUnits("10000", "18"));
+    // await sanDaiEur.connect(sanDAILPHolder).transfer(locker.address, parseUnits("10000", "18"));
+    // await sanDaiEur.connect(sanDAILPHolder).transfer(strategy.address, parseUnits("10000", "18"));
     await sanDaiEur.connect(sanDAILPHolder).transfer(deployer._address, parseUnits("10000", "18"));
     const angleVaultFactory = await ethers.getContractFactory("AngleVault");
     const multiGaugeRewardsFactory = await ethers.getContractFactory("GaugeMultiRewards");
@@ -174,66 +174,23 @@ describe("ANGLE Strategy", function () {
       const sanUsdcEurAngleGaugeStakedBefore = await sanUsdcEurLiqudityGauge.balanceOf(locker.address);
       await strategy.connect(deployer).toggleVault(sanUSDCEurVault.address);
       await strategy.connect(deployer).setGauge(SAN_USDC_EUR, sanUSDC_EUR_GAUGE);
-      await sanUSDCEurVault.earn();
+      const tx = await (await sanUSDCEurVault.earn()).wait();
+      const vaultSanUsdcEurBalanceAfterEarn = await sanUsdcEur.balanceOf(sanUSDCEurVault.address);
       const sanUsdcEurAngleGaugeStakedAfter = await sanUsdcEurLiqudityGauge.balanceOf(locker.address);
       expect(sanUsdcEurAngleGaugeStakedBefore).to.be.eq(0);
       expect(sanUsdcEurAngleGaugeStakedAfter).to.be.eq(parseUnits("1000", 6));
+      expect(vaultSanUsdcEurBalanceAfterEarn).to.be.equal(0);
     });
-  });
-
-  describe("san usdc gauge tests", function () {
-    it("should be able to deposit", async function () {
-      await strategy.connect(deployer).deposit(sanUSDC_EUR_GAUGE, SAN_USDC_EUR, parseUnits("1", "6"));
-    });
-
-    it("should be able to claim", async function () {
-      const beforeBalance = await angle.balanceOf(ANGLEACCUMULATOR);
-      await strategy.claim(sanUSDC_EUR_GAUGE);
-      const afterBalance = await angle.balanceOf(ANGLEACCUMULATOR);
-      expect(afterBalance.gt(beforeBalance));
-    });
-
-    it("should be able to withdraw", async function () {
-      const beforeBalance = await sanUsdcEur.balanceOf(deployer._address);
-      await strategy.connect(deployer).withdrawAll(sanUSDC_EUR_GAUGE, SAN_USDC_EUR);
-      const afterBalance = await sanUsdcEur.balanceOf(deployer._address);
-      expect(afterBalance.gt(beforeBalance));
-    });
-
-    it("should be able to set rewards receiver", async function () {
-      await strategy.connect(deployer).set_rewards_receiver(sanUSDC_EUR_GAUGE, deployer._address);
-    });
-
-    it("should be able to boost", async function () {
-      await strategy.connect(deployer).boost(sanUSDC_EUR_GAUGE);
-    });
-  });
-
-  describe("san dai gauge tests", function () {
-    it("should be able to deposit", async function () {
-      await strategy.connect(deployer).deposit(sanDAI_EUR_GAUGE, SAN_DAI_EUR, parseUnits("1", "6"));
-    });
-
-    it("should be able to claim", async function () {
-      const beforeBalance = await angle.balanceOf(ANGLEACCUMULATOR);
-      await strategy.claim(sanDAI_EUR_GAUGE);
-      const afterBalance = await angle.balanceOf(ANGLEACCUMULATOR);
-      expect(afterBalance.gt(beforeBalance));
-    });
-
-    it("should be able to withdraw", async function () {
-      const beforeBalance = await sanDaiEur.balanceOf(deployer._address);
-      await strategy.connect(deployer).withdrawAll(sanDAI_EUR_GAUGE, SAN_DAI_EUR);
-      const afterBalance = await sanDaiEur.balanceOf(deployer._address);
-      expect(afterBalance.gt(beforeBalance));
-    });
-
-    it("should be able to set rewards receiver", async function () {
-      await strategy.connect(deployer).set_rewards_receiver(sanDAI_EUR_GAUGE, deployer._address);
-    });
-
-    it("should be able to boost", async function () {
-      await strategy.connect(deployer).boost(sanDAI_EUR_GAUGE);
+    it("Should pay withdraw fee if withdraw from Angle gauge", async function () {
+      const sanUsdcEurBalanceBeforeWithdraw = await sanUsdcEur.balanceOf(sanLPHolder._address);
+      const tx = await (await sanUSDCEurVault.connect(sanLPHolder).withdraw(parseUnits("500", 6))).wait();
+      const sanUsdcEurBalanceAfterWithdraw = await sanUsdcEur.balanceOf(sanLPHolder._address);
+      const sanUsdcEurAngleGaugeStakedAfterWithdraw = await sanUsdcEurLiqudityGauge.balanceOf(locker.address);
+      const fee = parseUnits("500", 6).mul(50).div(10000);
+      expect(sanUsdcEurBalanceAfterWithdraw.sub(sanUsdcEurBalanceBeforeWithdraw)).to.be.equal(
+        parseUnits("500", 6).sub(fee)
+      );
+      expect(sanUsdcEurAngleGaugeStakedAfterWithdraw).to.be.equal(parseUnits("500", 6));
     });
   });
 });

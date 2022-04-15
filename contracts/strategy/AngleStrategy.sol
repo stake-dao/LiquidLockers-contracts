@@ -20,7 +20,7 @@ contract AngleStrategy is BaseStrategy {
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
 	function deposit(address _token, uint256 _amount) public override onlyApprovedVault {
-		IERC20(_token).safeTransfer(address(locker), _amount);
+		IERC20(_token).transferFrom(msg.sender, address(locker), _amount);
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
 		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, 0));

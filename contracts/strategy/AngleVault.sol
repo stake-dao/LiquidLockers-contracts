@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/IMultiRewards.sol";
 import "./AngleStrategy.sol";
+import "hardhat/console.sol";
 
 contract AngleVault is ERC20 {
 	using SafeERC20 for ERC20;
@@ -15,13 +16,14 @@ contract AngleVault is ERC20 {
 
 	ERC20 public token;
 	address public governance;
-	uint256 public withdrawalFee;
+	uint256 public withdrawalFee = 50; // %0.5
 	address public multiRewardsGauge;
 	AngleStrategy public angleStrategy;
 	uint256 public min = 10000;
 	uint256 public constant max = 10000;
 	event Earn(address _token, uint256 _amount);
 	event Deposit(address _depositor, uint256 _amount);
+	event Withdraw(address _depositor, uint256 _amount);
 
 	constructor(
 		address _token,
@@ -63,6 +65,7 @@ contract AngleVault is ERC20 {
 		}
 		IMultiRewards(multiRewardsGauge).burnFrom(msg.sender, _shares);
 		token.safeTransfer(msg.sender, _shares - withdrawFee);
+		emit Withdraw(msg.sender, _shares - withdrawFee);
 	}
 
 	function withdrawAll() external {
