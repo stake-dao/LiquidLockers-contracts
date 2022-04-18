@@ -27,13 +27,15 @@ contract AngleVault is ERC20Upgradeable {
 		ERC20Upgradeable _token,
 		address _governance,
 		string memory name_,
-		string memory symbol_
+		string memory symbol_,
+		AngleStrategy _angleStrategy
 	) public initializer {
 		__ERC20_init(name_, symbol_);
 		token = _token;
 		governance = _governance;
 		withdrawalFee = 50; // %0.5
 		min = 10000;
+		angleStrategy = _angleStrategy;
 	}
 
 	function deposit(uint256 _amount) public {

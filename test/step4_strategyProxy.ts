@@ -120,7 +120,8 @@ describe("ANGLE Strategy", function () {
         SAN_USDC_EUR,
         localDeployer.address,
         "Stake Dao sanUSDCEUR",
-        "sdSanUsdcEur"
+        "sdSanUsdcEur",
+        strategy.address
       )
     ).wait();
 

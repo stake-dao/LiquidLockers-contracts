@@ -26,9 +26,10 @@ contract AngleVaultFactory {
 		ERC20Upgradeable _lpToken,
 		address _governance,
 		string memory _name,
-		string memory _symbol
+		string memory _symbol,
+		AngleStrategy _angleStrategy
 	) public {
-		_cloneAndInit(impl, _lpToken, _governance, _name, _symbol);
+		_cloneAndInit(impl, _lpToken, _governance, _name, _symbol, _angleStrategy);
 	}
 
 	/**
@@ -44,10 +45,15 @@ contract AngleVaultFactory {
 		ERC20Upgradeable _lpToken,
 		address _governance,
 		string memory _name,
-		string memory _symbol
+		string memory _symbol,
+		AngleStrategy _angleStrategy
 	) internal {
-		AngleVault deployed = clone(_impl, _lpToken, keccak256(abi.encodePacked(_governance, _name, _symbol)));
-		deployed.init(_lpToken, _governance, _name, _symbol);
+		AngleVault deployed = clone(
+			_impl,
+			_lpToken,
+			keccak256(abi.encodePacked(_governance, _name, _symbol, _angleStrategy))
+		);
+		deployed.init(_lpToken, _governance, _name, _symbol, _angleStrategy);
 	}
 
 	/**
