@@ -1,45 +1,46 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/IMultiRewards.sol";
 import "./AngleStrategy.sol";
-import "hardhat/console.sol";
 
-contract AngleVault is ERC20 {
-	using SafeERC20 for ERC20;
-	using Address for address;
+contract AngleVault is ERC20Upgradeable {
+	using SafeERC20Upgradeable for ERC20Upgradeable;
+	using AddressUpgradeable for address;
 
-	ERC20 public token;
+	ERC20Upgradeable public token;
 	address public governance;
-	uint256 public withdrawalFee = 50; // %0.5
+	uint256 public withdrawalFee;
 	address public multiRewardsGauge;
 	AngleStrategy public angleStrategy;
-	uint256 public min = 10000;
+	uint256 public min;
 	uint256 public constant max = 10000;
 	event Earn(address _token, uint256 _amount);
 	event Deposit(address _depositor, uint256 _amount);
 	event Withdraw(address _depositor, uint256 _amount);
 
-	constructor(
-		address _token,
+	function init(
+		ERC20Upgradeable _token,
 		address _governance,
 		string memory name_,
 		string memory symbol_
-	) ERC20(name_, symbol_) {
-		token = ERC20(_token);
+	) public initializer {
+		__ERC20_init(name_, symbol_);
+		token = _token;
 		governance = _governance;
+		withdrawalFee = 50; // %0.5
+		min = 10000;
 	}
 
 	function deposit(uint256 _amount) public {
 		require(address(multiRewardsGauge) != address(0), "Gauge not yet initialized");
 		token.safeTransferFrom(msg.sender, address(this), _amount);
 		_mint(address(this), _amount);
-		IERC20(address(this)).approve(multiRewardsGauge, _amount);
+		ERC20Upgradeable(address(this)).approve(multiRewardsGauge, _amount);
 		IMultiRewards(multiRewardsGauge).stakeFor(msg.sender, _amount);
 		IMultiRewards(multiRewardsGauge).mintFor(msg.sender, _amount);
 		emit Deposit(msg.sender, _amount);
@@ -108,7 +109,7 @@ contract AngleVault is ERC20 {
 	function earn() external {
 		require(msg.sender == governance, "!governance");
 		uint256 tokenBalance = available();
-		token.approve(address(angleStrategy), tokenBalance);
+		token.increaseAllowance(address(angleStrategy), tokenBalance);
 		angleStrategy.deposit(address(token), tokenBalance);
 		emit Earn(address(token), tokenBalance);
 	}

@@ -69,6 +69,7 @@ describe("ANGLE Strategy", function () {
   let sanUSDCEurVault: Contract;
   let sanUSDCEurMultiGauge: Contract;
   let sanUsdcEurLiqudityGauge: Contract;
+  let angleVaultFactoryContract: Contract;
 
   before(async function () {
     const [localDeployer] = await ethers.getSigners();
@@ -111,14 +112,19 @@ describe("ANGLE Strategy", function () {
     // await sanDaiEur.connect(sanDAILPHolder).transfer(locker.address, parseUnits("10000", "18"));
     // await sanDaiEur.connect(sanDAILPHolder).transfer(strategy.address, parseUnits("10000", "18"));
     await sanDaiEur.connect(sanDAILPHolder).transfer(deployer._address, parseUnits("10000", "18"));
-    const angleVaultFactory = await ethers.getContractFactory("AngleVault");
+    const angleVaultFactory = await ethers.getContractFactory("AngleVaultFactory");
+    angleVaultFactoryContract = await angleVaultFactory.deploy();
     const multiGaugeRewardsFactory = await ethers.getContractFactory("GaugeMultiRewards");
-    sanUSDCEurVault = await angleVaultFactory.deploy(
-      SAN_USDC_EUR,
-      localDeployer.address,
-      "Stake Dao sanUSDCEUR",
-      "sdSanUsdcEur"
-    );
+    const cloneTx = await (
+      await angleVaultFactoryContract.cloneAndInit(
+        SAN_USDC_EUR,
+        localDeployer.address,
+        "Stake Dao sanUSDCEUR",
+        "sdSanUsdcEur"
+      )
+    ).wait();
+
+    sanUSDCEurVault = await ethers.getContractAt("AngleVault", cloneTx.events[0].args[0]);
     sanUSDCEurMultiGauge = await multiGaugeRewardsFactory.deploy(
       sanUSDCEurVault.address,
       sanUSDCEurVault.address,
