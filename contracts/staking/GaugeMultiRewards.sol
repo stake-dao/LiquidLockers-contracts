@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
-contract GaugeMultiRewards is ReentrancyGuard, Pausable, ERC20 {
-	using SafeERC20 for ERC20;
+contract GaugeMultiRewards is ReentrancyGuardUpgradeable, PausableUpgradeable, ERC20Upgradeable {
+	using SafeERC20Upgradeable for ERC20Upgradeable;
 
 	/* ========== STATE VARIABLES ========== */
 
@@ -21,7 +21,7 @@ contract GaugeMultiRewards is ReentrancyGuard, Pausable, ERC20 {
 		uint256 rewardPerTokenStored;
 	}
 
-	ERC20 public stakingToken;
+	ERC20Upgradeable public stakingToken;
 	address public vault;
 
 	mapping(address => Reward) public rewardData;
@@ -41,15 +41,16 @@ contract GaugeMultiRewards is ReentrancyGuard, Pausable, ERC20 {
 
 	/* ========== CONSTRUCTOR ========== */
 
-	constructor(
+	function init(
 		address _stakingToken,
 		address _vault,
 		address _governance,
 		string memory _name,
 		string memory _symbol
-	) ERC20(_name, _symbol) {
+	) public initializer {
+		__ERC20_init(_name, _symbol);
 		governance = _governance;
-		stakingToken = ERC20(_stakingToken);
+		stakingToken = ERC20Upgradeable(_stakingToken);
 		vault = _vault;
 	}
 
@@ -75,7 +76,7 @@ contract GaugeMultiRewards is ReentrancyGuard, Pausable, ERC20 {
 	}
 
 	function lastTimeRewardApplicable(address _rewardsToken) public view returns (uint256) {
-		return Math.min(block.timestamp, rewardData[_rewardsToken].periodFinish);
+		return MathUpgradeable.min(block.timestamp, rewardData[_rewardsToken].periodFinish);
 	}
 
 	function rewardPerToken(address _rewardsToken) public view returns (uint256) {
@@ -147,7 +148,7 @@ contract GaugeMultiRewards is ReentrancyGuard, Pausable, ERC20 {
 			uint256 reward = rewards[account][_rewardsToken];
 			if (reward > 0) {
 				rewards[account][_rewardsToken] = 0;
-				ERC20(_rewardsToken).safeTransfer(account, reward);
+				ERC20Upgradeable(_rewardsToken).safeTransfer(account, reward);
 				emit RewardPaid(account, _rewardsToken, reward);
 			}
 		}
@@ -163,7 +164,7 @@ contract GaugeMultiRewards is ReentrancyGuard, Pausable, ERC20 {
 		require(rewardData[_rewardsToken].rewardsDistributor == msg.sender);
 		// handle the transfer of reward tokens via `transferFrom` to reduce the number
 		// of transactions required and ensure correctness of the reward amount
-		ERC20(_rewardsToken).safeTransferFrom(msg.sender, address(this), reward);
+		ERC20Upgradeable(_rewardsToken).safeTransferFrom(msg.sender, address(this), reward);
 
 		if (block.timestamp >= rewardData[_rewardsToken].periodFinish) {
 			rewardData[_rewardsToken].rewardRate = reward / rewardData[_rewardsToken].rewardsDuration;
@@ -185,7 +186,7 @@ contract GaugeMultiRewards is ReentrancyGuard, Pausable, ERC20 {
 	) external onlyGovernance {
 		require(tokenAddress != address(stakingToken), "Cannot withdraw staking token");
 		require(rewardData[tokenAddress].lastUpdateTime == 0, "Cannot withdraw reward token");
-		ERC20(tokenAddress).safeTransfer(destination, tokenAmount);
+		ERC20Upgradeable(tokenAddress).safeTransfer(destination, tokenAmount);
 		emit Recovered(tokenAddress, tokenAmount);
 	}
 

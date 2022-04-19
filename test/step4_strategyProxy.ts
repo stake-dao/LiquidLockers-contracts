@@ -22,6 +22,8 @@ const ANGLE_HOLDER_2 = "0x9843C8a8263308A309BfC3C2d1c308126D8E754D";
 const SDT = "0x73968b9a57c6e53d41345fd57a6e6ae27d6cdb2f";
 
 const ANGLE = "0x31429d1856aD1377A8A0079410B297e1a9e214c2";
+const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+const FRAX = "0x853d955aCEf822Db058eb8505911ED77F175b99e";
 const VE_ANGLE = "0x0C462Dbb9EC8cD1630f1728B2CFD2769d09f0dd5";
 
 const WALLET_CHECKER = "0xAa241Ccd398feC742f463c534a610529dCC5888E";
@@ -62,6 +64,8 @@ describe("ANGLE Strategy", function () {
   let sanDaiEur: Contract;
 
   let deployer: JsonRpcSigner;
+  let dummyMs: JsonRpcSigner;
+  let VeSdtProxy: Contract;
   let sanLPHolder: JsonRpcSigner;
   let sanDAILPHolder: JsonRpcSigner;
 
@@ -72,7 +76,7 @@ describe("ANGLE Strategy", function () {
   let angleVaultFactoryContract: Contract;
 
   before(async function () {
-    const [localDeployer] = await ethers.getSigners();
+    const [localDeployer, dummyMs] = await ethers.getSigners();
     await network.provider.request({
       method: "hardhat_impersonateAccount",
       params: [STDDEPLOYER]
@@ -101,8 +105,9 @@ describe("ANGLE Strategy", function () {
     sanDaiEur = await ethers.getContractAt(ERC20ABI, SAN_DAI_EUR);
     angle = await ethers.getContractAt(ERC20ABI, ANGLE);
 
-    strategy = await AngleStrategy.deploy(locker.address, deployer._address, ANGLEACCUMULATOR);
-
+    strategy = await AngleStrategy.deploy(locker.address, deployer._address, dummyMs.address);
+    const veSdtAngleProxyFactory = await ethers.getContractFactory("veSDTFeeAngleProxy");
+    VeSdtProxy = await veSdtAngleProxyFactory.deploy([ANGLE, WETH, FRAX]);
     await locker.connect(deployer).setGovernance(strategy.address);
 
     // await sanUsdcEur.connect(sanLPHolder).transfer(locker.address, parseUnits("10000", "6"));
@@ -136,6 +141,11 @@ describe("ANGLE Strategy", function () {
     sanUsdcEurLiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", sanUSDC_EUR_GAUGE);
     await sanUSDCEurVault.setGaugeMultiRewards(sanUSDCEurMultiGauge.address);
     await sanUSDCEurVault.setAngleStrategy(strategy.address);
+    await strategy.connect(deployer).setMultiGauge(sanUSDC_EUR_GAUGE, sanUSDCEurMultiGauge.address);
+    await strategy.connect(deployer).setAccumulator(ANGLEACCUMULATOR);
+    await strategy.connect(deployer).setVeSDTProxy(VeSdtProxy.address);
+    await sanUSDCEurMultiGauge.addReward(ANGLE, strategy.address, 60 * 60 * 24 * 7);
+    await strategy.connect(deployer).setClaimerReward(50);
   });
 
   describe("Angle Vault tests", function () {
@@ -198,6 +208,16 @@ describe("ANGLE Strategy", function () {
         parseUnits("500", 6).sub(fee)
       );
       expect(sanUsdcEurAngleGaugeStakedAfterWithdraw).to.be.equal(parseUnits("500", 6));
+    });
+
+    it("should be able to claim rewards when some time pass", async () => {
+      await sanUsdcEur.connect(sanLPHolder).approve(sanUSDCEurVault.address, parseUnits("100000", 6));
+      await sanUSDCEurVault.connect(sanLPHolder).deposit(parseUnits("100000", 6));
+      // increase the timestamp by 1 month
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 30]);
+      await network.provider.send("evm_mine", []);
+      const pendings = await strategy.claimerPendingReward(SAN_USDC_EUR);
+      const tx = await (await strategy.claim(sanUsdcEur.address)).wait();
     });
   });
 });

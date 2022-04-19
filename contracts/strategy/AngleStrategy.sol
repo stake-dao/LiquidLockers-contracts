@@ -10,6 +10,10 @@ import "../interfaces/IMultiRewards.sol";
 contract AngleStrategy is BaseStrategy {
 	using SafeERC20 for IERC20;
 	AngleAccumulator public accumulator;
+	struct ClaimerReward {
+		address rewardToken;
+		uint256 amount;
+	}
 
 	/* ========== CONSTRUCTOR ========== */
 	constructor(
@@ -65,13 +69,35 @@ contract AngleStrategy is BaseStrategy {
 				break;
 			}
 			uint256 rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
-			uint256 performanceFee = (rewardsBalance * perfFee[gauge]) / BASE_FEE;
-			uint256 accumulatorPart = (performanceFee * 800) / BASE_FEE;
+			uint256 multisigFee = (rewardsBalance * perfFee[gauge]) / BASE_FEE;
+			uint256 accumulatorPart = (rewardsBalance * accumulatorFee) / BASE_FEE;
+			uint256 veSDTPart = (rewardsBalance * veSDTFee) / BASE_FEE;
+			uint256 claimerPart = (rewardsBalance * claimerReward) / BASE_FEE;
 			IERC20(rewardToken).transfer(address(accumulator), accumulatorPart);
-			IERC20(rewardToken).transfer(rewardsReceiver, performanceFee - accumulatorPart);
-			IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, rewardsBalance - performanceFee);
+			IERC20(rewardToken).transfer(rewardsReceiver, multisigFee);
+			IERC20(rewardToken).transfer(veSDTFeeProxy, veSDTPart);
+			IERC20(rewardToken).transfer(msg.sender, claimerPart);
+			uint256 netRewards = rewardsBalance - multisigFee - accumulatorPart - veSDTPart - claimerPart;
+			IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
+			IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, netRewards);
 			emit Claimed(gauge, rewardToken, rewardsBalance);
 		}
+	}
+
+	function claimerPendingRewards(address _token) external view returns (ClaimerReward[] memory) {
+		ClaimerReward[] memory pendings = new ClaimerReward[](8);
+		address gauge = gauges[_token];
+		for (uint8 i = 0; i < 8; i++) {
+			address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
+			if (rewardToken == address(0)) {
+				break;
+			}
+			uint256 rewardsBalance = ILiquidityGauge(gauge).claimable_reward(address(locker), rewardToken);
+			uint256 pendingAmount = (rewardsBalance * claimerReward) / BASE_FEE;
+			ClaimerReward memory pendingReward = ClaimerReward(rewardToken, pendingAmount);
+			pendings[i] = pendingReward;
+		}
+		return pendings;
 	}
 
 	function boost(address _gauge) external override onlyGovernance {
@@ -102,5 +128,25 @@ contract AngleStrategy is BaseStrategy {
 
 	function setPerfFee(address _gauge, uint256 _newFee) external override onlyGovernance {
 		perfFee[_gauge] = _newFee;
+	}
+
+	function setVeSDTProxy(address _newVeSDTProxy) external onlyGovernance {
+		veSDTFeeProxy = _newVeSDTProxy;
+	}
+
+	function setVeSDTFee(uint256 _newFee) external onlyGovernance {
+		veSDTFee = _newFee;
+	}
+
+	function setClaimerReward(uint256 _newReward) external onlyGovernance {
+		claimerReward = _newReward;
+	}
+
+	function setAccumulator(address _newAccumulator) external onlyGovernance {
+		accumulator = AngleAccumulator(_newAccumulator);
+	}
+
+	function setRewardsReceiver(address _newRewardsReceiver) external onlyGovernance {
+		rewardsReceiver = _newRewardsReceiver;
 	}
 }

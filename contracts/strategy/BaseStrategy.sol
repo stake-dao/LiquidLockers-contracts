@@ -7,6 +7,10 @@ contract BaseStrategy {
 	ILocker locker;
 	address public governance;
 	address public rewardsReceiver;
+	uint256 public veSDTFee;
+	address public veSDTFeeProxy;
+	uint256 public accumulatorFee;
+	uint256 public claimerReward;
 	uint256 public constant BASE_FEE = 10000;
 	mapping(address => address) public gauges;
 	mapping(address => bool) public vaults;
