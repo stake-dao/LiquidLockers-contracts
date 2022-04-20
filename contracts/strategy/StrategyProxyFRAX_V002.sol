@@ -149,7 +149,7 @@ contract StrategyProxyFRAX {
 			_withdrawLocked = abi.encodeWithSignature("withdrawLocked(bytes32,address)", _kekid, msg.sender);
 		}
 
-		// Call Withdraw function 
+		// Call Withdraw function
 		uint256 _balanceBefore = IERC20(_lpToken).balanceOf(LIQUIDLOCKER);
 		(bool _successWithdraw, ) = ILiquidLocker(LIQUIDLOCKER).execute(lpInfos[_lpToken].lpLocker, 0, _withdrawLocked);
 		require(_successWithdraw, "withdraw failed");
@@ -164,12 +164,11 @@ contract StrategyProxyFRAX {
 		_sendRewards(_lpToken);
 	}
 
-
 	function _sendRewards(address _lpToken) private {
 		for (uint256 i = 0; i < lpInfos[_lpToken].rewards.length; i++) {
 			uint256 _reward = IERC20(lpInfos[_lpToken].rewards[i]).balanceOf(LIQUIDLOCKER);
 			if (_reward > 0) {
-				console.log("rewards: ", _reward);
+				//console.log("rewards: ", _reward);
 				bytes memory _sendReward = abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _reward);
 				(bool _successSendReward, ) = ILiquidLocker(LIQUIDLOCKER).execute(lpInfos[_lpToken].rewards[i], 0, _sendReward);
 				require(_successSendReward, "Send reward failed"); // TODO : deal with fees

@@ -7,9 +7,9 @@ import { parseEther, parseUnits } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 /* ==== Get ABIS ==== */
-const ERC20_ABI = require("../../abis/ERC20.json");
-const LIQUIDLOCKER_ABI = require("../../abis/FXSLocker.json");
-const LPLOCKER_ABI = require("../../abis/MultiGaugeReward.json");
+const ERC20_ABI = require("./fixtures/ERC20.json");
+const LIQUIDLOCKER_ABI = require("./fixtures/FXSLocker.json");
+const LPLOCKER_ABI = require("./fixtures/MultiGaugeReward.json");
 
 /* ==== Addresses ==== */
 const LIQUIDLOCKER_ADDRESS = "0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f"; // Liquid Locker Address
@@ -120,14 +120,22 @@ describe("Testing the Strategy Proxy for FRAX", function () {
       expect(LL_KEKIDLIST[0].kek_id == USER_KEKIDLIST[0]);
     });
 
+    it("Should display balance reward token on LL before withdraw", async function () {
+      const BAL_FXS = await fxs.balanceOf(LIQUIDLOCKER_ADDRESS);
+      const BAL_SUSHI = await sushi.balanceOf(LIQUIDLOCKER_ADDRESS);
+      console.log("Balance Reward token of user before withdraw \n");
+      console.log("Balance FXS: \t", (BAL_FXS / 10 ** 18).toString());
+      console.log("Balance SUSHI: \t", (BAL_SUSHI / 10 ** 18).toString());
+    });
+
     it("Should withdraw 100% after locked period ended", async function () {
       await network.provider.send("evm_increaseTime", [WEEK]);
       const KEK_ID = await lpLocker.lockedStakesOf(liquidLocker.address);
 
       await strategyProxyFRAX.connect(account_1).withdraw(FXS_SUSHI_ADDRESS, KEK_ID[0].kek_id, 0);
 
-      const BAL_FXS = await fxs.balanceOf(liquidLocker.address);
-      const BAL_SUSHI = await sushi.balanceOf(liquidLocker.address);
+      const BAL_FXS = await fxs.balanceOf(account_1._address);
+      const BAL_SUSHI = await sushi.balanceOf(account_1._address);
 
       console.log("Balance FXS: \t", (BAL_FXS / 10 ** 18).toString());
       console.log("Balance SUSHI: \t", (BAL_SUSHI / 10 ** 18).toString());
