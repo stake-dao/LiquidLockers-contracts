@@ -25,13 +25,14 @@ const ANGLE = "0x31429d1856aD1377A8A0079410B297e1a9e214c2";
 const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 const FRAX = "0x853d955aCEf822Db058eb8505911ED77F175b99e";
 const VE_ANGLE = "0x0C462Dbb9EC8cD1630f1728B2CFD2769d09f0dd5";
+const SDFRAX3CRV = "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7";
 
 const WALLET_CHECKER = "0xAa241Ccd398feC742f463c534a610529dCC5888E";
 const WALLET_CHECKER_OWNER = "0xdC4e6DFe07EFCa50a197DF15D9200883eF4Eb1c8";
 
 const FEE_DISTRIBUTOR = "0x7F82ff050128e29Fd89D85d01b93246F744E62A0";
 const ANGLE_GAUGE_CONTROLLER = "0x9aD7e7b0877582E14c17702EecF49018DD6f2367";
-
+const STAKEDAO_FEE_DISTRIBUTOR = "0x29f3dd38dB24d3935CF1bf841e6b2B461A3E5D92";
 const GAUGE = "0x3785Ce82be62a342052b9E5431e9D3a839cfB581"; // G-UNI LP gauge
 
 const ACC = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0"; // StakeDAO multisig
@@ -64,19 +65,22 @@ describe("ANGLE Strategy", function () {
   let sanDaiEur: Contract;
 
   let deployer: JsonRpcSigner;
-  let dummyMs: JsonRpcSigner;
+  let dummyMs: SignerWithAddress;
   let VeSdtProxy: Contract;
   let sanLPHolder: JsonRpcSigner;
   let sanDAILPHolder: JsonRpcSigner;
+  let localDeployer: SignerWithAddress;
 
   let strategy: Contract;
   let sanUSDCEurVault: Contract;
   let sanUSDCEurMultiGauge: Contract;
   let sanUsdcEurLiqudityGauge: Contract;
   let angleVaultFactoryContract: Contract;
+  let frax: Contract;
+  let sdFrax3Crv: Contract;
 
   before(async function () {
-    const [localDeployer, dummyMs] = await ethers.getSigners();
+    [localDeployer, dummyMs] = await ethers.getSigners();
     await network.provider.request({
       method: "hardhat_impersonateAccount",
       params: [STDDEPLOYER]
@@ -104,6 +108,8 @@ describe("ANGLE Strategy", function () {
     sanUsdcEur = await ethers.getContractAt(ERC20ABI, SAN_USDC_EUR);
     sanDaiEur = await ethers.getContractAt(ERC20ABI, SAN_DAI_EUR);
     angle = await ethers.getContractAt(ERC20ABI, ANGLE);
+    frax = await ethers.getContractAt(ERC20ABI, FRAX);
+    sdFrax3Crv = await ethers.getContractAt(ERC20ABI, SDFRAX3CRV);
 
     strategy = await AngleStrategy.deploy(locker.address, deployer._address, dummyMs.address);
     const veSdtAngleProxyFactory = await ethers.getContractFactory("veSDTFeeAngleProxy");
@@ -126,18 +132,14 @@ describe("ANGLE Strategy", function () {
         localDeployer.address,
         "Stake Dao sanUSDCEUR",
         "sdSanUsdcEur",
-        strategy.address
+        strategy.address,
+        localDeployer.address,
+        "Stake Dao sanUSDCEUR gauge",
+        "sdSanUsdcEur-gauge"
       )
     ).wait();
-
     sanUSDCEurVault = await ethers.getContractAt("AngleVault", cloneTx.events[0].args[0]);
-    sanUSDCEurMultiGauge = await multiGaugeRewardsFactory.deploy(
-      sanUSDCEurVault.address,
-      sanUSDCEurVault.address,
-      localDeployer.address,
-      "Stake Dao sanUSDCEUR gauge",
-      "sdSanUsdcEur-gauge"
-    );
+    sanUSDCEurMultiGauge = await ethers.getContractAt("GaugeMultiRewards", cloneTx.events[1].args[0]);
     sanUsdcEurLiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", sanUSDC_EUR_GAUGE);
     await sanUSDCEurVault.setGaugeMultiRewards(sanUSDCEurMultiGauge.address);
     await sanUSDCEurVault.setAngleStrategy(strategy.address);
@@ -213,11 +215,23 @@ describe("ANGLE Strategy", function () {
     it("should be able to claim rewards when some time pass", async () => {
       await sanUsdcEur.connect(sanLPHolder).approve(sanUSDCEurVault.address, parseUnits("100000", 6));
       await sanUSDCEurVault.connect(sanLPHolder).deposit(parseUnits("100000", 6));
+      await (await sanUSDCEurVault.earn()).wait();
       // increase the timestamp by 1 month
       await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 30]);
       await network.provider.send("evm_mine", []);
-      const pendings = await strategy.claimerPendingReward(SAN_USDC_EUR);
+      const claimable = await sanUsdcEurLiqudityGauge.claimable_reward(locker.address, angle.address);
       const tx = await (await strategy.claim(sanUsdcEur.address)).wait();
+      const claimed = tx.events.find((e: any) => e.event === "Claimed");
+      expect(claimed.args[2]).to.be.equal(claimable);
+    });
+    it("it should be able swap angles and transfer to feeDistributor on veSDTFeeAngleProxy", async () => {
+      const fraxBalanceOfClaimer = await frax.balanceOf(localDeployer.address);
+      const sd3CrvBalanceOfFeeD = await sdFrax3Crv.balanceOf(STAKEDAO_FEE_DISTRIBUTOR);
+      await VeSdtProxy.sendRewards();
+      const fraxBalanceOfClaimerAfterClaim = await frax.balanceOf(localDeployer.address);
+      const sd3CrvBalanceOfFeeDAfterRewards = await sdFrax3Crv.balanceOf(STAKEDAO_FEE_DISTRIBUTOR);
+      expect(fraxBalanceOfClaimerAfterClaim.sub(fraxBalanceOfClaimer)).to.be.gt(0);
+      expect(sd3CrvBalanceOfFeeDAfterRewards.sub(sd3CrvBalanceOfFeeD)).to.be.gt(0);
     });
   });
 });

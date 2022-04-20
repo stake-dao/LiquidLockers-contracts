@@ -35,6 +35,7 @@ contract veSDTFeeAngleProxy is Ownable {
 		IERC20(frax).approve(frax3Crv, fraxBalance - claimerPart);
 		ICurvePool(frax3Crv).add_liquidity([fraxBalance - claimerPart, 0], 0);
 		uint256 frax3CrvBalance = IERC20(frax3Crv).balanceOf(address(this));
+		IERC20(frax3Crv).approve(sdFrax3Crv, fraxBalance - claimerPart);
 		ISdFraxVault(sdFrax3Crv).deposit(frax3CrvBalance);
 		IERC20(sdFrax3Crv).transfer(feeD, IERC20(sdFrax3Crv).balanceOf(address(this)));
 	}
@@ -62,5 +63,9 @@ contract veSDTFeeAngleProxy is Ownable {
 
 	function setClaimerFe(uint256 newClaimerFee) external onlyOwner {
 		claimerFee = newClaimerFee;
+	}
+
+	function setSwapPath(address[] memory newPath) external onlyOwner {
+		angleToFraxPath = newPath;
 	}
 }

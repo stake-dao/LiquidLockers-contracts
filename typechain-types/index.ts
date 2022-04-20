@@ -19,7 +19,6 @@ export type { AngleAccumulatorV2 } from "./AngleAccumulatorV2";
 export type { BaseAccumulator } from "./BaseAccumulator";
 export type { CurveAccumulator } from "./CurveAccumulator";
 export type { FxsAccumulator } from "./FxsAccumulator";
-export type { VeSDTAngleProxy } from "./VeSDTAngleProxy";
 export type { VeSDTFeeAngleProxy } from "./VeSDTFeeAngleProxy";
 export type { AngleLocker } from "./AngleLocker";
 export type { SmartWalletChecker } from "./SmartWalletChecker";
@@ -92,7 +91,6 @@ export { AngleAccumulatorV2__factory } from "./factories/AngleAccumulatorV2__fac
 export { BaseAccumulator__factory } from "./factories/BaseAccumulator__factory";
 export { CurveAccumulator__factory } from "./factories/CurveAccumulator__factory";
 export { FxsAccumulator__factory } from "./factories/FxsAccumulator__factory";
-export { VeSDTAngleProxy__factory } from "./factories/VeSDTAngleProxy__factory";
 export { VeSDTFeeAngleProxy__factory } from "./factories/VeSDTFeeAngleProxy__factory";
 export { AngleLocker__factory } from "./factories/AngleLocker__factory";
 export { SmartWalletChecker__factory } from "./factories/SmartWalletChecker__factory";

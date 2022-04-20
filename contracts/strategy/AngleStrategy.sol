@@ -20,7 +20,10 @@ contract AngleStrategy is BaseStrategy {
 		ILocker _locker,
 		address _governance,
 		address _receiver
-	) BaseStrategy(_locker, _governance, _receiver) {}
+	) BaseStrategy(_locker, _governance, _receiver) {
+		veSDTFee = 500; // 5%
+		accumulatorFee = 800; // 8%
+	}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
 	function deposit(address _token, uint256 _amount) public override onlyApprovedVault {
