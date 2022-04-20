@@ -30,9 +30,10 @@ interface ILPLocker {
 contract StrategyProxyFRAX {
 	address public governance;
 	address public constant LIQUIDLOCKER = 0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f;
+	address[] public listedLP;
 
 	mapping(address => LPInformations) public lpInfos;
-	mapping(address => bytes32[]) public kekIdUser; // TODO : find a way to make it transferable (i.e. minting token)
+	mapping(address => mapping(address => bytes32[])) public LPkekIdUser; // TODO : find a way to make it transferable (i.e. minting token)
 
 	struct LPInformations {
 		address lpLocker;
@@ -54,25 +55,37 @@ contract StrategyProxyFRAX {
 	}
 
 	/* ==== Views ==== */
-	function isKekIdOwner(address _address, bytes32 _kek_id) public view returns (bool) {
+	function getKekID(address _address, address _lpToken) public view returns (bytes32[] memory) {
+		return (LPkekIdUser[_address][_lpToken]);
+	}
+
+	// return if for a lptoken, an address is owner of a given kekId
+	function isKekIdOwner(
+		address _address,
+		address _lpToken,
+		bytes32 _kek_id
+	) public view returns (bool) {
 		bool isOwner = false;
-		for (uint256 i; i < kekIdUser[_address].length; i++) {
-			if (kekIdUser[_address][i] == _kek_id) {
+		for (uint256 i; i < LPkekIdUser[_address][_lpToken].length; i++) {
+			if (LPkekIdUser[_address][_lpToken][i] == _kek_id) {
 				isOwner = true;
 			}
 		}
 		return (isOwner);
 	}
 
+	// get list of LP token listed on LPinformations
+	function getListedLP() public view returns (address[] memory) {
+		return (listedLP);
+	}
+
+	// get LP information
 	function getLPInfos(address _lpToken) public view returns (LPInformations memory) {
 		return (lpInfos[_lpToken]);
 	}
 
-	function getKekID(address _address) public view returns (bytes32[] memory) {
-		return (kekIdUser[_address]);
-	}
-
 	/* ==== Only Governance ==== */
+	// add a new token to the LP information
 	function setLPInfos(
 		address _lpToken,
 		address _lpLocker,
@@ -83,6 +96,7 @@ contract StrategyProxyFRAX {
 	) public onlyGovernance {
 		require(lpInfos[_lpToken].lpLocker == address(0), "!already exist");
 		lpInfos[_lpToken] = LPInformations(_lpLocker, _rewards, _lpType, _stakeLockedType, _withdrawLockedType);
+		listedLP.push(_lpToken);
 	}
 
 	// TODO : LPInformation updater for an already existing LP Token
@@ -125,7 +139,7 @@ contract StrategyProxyFRAX {
 
 		uint256 _length = ILPLocker(lpInfos[_lpToken].lpLocker).lockedStakesOf(LIQUIDLOCKER).length;
 		bytes32 _kek_id = ILPLocker(lpInfos[_lpToken].lpLocker).lockedStakesOf(LIQUIDLOCKER)[_length - 1].kek_id;
-		kekIdUser[msg.sender].push(_kek_id);
+		LPkekIdUser[msg.sender][_lpToken].push(_kek_id);
 	}
 
 	/* ==== Withdraw ==== */
@@ -135,7 +149,7 @@ contract StrategyProxyFRAX {
 		uint256 _tokenId
 	) public {
 		require(lpInfos[_lpToken].lpLocker != address(0), "LP token not valid!");
-		require(isKekIdOwner(msg.sender, _kekid) == true, "Not owner of this kekId");
+		require(isKekIdOwner(msg.sender, _lpToken, _kekid) == true, "Not owner of this kekId");
 
 		// Encode with Signature withdraw function
 		bytes memory _withdrawLocked;
@@ -168,7 +182,8 @@ contract StrategyProxyFRAX {
 		for (uint256 i = 0; i < lpInfos[_lpToken].rewards.length; i++) {
 			uint256 _reward = IERC20(lpInfos[_lpToken].rewards[i]).balanceOf(LIQUIDLOCKER);
 			if (_reward > 0) {
-				//console.log("rewards: ", _reward);
+				//console.log("LP: \t\t", lpInfos[_lpToken].rewards[i]);
+				//console.log("rewards: \t", _reward);
 				bytes memory _sendReward = abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _reward);
 				(bool _successSendReward, ) = ILiquidLocker(LIQUIDLOCKER).execute(lpInfos[_lpToken].rewards[i], 0, _sendReward);
 				require(_successSendReward, "Send reward failed"); // TODO : deal with fees
