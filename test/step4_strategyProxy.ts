@@ -26,7 +26,7 @@ const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 const FRAX = "0x853d955aCEf822Db058eb8505911ED77F175b99e";
 const VE_ANGLE = "0x0C462Dbb9EC8cD1630f1728B2CFD2769d09f0dd5";
 const SDFRAX3CRV = "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7";
-
+const SDANGLEGAUGE = "0xE55843a90672f7d8218285e51EE8fF8E233F35d5";
 const WALLET_CHECKER = "0xAa241Ccd398feC742f463c534a610529dCC5888E";
 const WALLET_CHECKER_OWNER = "0xdC4e6DFe07EFCa50a197DF15D9200883eF4Eb1c8";
 
@@ -78,6 +78,8 @@ describe("ANGLE Strategy", function () {
   let angleVaultFactoryContract: Contract;
   let frax: Contract;
   let sdFrax3Crv: Contract;
+  let sdAngleGauge: Contract;
+  let angleAccumulator: Contract;
 
   before(async function () {
     [localDeployer, dummyMs] = await ethers.getSigners();
@@ -110,8 +112,10 @@ describe("ANGLE Strategy", function () {
     angle = await ethers.getContractAt(ERC20ABI, ANGLE);
     frax = await ethers.getContractAt(ERC20ABI, FRAX);
     sdFrax3Crv = await ethers.getContractAt(ERC20ABI, SDFRAX3CRV);
+    sdAngleGauge = await ethers.getContractAt("LiquidityGaugeV4", SDANGLEGAUGE);
+    angleAccumulator = await ethers.getContractAt("AngleAccumulatorV2", ANGLEACCUMULATOR);
 
-    strategy = await AngleStrategy.deploy(locker.address, deployer._address, dummyMs.address);
+    strategy = await AngleStrategy.deploy(locker.address, deployer._address, dummyMs.address, ANGLEACCUMULATOR);
     const veSdtAngleProxyFactory = await ethers.getContractFactory("veSDTFeeAngleProxy");
     VeSdtProxy = await veSdtAngleProxyFactory.deploy([ANGLE, WETH, FRAX]);
     await locker.connect(deployer).setGovernance(strategy.address);
@@ -125,7 +129,6 @@ describe("ANGLE Strategy", function () {
     await sanDaiEur.connect(sanDAILPHolder).transfer(deployer._address, parseUnits("10000", "18"));
     const angleVaultFactory = await ethers.getContractFactory("AngleVaultFactory");
     angleVaultFactoryContract = await angleVaultFactory.deploy();
-    const multiGaugeRewardsFactory = await ethers.getContractFactory("GaugeMultiRewards");
     const cloneTx = await (
       await angleVaultFactoryContract.cloneAndInit(
         SAN_USDC_EUR,
@@ -144,10 +147,9 @@ describe("ANGLE Strategy", function () {
     await sanUSDCEurVault.setGaugeMultiRewards(sanUSDCEurMultiGauge.address);
     await sanUSDCEurVault.setAngleStrategy(strategy.address);
     await strategy.connect(deployer).setMultiGauge(sanUSDC_EUR_GAUGE, sanUSDCEurMultiGauge.address);
-    await strategy.connect(deployer).setAccumulator(ANGLEACCUMULATOR);
     await strategy.connect(deployer).setVeSDTProxy(VeSdtProxy.address);
+    await strategy.connect(deployer).manageFee(0, sanUsdcEurLiqudityGauge.address, 200); // %2
     await sanUSDCEurMultiGauge.addReward(ANGLE, strategy.address, 60 * 60 * 24 * 7);
-    await strategy.connect(deployer).setClaimerReward(50);
   });
 
   describe("Angle Vault tests", function () {
@@ -180,6 +182,15 @@ describe("ANGLE Strategy", function () {
         .withdraw(parseUnits("1000", 6))
         .catch((e: any) => e);
       expect(tx.message).to.have.string("ERC20: burn amount exceeds balance");
+    });
+    it("it should not be able withdraw from multigauge if not vault", async () => {
+      const stakedBalance = await sanUSDCEurMultiGauge.stakeOf(sanLPHolder._address);
+      const tx = await sanUSDCEurMultiGauge
+        .connect(sanLPHolder)
+        .withdrawFor(sanLPHolder._address, stakedBalance)
+        .catch((e: any) => e);
+
+      expect(tx.message).to.have.string("!vault");
     });
     it("Should not be able to approve vault on the strategy when not governance", async function () {
       const tx = await strategy.toggleVault(sanUSDCEurVault.address).catch((e: any) => e);
@@ -219,12 +230,26 @@ describe("ANGLE Strategy", function () {
       // increase the timestamp by 1 month
       await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 30]);
       await network.provider.send("evm_mine", []);
+      const multiGaugeRewardRateBefore = await sanUSDCEurMultiGauge.rewardData(angle.address);
+      const msAngleBalanceBefore = await angle.balanceOf(dummyMs.address);
+      const accumulatorAngleBalanceBefore = await angle.balanceOf(ANGLEACCUMULATOR);
       const claimable = await sanUsdcEurLiqudityGauge.claimable_reward(locker.address, angle.address);
       const tx = await (await strategy.claim(sanUsdcEur.address)).wait();
+      const accumulatorAngleBalanceAfter = await angle.balanceOf(ANGLEACCUMULATOR);
+      const multiGaugeRewardRateAfter = await sanUSDCEurMultiGauge.rewardData(angle.address);
+      const msAngleBalanceAfter = await angle.balanceOf(dummyMs.address);
+      const perfFee = claimable.mul(BigNumber.from(200)).div(BigNumber.from(10000));
+      const accumulatorPart = claimable.mul(BigNumber.from(800)).div(BigNumber.from(10000));
       const claimed = tx.events.find((e: any) => e.event === "Claimed");
       expect(claimed.args[2]).to.be.equal(claimable);
+      expect(multiGaugeRewardRateBefore[3]).to.be.equal(0);
+      expect(multiGaugeRewardRateAfter[3]).to.be.gt(0);
+      expect(perfFee).to.be.gt(0);
+      expect(accumulatorPart).to.be.gt(0);
+      expect(msAngleBalanceAfter.sub(msAngleBalanceBefore)).to.be.equal(perfFee);
+      expect(accumulatorAngleBalanceAfter.sub(accumulatorAngleBalanceBefore)).to.be.equal(accumulatorPart);
     });
-    it("it should be able swap angles and transfer to feeDistributor on veSDTFeeAngleProxy", async () => {
+    it("it should be able swap angles and transfer to feeDistributor from veSDTFeeAngleProxy", async () => {
       const fraxBalanceOfClaimer = await frax.balanceOf(localDeployer.address);
       const sd3CrvBalanceOfFeeD = await sdFrax3Crv.balanceOf(STAKEDAO_FEE_DISTRIBUTOR);
       await VeSdtProxy.sendRewards();
@@ -232,6 +257,15 @@ describe("ANGLE Strategy", function () {
       const sd3CrvBalanceOfFeeDAfterRewards = await sdFrax3Crv.balanceOf(STAKEDAO_FEE_DISTRIBUTOR);
       expect(fraxBalanceOfClaimerAfterClaim.sub(fraxBalanceOfClaimer)).to.be.gt(0);
       expect(sd3CrvBalanceOfFeeDAfterRewards.sub(sd3CrvBalanceOfFeeD)).to.be.gt(0);
+    });
+    it("it should accumulated angle rewards to sdAngle liquidity gauge from AngleAccumulator", async () => {
+      const gaugeAngleBalanceBefore = await angle.balanceOf(sdAngleGauge.address);
+      await sdAngleGauge.connect(deployer).add_reward(angle.address, angleAccumulator.address);
+      await angleAccumulator.connect(deployer).notifyAllExtraReward(angle.address);
+      const gaugeAngleBalanceAfter = await angle.balanceOf(sdAngleGauge.address);
+      const angleAccumulatorBalance = await angle.balanceOf(angleAccumulator.address);
+      expect(gaugeAngleBalanceAfter.sub(gaugeAngleBalanceBefore)).to.be.gt(0);
+      expect(angleAccumulatorBalance).to.be.equal(0);
     });
   });
 });

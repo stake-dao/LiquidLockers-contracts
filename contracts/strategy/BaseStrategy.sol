@@ -65,6 +65,4 @@ contract BaseStrategy {
 	function setGauge(address _token, address _gauge) external virtual onlyGovernance {}
 
 	function setMultiGauge(address _gauge, address _multiGauge) external virtual onlyGovernance {}
-
-	function setPerfFee(address _gauge, uint256 _newFee) external virtual onlyGovernance {}
 }

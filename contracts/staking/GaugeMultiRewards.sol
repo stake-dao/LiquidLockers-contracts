@@ -125,20 +125,11 @@ contract GaugeMultiRewards is ReentrancyGuardUpgradeable, PausableUpgradeable, E
 		emit Withdrawn(account, amount);
 	}
 
-	function stake(uint256 amount) external {
-		_stake(amount, msg.sender);
-	}
-
-	function stakeFor(address account, uint256 amount) external {
+	function stakeFor(address account, uint256 amount) external onlyVault {
 		_stake(amount, account);
 	}
 
-	function withdraw(uint256 amount) external {
-		_withdraw(amount, msg.sender);
-	}
-
-	function withdrawFor(address account, uint256 amount) external {
-		require(tx.origin == account, "withdrawFor: account != tx.origin");
+	function withdrawFor(address account, uint256 amount) external onlyVault {
 		_withdraw(amount, account);
 	}
 

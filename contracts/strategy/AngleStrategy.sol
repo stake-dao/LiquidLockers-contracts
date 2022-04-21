@@ -14,15 +14,24 @@ contract AngleStrategy is BaseStrategy {
 		address rewardToken;
 		uint256 amount;
 	}
+	enum MANAGEFEE {
+		PERFFEE,
+		VESDTFEE,
+		ACCUMULATORFEE,
+		CLAIMERREWARD
+	}
 
 	/* ========== CONSTRUCTOR ========== */
 	constructor(
 		ILocker _locker,
 		address _governance,
-		address _receiver
+		address _receiver,
+		AngleAccumulator _accumulator
 	) BaseStrategy(_locker, _governance, _receiver) {
-		veSDTFee = 500; // 5%
-		accumulatorFee = 800; // 8%
+		veSDTFee = 500; // %5
+		accumulatorFee = 800; // %8
+		claimerReward = 50; //%0.5
+		accumulator = _accumulator;
 	}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
@@ -129,20 +138,8 @@ contract AngleStrategy is BaseStrategy {
 		multiGauges[_gauge] = _multiGauge;
 	}
 
-	function setPerfFee(address _gauge, uint256 _newFee) external override onlyGovernance {
-		perfFee[_gauge] = _newFee;
-	}
-
 	function setVeSDTProxy(address _newVeSDTProxy) external onlyGovernance {
 		veSDTFeeProxy = _newVeSDTProxy;
-	}
-
-	function setVeSDTFee(uint256 _newFee) external onlyGovernance {
-		veSDTFee = _newFee;
-	}
-
-	function setClaimerReward(uint256 _newReward) external onlyGovernance {
-		claimerReward = _newReward;
 	}
 
 	function setAccumulator(address _newAccumulator) external onlyGovernance {
@@ -151,5 +148,26 @@ contract AngleStrategy is BaseStrategy {
 
 	function setRewardsReceiver(address _newRewardsReceiver) external onlyGovernance {
 		rewardsReceiver = _newRewardsReceiver;
+	}
+
+	function manageFee(
+		MANAGEFEE _manageFee,
+		address _gauge,
+		uint256 _newFee
+	) external onlyGovernance {
+		if (_manageFee == MANAGEFEE.PERFFEE) {
+			// 0
+			require(_gauge != address(0), "zero address");
+			perfFee[_gauge] = _newFee;
+		} else if (_manageFee == MANAGEFEE.VESDTFEE) {
+			// 1
+			veSDTFee = _newFee;
+		} else if (_manageFee == MANAGEFEE.ACCUMULATORFEE) {
+			//2
+			accumulatorFee = _newFee;
+		} else if (_manageFee == MANAGEFEE.CLAIMERREWARD) {
+			// 3
+			claimerReward = _newFee;
+		}
 	}
 }
