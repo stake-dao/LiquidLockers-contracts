@@ -41,20 +41,22 @@ contract AngleVaultFactory {
 		string memory _gaugeSymbol
 	) public {
 		address vaultImplAddress = _cloneAndInitVault(
-			vaultImpl, 
-			_vaultLPToken, 
-			_vaultGovernance, 
-			_vaultName, 
-			_vaultSymbol, 
+			vaultImpl,
+			_vaultLPToken,
+			_vaultGovernance,
+			_vaultName,
+			_vaultSymbol,
 			_vaultAngleStrategy
 		);
-		_cloneAndInitGauge(
-			gaugeImpl, 
+		address gaugeImplAddress = _cloneAndInitGauge(
+			gaugeImpl,
 			vaultImplAddress,
-			_gaugeGovernance, 
-			_gaugeName, 
+			_gaugeGovernance,
+			_gaugeName,
 			_gaugeSymbol
 		);
+		AngleVault(vaultImplAddress).setGaugeMultiRewards(gaugeImplAddress);
+		AngleVault(vaultImplAddress).setGovernance(_vaultGovernance);
 	}
 
 	/**
@@ -73,13 +75,13 @@ contract AngleVaultFactory {
 		string memory _name,
 		string memory _symbol,
 		AngleStrategy _angleStrategy
-	) internal returns(address) {
+	) internal returns (address) {
 		AngleVault deployed = cloneVault(
 			_impl,
 			_lpToken,
 			keccak256(abi.encodePacked(_governance, _name, _symbol, _angleStrategy))
 		);
-		deployed.init(_lpToken, _governance, _name, _symbol, _angleStrategy);
+		deployed.init(_lpToken, address(this), _name, _symbol, _angleStrategy);
 		return address(deployed);
 	}
 
@@ -97,13 +99,14 @@ contract AngleVaultFactory {
 		address _governance,
 		string memory _name,
 		string memory _symbol
-	) internal {
+	) internal returns (address) {
 		GaugeMultiRewards deployed = cloneGauge(
 			_impl,
 			_stakingToken,
 			keccak256(abi.encodePacked(_governance, _name, _symbol))
 		);
 		deployed.init(_stakingToken, _stakingToken, _governance, _name, _symbol);
+		return address(deployed);
 	}
 
 	/**
@@ -133,7 +136,9 @@ contract AngleVaultFactory {
 		address _stakingToken,
 		bytes32 _paramsHash
 	) internal returns (GaugeMultiRewards) {
-		address deployed = address(_impl).cloneDeterministic(keccak256(abi.encodePacked(address(_stakingToken), _paramsHash)));
+		address deployed = address(_impl).cloneDeterministic(
+			keccak256(abi.encodePacked(address(_stakingToken), _paramsHash))
+		);
 		emit GaugeDeployed(deployed, _stakingToken, _impl);
 		return GaugeMultiRewards(deployed);
 	}

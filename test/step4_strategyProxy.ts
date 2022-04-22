@@ -80,6 +80,9 @@ describe("ANGLE Strategy", function () {
   let sdFrax3Crv: Contract;
   let sdAngleGauge: Contract;
   let angleAccumulator: Contract;
+  let sanDaiEurVault: Contract;
+  let sanDaiEurMultiGauge: Contract;
+  let sanDaiEurLiqudityGauge: Contract;
 
   before(async function () {
     [localDeployer, dummyMs] = await ethers.getSigners();
@@ -144,8 +147,7 @@ describe("ANGLE Strategy", function () {
     sanUSDCEurVault = await ethers.getContractAt("AngleVault", cloneTx.events[0].args[0]);
     sanUSDCEurMultiGauge = await ethers.getContractAt("GaugeMultiRewards", cloneTx.events[1].args[0]);
     sanUsdcEurLiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", sanUSDC_EUR_GAUGE);
-    await sanUSDCEurVault.setGaugeMultiRewards(sanUSDCEurMultiGauge.address);
-    await sanUSDCEurVault.setAngleStrategy(strategy.address);
+    sanDaiEurLiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", sanDAI_EUR_GAUGE);
     await strategy.connect(deployer).setMultiGauge(sanUSDC_EUR_GAUGE, sanUSDCEurMultiGauge.address);
     await strategy.connect(deployer).setVeSDTProxy(VeSdtProxy.address);
     await strategy.connect(deployer).manageFee(0, sanUsdcEurLiqudityGauge.address, 200); // %2
@@ -266,6 +268,44 @@ describe("ANGLE Strategy", function () {
       const angleAccumulatorBalance = await angle.balanceOf(angleAccumulator.address);
       expect(gaugeAngleBalanceAfter.sub(gaugeAngleBalanceBefore)).to.be.gt(0);
       expect(angleAccumulatorBalance).to.be.equal(0);
+    });
+    it("it should create new vault and multigauge rewards for different Angle LP token", async () => {
+      const cloneTx = await (
+        await angleVaultFactoryContract.cloneAndInit(
+          SAN_DAI_EUR,
+          localDeployer.address,
+          "Stake Dao sanDAIEUR",
+          "sdSanDaiEur",
+          strategy.address,
+          localDeployer.address,
+          "Stake Dao sanDAIEUR gauge",
+          "sdSanDaiEur-gauge"
+        )
+      ).wait();
+      sanDaiEurVault = await ethers.getContractAt("AngleVault", cloneTx.events[0].args[0]);
+      sanDaiEurMultiGauge = await ethers.getContractAt("GaugeMultiRewards", cloneTx.events[1].args[0]);
+      const tokenOfVault = await sanDaiEurVault.token();
+      expect(tokenOfVault.toLowerCase()).to.be.equal(SAN_DAI_EUR.toLowerCase());
+    });
+    it("it should be able to deposit sanDAIEur to new vault", async () => {
+      const gaugeTokenBalanceBeforeDeposit = await sanDaiEurMultiGauge.balanceOf(sanDAILPHolder._address);
+      await sanDaiEur.connect(sanDAILPHolder).approve(sanDaiEurVault.address, ethers.constants.MaxUint256);
+      await sanDaiEurVault.connect(sanDAILPHolder).deposit(parseEther("10000"));
+      const gaugeTokenBalanceAfterDeposit = await sanDaiEurMultiGauge.balanceOf(sanDAILPHolder._address);
+      expect(gaugeTokenBalanceBeforeDeposit).to.be.equal(0);
+      expect(gaugeTokenBalanceAfterDeposit.sub(gaugeTokenBalanceBeforeDeposit)).to.be.equal(parseEther("10000"));
+    });
+    it("it should send tokens to angle gauge after call earn for new vault", async () => {
+      await strategy.connect(deployer).setMultiGauge(sanDAI_EUR_GAUGE, sanDaiEurMultiGauge.address);
+      await strategy.connect(deployer).manageFee(0, sanDAI_EUR_GAUGE, 200); // %2
+      await sanDaiEurMultiGauge.addReward(ANGLE, strategy.address, 60 * 60 * 24 * 7);
+      await strategy.connect(deployer).toggleVault(sanDaiEurVault.address);
+      await strategy.connect(deployer).setGauge(SAN_DAI_EUR, sanDAI_EUR_GAUGE);
+      const sanUsdcEurAngleGaugeStakedBefore = await sanDaiEurLiqudityGauge.balanceOf(locker.address);
+      await (await sanDaiEurVault.earn()).wait();
+      const sanUsdcEurAngleGaugeStakedAfter = await sanDaiEurLiqudityGauge.balanceOf(locker.address);
+      expect(sanUsdcEurAngleGaugeStakedBefore).to.be.equal(0);
+      expect(sanUsdcEurAngleGaugeStakedAfter).to.be.equal(parseEther("10000"));
     });
   });
 });

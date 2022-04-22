@@ -85,7 +85,8 @@ contract AngleStrategy is BaseStrategy {
 			uint256 accumulatorPart = (rewardsBalance * accumulatorFee) / BASE_FEE;
 			uint256 veSDTPart = (rewardsBalance * veSDTFee) / BASE_FEE;
 			uint256 claimerPart = (rewardsBalance * claimerReward) / BASE_FEE;
-			IERC20(rewardToken).transfer(address(accumulator), accumulatorPart);
+			IERC20(rewardToken).approve(address(accumulator), accumulatorPart);
+			accumulator.depositToken(rewardToken, accumulatorPart);
 			IERC20(rewardToken).transfer(rewardsReceiver, multisigFee);
 			IERC20(rewardToken).transfer(veSDTFeeProxy, veSDTPart);
 			IERC20(rewardToken).transfer(msg.sender, claimerPart);
