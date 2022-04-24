@@ -38,7 +38,7 @@ const FXS_TEMPLE_WHALE = "0xa5f74ae4b22a792f18c42ec49a85cf560f16559f"; // LP tok
 const DAY = 60 * 60 * 24;
 const WEEK = 60 * 60 * 24 * 7;
 const YEAR = 60 * 60 * 24 * 365;
-const MAXLOCK = 3 * 60 * 60 * 24 * 365;
+const MAXLOCK = 3 * 60 * 60 * 24 * 364;
 
 describe("Testing the Strategy Proxy for FRAX", function () {
   let dummyMs: SignerWithAddress;
@@ -57,6 +57,7 @@ describe("Testing the Strategy Proxy for FRAX", function () {
   let fxs_templeVault: Contract;
   let fraxVaultFactoryContract: Contract;
   let fxs_templeMultiGauge: Contract;
+  let fxs_templeLiquidityGauge: Contract;
   let fxs_sushi_LP: Contract;
   let fxs_temple_LP: Contract;
   let liquidLocker: Contract;
@@ -73,9 +74,22 @@ describe("Testing the Strategy Proxy for FRAX", function () {
     account_1 = ethers.provider.getSigner(user_1.address);
     account_2 = ethers.provider.getSigner(user_2.address);
 
+    /* ==== Impersonate Account ==== */
+    await ethers.provider.send("hardhat_impersonateAccount", [FXS_TEMPLE_WHALE]);
+    await ethers.provider.send("hardhat_impersonateAccount", [LIQUIDLOCKER_GOVERNANCE]);
+    whale_fxs_temple = ethers.provider.getSigner(FXS_TEMPLE_WHALE);
+    governance = ethers.provider.getSigner(LIQUIDLOCKER_GOVERNANCE);
+
+    /* ==== Give Ether for Transactions ==== */
+    await account_1.sendTransaction({
+      to: FXS_TEMPLE_WHALE,
+      value: ethers.utils.parseEther("10.0")
+    });
+
     /* ==== Other Contract ==== */
-    liquidLocker = await ethers.getContractAt(LIQUIDLOCKER_ABI, LIQUIDLOCKER_ADDRESS);
     fxs = await ethers.getContractAt(ERC20_ABI, FXS_ADDRESS);
+    liquidLocker = await ethers.getContractAt(LIQUIDLOCKER_ABI, LIQUIDLOCKER_ADDRESS);
+    fxs_temple_LP = await ethers.getContractAt(ERC20_ABI, FXS_TEMPLE_ADDRESS);
 
     /* ==== Deploye Strategy Proxy FRAX ==== */
     StrategyProxyFRAX = await ethers.getContractFactory("FraxStrategy");
@@ -85,66 +99,45 @@ describe("Testing the Strategy Proxy for FRAX", function () {
       dummyMs.address,
       FXS_ACCUMULATOR
     );
-    await strategyFRAX.deployed();
+    await liquidLocker.connect(governance).setGovernance(strategyFRAX.address);
 
     const fraxVaultFactory = await ethers.getContractFactory("FraxVaultFactory");
     fraxVaultFactoryContract = await fraxVaultFactory.deploy();
     const cloneTx = await (
       await fraxVaultFactoryContract.cloneAndInit(
-        FXS_SUSHI_ADDRESS,
+        FXS_TEMPLE_ADDRESS,
         deployer._address,
-        "Stake Dao sanUSDCEUR",
-        "sdSanUsdcEur",
+        "Stake Dao FXSTEMPLE",
+        "sdFXSTEMPLE",
         strategyFRAX.address,
         deployer._address,
-        "Stake Dao sanUSDCEUR gauge",
-        "sdSanUsdcEur-gauge"
+        "Stake Dao FXSTEMPLE gauge",
+        "sdFXSTEMPLE-gauge"
       )
     ).wait();
     fxs_templeVault = await ethers.getContractAt("FraxVault", cloneTx.events[0].args[0]);
     fxs_templeMultiGauge = await ethers.getContractAt("GaugeMultiRewards", cloneTx.events[1].args[0]);
-    console.log(cloneTx);
+    fxs_templeLiquidityGauge = await ethers.getContractAt("LiquidityGaugeV4", FXS_TEMPLE_LOCKER_ADDRESS);
+    await strategyFRAX.connect(deployer).setMultiGauge(FXS_TEMPLE_LOCKER_ADDRESS, fxs_templeMultiGauge.address);
+    //console.log(cloneTx);
 
-    // fxs/sushi
-    sushi = await ethers.getContractAt(ERC20_ABI, SUSHI_ADDRESS);
-    fxs_sushi_LP = await ethers.getContractAt(ERC20_ABI, FXS_SUSHI_ADDRESS);
-    fxs_sushi_locker = await ethers.getContractAt(FXS_SUSHI_LOCKER_ABI, FXS_SUSHI_LOCKER_ADDRESS);
-
-    // fxs/temple
-    temple = await ethers.getContractAt(ERC20_ABI, TEMPLE_ADDRESS);
-    fxs_temple_LP = await ethers.getContractAt(ERC20_ABI, FXS_TEMPLE_ADDRESS);
-    fxs_temple_locker = await ethers.getContractAt(FXS_TEMPLE_LOCKER_ABI, FXS_TEMPLE_LOCKER_ADDRESS);
-
-    /* ==== Impersonate Account ==== */
-    await ethers.provider.send("hardhat_impersonateAccount", [FXS_SUSHI_WHALE]);
-    await ethers.provider.send("hardhat_impersonateAccount", [FXS_TEMPLE_WHALE]);
-    await ethers.provider.send("hardhat_impersonateAccount", [LIQUIDLOCKER_GOVERNANCE]);
-    whale_fxs_sushi = ethers.provider.getSigner(FXS_SUSHI_WHALE);
-    whale_fxs_temple = ethers.provider.getSigner(FXS_TEMPLE_WHALE);
-    governance = ethers.provider.getSigner(LIQUIDLOCKER_GOVERNANCE);
-
-    /* ==== Give Ether for Transactions ==== */
-    await account_1.sendTransaction({
-      to: FXS_SUSHI_WHALE,
-      value: ethers.utils.parseEther("20.0")
-    });
-    await account_1.sendTransaction({
-      to: FXS_TEMPLE_WHALE,
-      value: ethers.utils.parseEther("10.0")
-    });
-    await fxs_sushi_LP.connect(whale_fxs_sushi).transfer(account_1._address, ethers.utils.parseEther("100.0"));
+    /* ==== Give LP ==== */
     await fxs_temple_LP.connect(whale_fxs_temple).transfer(account_1._address, ethers.utils.parseEther("100.0"));
-    await liquidLocker.connect(governance).setGovernance(strategyFRAX.address);
   });
 
   /* ========================================== */
   /* ********** Begining of the test ********** */
   /* ========================================== */
-  it("should do nothing", async function () {
-    const STRATEGY = await strategyFRAX.address;
-    const BAL = fxs_temple_LP.balanceOf(account_1._address);
+  it("Should try to deposit through LiquidLocker", async function () {
+    const BAL = await fxs_temple_LP.connect(account_1).balanceOf(account_1._address);
+    await strategyFRAX.connect(deployer).toggleVault(fxs_templeVault.address);
+    await strategyFRAX.connect(deployer).setGauge(FXS_TEMPLE_ADDRESS, FXS_TEMPLE_LOCKER_ADDRESS);
     await fxs_temple_LP.connect(account_1).approve(fxs_templeVault.address, BAL);
-    await fxs_templeVault.connect(account_1).deposit(BAL, WEEK);
-    console.log("Strategy: \t", STRATEGY);
+    await fxs_templeVault.connect(account_1).deposit(BAL, MAXLOCK);
+    const LIST = await strategyFRAX.getKekIdList(FXS_TEMPLE_ADDRESS);
+    const gauge = await strategyFRAX.gauges(FXS_TEMPLE_ADDRESS);
+    console.log("Amount deposited: ", (BAL / 10 ** 18).toString());
+    console.log("gauge: ", gauge);
+    console.log(LIST);
   });
 });

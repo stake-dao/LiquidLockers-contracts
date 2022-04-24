@@ -21,6 +21,8 @@ contract FraxStrategy is BaseStrategy {
 		CLAIMERREWARD
 	}
 
+	mapping(address => bytes32[]) public kekIdList;
+
 	/* ========== CONSTRUCTOR ========== */
 	constructor(
 		ILocker _locker,
@@ -41,11 +43,15 @@ contract FraxStrategy is BaseStrategy {
 	) public onlyApprovedVault {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
+
 		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, 0));
 		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, _amount));
-
 		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("stakeLocked(uint256,uint256)", _amount, _sec));
 		require(success, "Deposit failed!");
+
+		uint256 _lockedStakeLength = ILiquidityGaugeFRAX(gauge).lockedStakesOfLength(address(locker));
+		bytes32 _kekId = ILiquidityGaugeFRAX(gauge).lockedStakesOf(address(locker))[_lockedStakeLength - 1].kek_id;
+		kekIdList[_token].push(_kekId);
 		emit Deposited(gauge, _token, _amount);
 	}
 
@@ -119,6 +125,10 @@ contract FraxStrategy is BaseStrategy {
 			pendings[i] = pendingReward;
 		}
 		return pendings;
+	}
+
+	function getKekIdList(address _token) public view returns (bytes32[] memory) {
+		return (kekIdList[_token]);
 	}
 
 	function boost(address _gauge) external override onlyGovernance {

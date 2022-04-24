@@ -101,9 +101,6 @@ export type { AngleVault } from "./AngleVault";
 export type { BaseStrategy } from "./BaseStrategy";
 export type { FraxStrategy } from "./FraxStrategy";
 export type { FraxVault } from "./FraxVault";
-export type { ILiquidLocker } from "./ILiquidLocker";
-export type { ILPLocker } from "./ILPLocker";
-export type { StrategyProxyFRAX } from "./StrategyProxyFRAX";
 
 export { Initializable__factory } from "./factories/Initializable__factory";
 export { ReentrancyGuardUpgradeable__factory } from "./factories/ReentrancyGuardUpgradeable__factory";
@@ -205,6 +202,3 @@ export { AngleVault__factory } from "./factories/AngleVault__factory";
 export { BaseStrategy__factory } from "./factories/BaseStrategy__factory";
 export { FraxStrategy__factory } from "./factories/FraxStrategy__factory";
 export { FraxVault__factory } from "./factories/FraxVault__factory";
-export { ILiquidLocker__factory } from "./factories/ILiquidLocker__factory";
-export { ILPLocker__factory } from "./factories/ILPLocker__factory";
-export { StrategyProxyFRAX__factory } from "./factories/StrategyProxyFRAX__factory";
