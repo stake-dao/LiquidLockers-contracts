@@ -17,4 +17,6 @@ interface ILiquidityGaugeFRAX {
 	function lockedStakesOf(address account) external view returns (LockedStake[] memory);
 
 	function lockedStakesOfLength(address account) external view returns (uint256);
+
+	function lockedLiquidityOf(address account) external view returns (uint256);
 }

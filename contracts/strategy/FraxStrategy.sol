@@ -10,6 +10,7 @@ import "../interfaces/IMultiRewards.sol";
 contract FraxStrategy is BaseStrategy {
 	using SafeERC20 for IERC20;
 	FxsAccumulator public accumulator;
+	bytes public result;
 	struct ClaimerReward {
 		address rewardToken;
 		uint256 amount;
@@ -41,14 +42,30 @@ contract FraxStrategy is BaseStrategy {
 	) public onlyApprovedVault returns (bytes32) {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
+		IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+		IERC20(_token).approve(address(locker), _amount);
 
+		locker.execute(
+			_token,
+			0,
+			abi.encodeWithSignature("transferFrom(address,address,uint256)", address(this), address(locker), _amount)
+		);
 		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, 0));
 		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, _amount));
+		uint256 _lockedLiquidity = ILiquidityGaugeFRAX(gauge).lockedLiquidityOf(address(locker));
 		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("stakeLocked(uint256,uint256)", _amount, _sec));
 		require(success, "Deposit failed!");
 
+		// Fetching the kekid directly form the calling of the stakeLocked function
+		// with result from execute seems not working. Can be proposed : two Solutions :
+		// 1.
 		uint256 _lockedStakeLength = ILiquidityGaugeFRAX(gauge).lockedStakesOfLength(address(locker));
 		bytes32 _kekId = ILiquidityGaugeFRAX(gauge).lockedStakesOf(address(locker))[_lockedStakeLength - 1].kek_id;
+		// 2.
+		bytes32 _kekIdCalculated = keccak256(abi.encodePacked(address(locker), block.timestamp, _amount, _lockedLiquidity));
+		// Idea : second seems better
+
+		require(_kekId == _kekIdCalculated);
 		emit Deposited(gauge, _token, _amount);
 		return (_kekId);
 	}
@@ -59,16 +76,15 @@ contract FraxStrategy is BaseStrategy {
 		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("getReward(address)", address(this)));
 		require(success, "getReward failed");
 		uint256 rewardLength = ILiquidityGaugeFRAX(gauge).getAllRewardTokens().length;
-		for (uint8 i = 0; i < rewardLength; i++) {
+		for (uint256 i = 0; i < rewardLength; i++) {
 			address rewardToken = ILiquidityGaugeFRAX(gauge).getAllRewardTokens()[i];
 			if (rewardToken == address(0)) {
 				break;
 			}
 			uint256 rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
 			if (rewardsBalance == 0) {
-				break;
+				continue;
 			}
-			// Maybe this could be good the check if the amount is > 0 ?
 			uint256 multisigFee = (rewardsBalance * perfFee[gauge]) / BASE_FEE;
 			uint256 accumulatorPart = (rewardsBalance * accumulatorFee) / BASE_FEE;
 			uint256 veSDTPart = (rewardsBalance * veSDTFee) / BASE_FEE;
@@ -91,7 +107,8 @@ contract FraxStrategy is BaseStrategy {
 	Global path of the LP token : 
 	frax gauge => frax locker => frax vault => user
 	Optimised path of the LP token : 
-	frax gauge => frax vault => user
+	frax gauge => frax vault => user // better
+
 	But withdrawLocked with a specified address is not permitted for every frax gauge
 	So do we want to have a global path logic, who is the same for every frax gauge 
 	or do we want to optimise path when possible with a specified withdraw address? 
@@ -99,21 +116,21 @@ contract FraxStrategy is BaseStrategy {
 	Or maybe we will have to create different withdraw function, depending 
 	on the withdrawLocked function signature?
 
-	What about calling claim function during the withdraw?  
+	What about calling claim function during the withdraw? Answer : No 
 
 	*/
 	// Todo : rename the function
 	function withdraw2(address _token, bytes32 _kekid) public onlyApprovedVault {
-		uint256 _before = IERC20(_token).balanceOf(address(locker));
+		//using require instead of modifier for saving gas
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
+		uint256 _before = IERC20(_token).balanceOf(address(locker));
 		(bool success, ) = locker.execute(
 			gauge,
 			0,
 			abi.encodeWithSignature("withdrawLocked(bytes32,address)", _kekid, address(locker)) // remark on the passes address
 		);
-		require(success, "Withdraw failed!");
-		// what about trigger claim fucntion at this point? 
+		require(success, "Withdraw failed here!");
 		uint256 _after = IERC20(_token).balanceOf(address(locker));
 		uint256 _net = _after - _before;
 

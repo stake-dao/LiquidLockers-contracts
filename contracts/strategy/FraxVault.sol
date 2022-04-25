@@ -10,14 +10,19 @@ import "./FraxStrategy.sol";
 
 /**
 Idea :
-Do we want to make the sdLPToken transferable ?
-If yes, it could be usefull to generate a ERC721 instead of a ERC20 as sdLPToken
-because, each deposit are differents, due to the kekid creation on each deposit.
+Do we want to make the sdLPToken transferable ? Answer : No
 */
 
 contract FraxVault is ERC20Upgradeable {
 	using SafeERC20Upgradeable for ERC20Upgradeable;
 	using AddressUpgradeable for address;
+
+	struct LockInformations {
+		address owner;
+		uint256 amount;
+		uint256 start;
+		uint256 duration;
+	}
 
 	IERC20 public token;
 	address public governance;
@@ -27,11 +32,7 @@ contract FraxVault is ERC20Upgradeable {
 	FraxStrategy public fraxStrategy;
 
 	mapping(address => bytes32[]) public kekIdPerUser;
-
-	/*
-	uint256 public min; // not used anymore
-	uint256 public constant max = 10000; // not used anymore
-	*/
+	mapping(bytes32 => LockInformations) public infosPerKekId;
 
 	event Earn(address _token, uint256 _amount);
 	event Deposit(address _depositor, uint256 _amount);
@@ -48,7 +49,6 @@ contract FraxVault is ERC20Upgradeable {
 		token = IERC20(_token);
 		governance = _governance;
 		withdrawalFee = 50; // %0.5
-		//min = 10000;
 		fraxStrategy = _fraxStrategy;
 	}
 
@@ -57,16 +57,16 @@ contract FraxVault is ERC20Upgradeable {
 	Do we want to send directly LP token to the liquid locker, or make it through different step ?
 
 	Optimised path for LP token : 
-	user => frax locker => frax gauge
+	user => frax vault => frax locker => frax gauge
 	Multiple step path for LP token :
-	user => frax vault => frax stratehy => frax locker => frax gauge
-
-	imo optimised path will save gas
+	user => frax vault => frax strategy => frax locker => frax gauge // better
 	*/
 
 	function deposit(uint256 _amount, uint256 _sec) public {
 		require(address(multiRewardsGauge) != address(0), "Gauge not yet initialized");
-		token.transferFrom(msg.sender, LIQUIDLOCKER, _amount);
+
+		token.transferFrom(msg.sender, address(this), _amount);
+		token.approve(address(fraxStrategy), _amount);
 
 		uint256 _sdAmount = (_sec * _amount) / (60 * 60 * 24 * 364);
 		_mint(address(this), _sdAmount);
@@ -76,31 +76,62 @@ contract FraxVault is ERC20Upgradeable {
 
 		bytes32 _kekId = fraxStrategy.deposit(address(token), _amount, _sec);
 		kekIdPerUser[msg.sender].push(_kekId);
+
+		infosPerKekId[_kekId] = LockInformations(msg.sender, _amount, block.timestamp, _sec);
 		emit Deposit(msg.sender, _amount);
 	}
 
+	// Really messy at the moment
 	function withdraw(bytes32 _kekId) public {
-		require(isOwner(msg.sender, _kekId), "not owner of this kekid"); // Useless
-		// Todo : deal with sdLPToken to burn and so on
+		require(infosPerKekId[_kekId].owner == msg.sender, "not owner of this kekid");
+
+		LockInformations storage _infos = infosPerKekId[_kekId];
+		uint256 _shares = (_infos.amount * _infos.duration) / (60 * 60 * 24 * 364);
+		uint256 userTotalShares = IMultiRewards(multiRewardsGauge).stakeOf(msg.sender);
+		require(_shares <= userTotalShares, "Not enough staked");
+
+		IMultiRewards(multiRewardsGauge).withdrawFor(msg.sender, _shares);
+		/* Burn sdLPToken */
+		_burn(address(this), _shares);
+		_infos.owner = address(0);
+		remove(getIndexKekId(msg.sender, _kekId), msg.sender);
+
 		uint256 _before = token.balanceOf(address(this));
 		fraxStrategy.withdraw2(address(token), _kekId);
-		uint256 _after = token.balanceOf(address(this));
-		uint256 _net = _after - _before;
-		token.transfer(msg.sender, _net);
+		uint256 _net = token.balanceOf(address(this)) - _before;
+		uint256 withdrawFee = 0; //(_net * withdrawalFee) / 10000;
+		token.transfer(governance, withdrawFee);
+
+		/* Burn gauge multi reward token */
+		IMultiRewards(multiRewardsGauge).burnFrom(msg.sender, _shares);
+
+		token.transfer(msg.sender, _shares - withdrawFee);
+		emit Withdraw(msg.sender, _shares - withdrawFee);
+	}
+
+	function getLockedInformations(bytes32 _kekId) public view returns (LockInformations memory) {
+		return (infosPerKekId[_kekId]);
 	}
 
 	function getKekIdUser(address _address) public view returns (bytes32[] memory) {
 		return (kekIdPerUser[_address]);
 	}
 
-	function isOwner(address _address, bytes32 _kekId) public view returns (bool) {
-		bool _isOwner = false;
-		for (uint256 i; i < kekIdPerUser[_address].length; i++) {
-			if (kekIdPerUser[_address][i] == _kekId) {
-				_isOwner = true;
+	function getIndexKekId(address _address, bytes32 _kekId) public view returns (uint256) {
+		uint256 _position;
+		bytes32[] memory arr = kekIdPerUser[_address];
+		for (uint256 i; i < arr.length; i++) {
+			if (arr[i] == _kekId) {
+				_position = i;
+				break;
 			}
 		}
-		return (_isOwner);
+		return (_position);
+	}
+
+	function remove(uint256 _index, address _address) private {
+		kekIdPerUser[_address][_index] = kekIdPerUser[_address][kekIdPerUser[_address].length - 1];
+		kekIdPerUser[_address].pop();
 	}
 
 	// No more earn function because all deposit are differents
@@ -117,6 +148,7 @@ contract FraxVault is ERC20Upgradeable {
 		return (token.balanceOf(address(this)) * min) / max;
 	}*/
 
+	// use enum for all of the setter
 	function setGovernance(address _governance) public {
 		require(msg.sender == governance, "!governance");
 		governance = _governance;
