@@ -8,7 +8,13 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../interfaces/IMultiRewards.sol";
 import "./FraxStrategy.sol";
 
-// Maybe we have to create a ERC721 instead of ERC20? Because each deposit are unique
+/**
+Idea :
+Do we want to make the sdLPToken transferable ?
+If yes, it could be usefull to generate a ERC721 instead of a ERC20 as sdLPToken
+because, each deposit are differents, due to the kekid creation on each deposit.
+*/
+
 contract FraxVault is ERC20Upgradeable {
 	using SafeERC20Upgradeable for ERC20Upgradeable;
 	using AddressUpgradeable for address;
@@ -19,6 +25,8 @@ contract FraxVault is ERC20Upgradeable {
 	address public multiRewardsGauge;
 	address public constant LIQUIDLOCKER = 0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f;
 	FraxStrategy public fraxStrategy;
+
+	mapping(address => bytes32[]) public kekIdPerUser;
 
 	/*
 	uint256 public min; // not used anymore
@@ -44,18 +52,55 @@ contract FraxVault is ERC20Upgradeable {
 		fraxStrategy = _fraxStrategy;
 	}
 
+	/**
+	Idea :
+	Do we want to send directly LP token to the liquid locker, or make it through different step ?
+
+	Optimised path for LP token : 
+	user => frax locker => frax gauge
+	Multiple step path for LP token :
+	user => frax vault => frax stratehy => frax locker => frax gauge
+
+	imo optimised path will save gas
+	*/
+
 	function deposit(uint256 _amount, uint256 _sec) public {
 		require(address(multiRewardsGauge) != address(0), "Gauge not yet initialized");
 		token.transferFrom(msg.sender, LIQUIDLOCKER, _amount);
-		// Do we want to send directly to the liquid locker, or make it through different step like
-		// first on this vault, then on the strategy, then on the LIQUIDLOCKER?
+
 		uint256 _sdAmount = (_sec * _amount) / (60 * 60 * 24 * 364);
 		_mint(address(this), _sdAmount);
 		ERC20Upgradeable(address(this)).approve(multiRewardsGauge, _sdAmount);
 		IMultiRewards(multiRewardsGauge).stakeFor(msg.sender, _sdAmount);
 		IMultiRewards(multiRewardsGauge).mintFor(msg.sender, _sdAmount);
-		fraxStrategy.deposit(address(token), _amount, _sec);
+
+		bytes32 _kekId = fraxStrategy.deposit(address(token), _amount, _sec);
+		kekIdPerUser[msg.sender].push(_kekId);
 		emit Deposit(msg.sender, _amount);
+	}
+
+	function withdraw(bytes32 _kekId) public {
+		require(isOwner(msg.sender, _kekId), "not owner of this kekid"); // Useless
+		// Todo : deal with sdLPToken to burn and so on
+		uint256 _before = token.balanceOf(address(this));
+		fraxStrategy.withdraw2(address(token), _kekId);
+		uint256 _after = token.balanceOf(address(this));
+		uint256 _net = _after - _before;
+		token.transfer(msg.sender, _net);
+	}
+
+	function getKekIdUser(address _address) public view returns (bytes32[] memory) {
+		return (kekIdPerUser[_address]);
+	}
+
+	function isOwner(address _address, bytes32 _kekId) public view returns (bool) {
+		bool _isOwner = false;
+		for (uint256 i; i < kekIdPerUser[_address].length; i++) {
+			if (kekIdPerUser[_address][i] == _kekId) {
+				_isOwner = true;
+			}
+		}
+		return (_isOwner);
 	}
 
 	// No more earn function because all deposit are differents

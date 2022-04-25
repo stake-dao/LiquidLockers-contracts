@@ -21,8 +21,6 @@ contract FraxStrategy is BaseStrategy {
 		CLAIMERREWARD
 	}
 
-	mapping(address => bytes32[]) public kekIdList;
-
 	/* ========== CONSTRUCTOR ========== */
 	constructor(
 		ILocker _locker,
@@ -40,7 +38,7 @@ contract FraxStrategy is BaseStrategy {
 		address _token,
 		uint256 _amount,
 		uint256 _sec
-	) public onlyApprovedVault {
+	) public onlyApprovedVault returns (bytes32) {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
 
@@ -51,33 +49,8 @@ contract FraxStrategy is BaseStrategy {
 
 		uint256 _lockedStakeLength = ILiquidityGaugeFRAX(gauge).lockedStakesOfLength(address(locker));
 		bytes32 _kekId = ILiquidityGaugeFRAX(gauge).lockedStakesOf(address(locker))[_lockedStakeLength - 1].kek_id;
-		kekIdList[_token].push(_kekId);
 		emit Deposited(gauge, _token, _amount);
-	}
-
-	function withdraw(address _token, bytes32 _kekid) public onlyApprovedVault {
-		uint256 _before = IERC20(_token).balanceOf(address(locker));
-		address gauge = gauges[_token];
-		require(gauge != address(0), "!gauge");
-		(bool success, ) = locker.execute(
-			gauge,
-			0,
-			abi.encodeWithSignature("withdrawLocked(bytes32, address)", _kekid, msg.sender)
-		);
-		// Maybe multiple strategy for FRAX, depending of the signature function for the withdrawLocked
-		require(success, "Withdraw failed!");
-		uint256 _after = IERC20(_token).balanceOf(address(locker));
-
-		uint256 _net = _after - _before;
-		(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _net));
-		require(success, "Transfer failed!");
-		emit Withdrawn(gauge, _token, 0);
-		// Maybe modify the event to show the kekid withdrawn?
-	}
-
-	function sendToAccumulator(address _token, uint256 _amount) external onlyGovernance {
-		IERC20(_token).approve(address(accumulator), _amount);
-		accumulator.depositToken(_token, _amount);
+		return (_kekId);
 	}
 
 	function claim(address _token) external override {
@@ -85,7 +58,8 @@ contract FraxStrategy is BaseStrategy {
 		require(gauge != address(0), "!gauge");
 		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("getReward(address)", address(this)));
 		require(success, "getReward failed");
-		for (uint8 i = 0; i < 8; i++) {
+		uint256 rewardLength = ILiquidityGaugeFRAX(gauge).getAllRewardTokens().length;
+		for (uint8 i = 0; i < rewardLength; i++) {
 			address rewardToken = ILiquidityGaugeFRAX(gauge).getAllRewardTokens()[i];
 			if (rewardToken == address(0)) {
 				break;
@@ -102,13 +76,55 @@ contract FraxStrategy is BaseStrategy {
 			IERC20(rewardToken).approve(address(accumulator), accumulatorPart);
 			accumulator.depositToken(rewardToken, accumulatorPart);
 			IERC20(rewardToken).transfer(rewardsReceiver, multisigFee);
-			IERC20(rewardToken).transfer(veSDTFeeProxy, veSDTPart);
+			// To be setup after
+			//IERC20(rewardToken).transfer(veSDTFeeProxy, veSDTPart);
 			IERC20(rewardToken).transfer(msg.sender, claimerPart);
 			uint256 netRewards = rewardsBalance - multisigFee - accumulatorPart - veSDTPart - claimerPart;
 			IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
-			IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, netRewards);
+			// To be setup after
+			//IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, netRewards); // To be setup after
 			emit Claimed(gauge, rewardToken, rewardsBalance);
 		}
+	}
+
+	/*
+	Global path of the LP token : 
+	frax gauge => frax locker => frax vault => user
+	Optimised path of the LP token : 
+	frax gauge => frax vault => user
+	But withdrawLocked with a specified address is not permitted for every frax gauge
+	So do we want to have a global path logic, who is the same for every frax gauge 
+	or do we want to optimise path when possible with a specified withdraw address? 
+
+	Or maybe we will have to create different withdraw function, depending 
+	on the withdrawLocked function signature?
+
+	What about calling claim function during the withdraw?  
+
+	*/
+	// Todo : rename the function
+	function withdraw2(address _token, bytes32 _kekid) public onlyApprovedVault {
+		uint256 _before = IERC20(_token).balanceOf(address(locker));
+		address gauge = gauges[_token];
+		require(gauge != address(0), "!gauge");
+		(bool success, ) = locker.execute(
+			gauge,
+			0,
+			abi.encodeWithSignature("withdrawLocked(bytes32,address)", _kekid, address(locker)) // remark on the passes address
+		);
+		require(success, "Withdraw failed!");
+		// what about trigger claim fucntion at this point? 
+		uint256 _after = IERC20(_token).balanceOf(address(locker));
+		uint256 _net = _after - _before;
+
+		(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _net));
+		require(success, "Transfer failed!");
+		emit Withdrawn(gauge, _token, 0);
+	}
+
+	function sendToAccumulator(address _token, uint256 _amount) external onlyGovernance {
+		IERC20(_token).approve(address(accumulator), _amount);
+		accumulator.depositToken(_token, _amount);
 	}
 
 	function claimerPendingReward(address _token) external view returns (ClaimerReward[] memory) {
@@ -125,10 +141,6 @@ contract FraxStrategy is BaseStrategy {
 			pendings[i] = pendingReward;
 		}
 		return pendings;
-	}
-
-	function getKekIdList(address _token) public view returns (bytes32[] memory) {
-		return (kekIdList[_token]);
 	}
 
 	function boost(address _gauge) external override onlyGovernance {

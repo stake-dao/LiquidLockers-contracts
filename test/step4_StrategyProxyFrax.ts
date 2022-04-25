@@ -53,7 +53,7 @@ describe("Testing the Strategy Proxy for FRAX", function () {
 
   /* ==== Contract ==== */
   let StrategyProxyFRAX;
-  let strategyFRAX: Contract;
+  let strategy: Contract;
   let fxs_templeVault: Contract;
   let fraxVaultFactoryContract: Contract;
   let fxs_templeMultiGauge: Contract;
@@ -91,25 +91,28 @@ describe("Testing the Strategy Proxy for FRAX", function () {
     liquidLocker = await ethers.getContractAt(LIQUIDLOCKER_ABI, LIQUIDLOCKER_ADDRESS);
     fxs_temple_LP = await ethers.getContractAt(ERC20_ABI, FXS_TEMPLE_ADDRESS);
 
-    /* ==== Deploye Strategy Proxy FRAX ==== */
+    /* ==== Deploye Strategy ==== */
     StrategyProxyFRAX = await ethers.getContractFactory("FraxStrategy");
-    strategyFRAX = await StrategyProxyFRAX.connect(deployer).deploy(
+    strategy = await StrategyProxyFRAX.connect(deployer).deploy(
       liquidLocker.address,
       deployer._address,
       dummyMs.address,
       FXS_ACCUMULATOR
     );
-    await liquidLocker.connect(governance).setGovernance(strategyFRAX.address);
+    await liquidLocker.connect(governance).setGovernance(strategy.address);
 
+    /* ==== Deploye Vault Facory ==== */
     const fraxVaultFactory = await ethers.getContractFactory("FraxVaultFactory");
     fraxVaultFactoryContract = await fraxVaultFactory.deploy();
+
+    /* ==== Deploye Vault ==== */
     const cloneTx = await (
       await fraxVaultFactoryContract.cloneAndInit(
         FXS_TEMPLE_ADDRESS,
         deployer._address,
         "Stake Dao FXSTEMPLE",
         "sdFXSTEMPLE",
-        strategyFRAX.address,
+        strategy.address,
         deployer._address,
         "Stake Dao FXSTEMPLE gauge",
         "sdFXSTEMPLE-gauge"
@@ -118,7 +121,7 @@ describe("Testing the Strategy Proxy for FRAX", function () {
     fxs_templeVault = await ethers.getContractAt("FraxVault", cloneTx.events[0].args[0]);
     fxs_templeMultiGauge = await ethers.getContractAt("GaugeMultiRewards", cloneTx.events[1].args[0]);
     fxs_templeLiquidityGauge = await ethers.getContractAt("LiquidityGaugeV4", FXS_TEMPLE_LOCKER_ADDRESS);
-    await strategyFRAX.connect(deployer).setMultiGauge(FXS_TEMPLE_LOCKER_ADDRESS, fxs_templeMultiGauge.address);
+    await strategy.connect(deployer).setMultiGauge(FXS_TEMPLE_LOCKER_ADDRESS, fxs_templeMultiGauge.address);
     //console.log(cloneTx);
 
     /* ==== Give LP ==== */
@@ -130,14 +133,28 @@ describe("Testing the Strategy Proxy for FRAX", function () {
   /* ========================================== */
   it("Should try to deposit through LiquidLocker", async function () {
     const BAL = await fxs_temple_LP.connect(account_1).balanceOf(account_1._address);
-    await strategyFRAX.connect(deployer).toggleVault(fxs_templeVault.address);
-    await strategyFRAX.connect(deployer).setGauge(FXS_TEMPLE_ADDRESS, FXS_TEMPLE_LOCKER_ADDRESS);
+    await strategy.connect(deployer).toggleVault(fxs_templeVault.address);
+    await strategy.connect(deployer).setGauge(FXS_TEMPLE_ADDRESS, FXS_TEMPLE_LOCKER_ADDRESS);
     await fxs_temple_LP.connect(account_1).approve(fxs_templeVault.address, BAL);
-    await fxs_templeVault.connect(account_1).deposit(BAL, MAXLOCK);
-    const LIST = await strategyFRAX.getKekIdList(FXS_TEMPLE_ADDRESS);
-    const gauge = await strategyFRAX.gauges(FXS_TEMPLE_ADDRESS);
-    console.log("Amount deposited: ", (BAL / 10 ** 18).toString());
-    console.log("gauge: ", gauge);
-    console.log(LIST);
+    await fxs_templeVault.connect(account_1).deposit(BAL, 4 * WEEK);
+    const LIST = await fxs_templeVault.getKekIdUser(account_1._address);
+    const gauge = await strategy.gauges(FXS_TEMPLE_ADDRESS);
+    //console.log("Amount deposited: ", (BAL / 10 ** 18).toString());
+    //console.log("gauge: ", gauge);
+    //console.log(LIST);
+  });
+  it("Should test to claim", async function () {
+    //this.enableTimeouts(false);
+    await network.provider.send("evm_increaseTime", [5 * WEEK]);
+    await network.provider.send("evm_mine", []);
+    await strategy.connect(account_1).claim(FXS_TEMPLE_ADDRESS);
+  });
+  it("Should withdraw lp", async function () {
+    const BEFORE = await fxs_temple_LP.balanceOf(account_1._address);
+    const LIST = await fxs_templeVault.getKekIdUser(account_1._address);
+    await fxs_templeVault.connect(account_1).withdraw(LIST[0]);
+    const AFTER = await fxs_temple_LP.balanceOf(account_1._address);
+    console.log(BEFORE.toString());
+    console.log(AFTER.toString());
   });
 });
