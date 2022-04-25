@@ -171,4 +171,17 @@ contract AngleStrategy is BaseStrategy {
 			claimerReward = _newFee;
 		}
 	}
+
+	/// @notice execute a function
+	/// @param to Address to sent the value to
+	/// @param value Value to be sent
+	/// @param data Call function data
+	function execute(
+		address to,
+		uint256 value,
+		bytes calldata data
+	) external onlyGovernance returns (bool, bytes memory) {
+		(bool success, bytes memory result) = to.call{ value: value }(data);
+		return (success, result);
+	}
 }
