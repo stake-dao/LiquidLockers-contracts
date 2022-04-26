@@ -75,17 +75,17 @@ contract AngleVault is ERC20Upgradeable {
 		withdraw(balanceOf(msg.sender));
 	}
 
-	function setGovernance(address _governance) public {
+	function setGovernance(address _governance) external {
 		require(msg.sender == governance, "!governance");
 		governance = _governance;
 	}
 
-	function setGaugeMultiRewards(address _multiRewardsGauge) public {
+	function setGaugeMultiRewards(address _multiRewardsGauge) external {
 		require(msg.sender == governance, "!governance");
 		multiRewardsGauge = _multiRewardsGauge;
 	}
 
-	function setAngleStrategy(AngleStrategy _newStrat) public {
+	function setAngleStrategy(AngleStrategy _newStrat) external {
 		require(msg.sender == governance, "!governance");
 		angleStrategy = _newStrat;
 	}
@@ -109,7 +109,6 @@ contract AngleVault is ERC20Upgradeable {
 	}
 
 	function earn() external {
-		require(msg.sender == governance, "!governance");
 		uint256 tokenBalance = available();
 		token.increaseAllowance(address(angleStrategy), tokenBalance);
 		angleStrategy.deposit(address(token), tokenBalance);
