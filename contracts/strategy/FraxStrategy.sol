@@ -119,8 +119,11 @@ contract FraxStrategy is BaseStrategy {
 	What about calling claim function during the withdraw? Answer : No 
 
 	*/
-	// Todo : rename the function
-	function withdraw2(address _token, bytes32 _kekid) public onlyApprovedVault {
+	function withdraw(
+		address _token,
+		bytes32 _kekid,
+		bytes memory _signature
+	) public onlyApprovedVault {
 		//using require instead of modifier for saving gas
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
@@ -128,7 +131,8 @@ contract FraxStrategy is BaseStrategy {
 		(bool success, ) = locker.execute(
 			gauge,
 			0,
-			abi.encodeWithSignature("withdrawLocked(bytes32,address)", _kekid, address(locker)) // remark on the passes address
+			_signature
+			//abi.encodeWithSignature("withdrawLocked(bytes32,address)", _kekid, address(locker)) // remark on the passes address
 		);
 		require(success, "Withdraw failed here!");
 		uint256 _after = IERC20(_token).balanceOf(address(locker));

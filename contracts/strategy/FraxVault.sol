@@ -20,6 +20,7 @@ contract FraxVault is ERC20Upgradeable {
 	struct LockInformations {
 		address owner;
 		uint256 amount;
+		uint256 shares;
 		uint256 start;
 		uint256 duration;
 	}
@@ -77,36 +78,41 @@ contract FraxVault is ERC20Upgradeable {
 		bytes32 _kekId = fraxStrategy.deposit(address(token), _amount, _sec);
 		kekIdPerUser[msg.sender].push(_kekId);
 
-		infosPerKekId[_kekId] = LockInformations(msg.sender, _amount, block.timestamp, _sec);
+		infosPerKekId[_kekId] = LockInformations(msg.sender, _amount, _sdAmount, block.timestamp, _sec);
 		emit Deposit(msg.sender, _amount);
 	}
 
-	// Really messy at the moment
 	function withdraw(bytes32 _kekId) public {
 		require(infosPerKekId[_kekId].owner == msg.sender, "not owner of this kekid");
+		LockInformations memory _infos = infosPerKekId[_kekId];
 
-		LockInformations storage _infos = infosPerKekId[_kekId];
-		uint256 _shares = (_infos.amount * _infos.duration) / (60 * 60 * 24 * 364);
+		/* Shares calculation */
+		uint256 _shares = _infos.shares;
 		uint256 userTotalShares = IMultiRewards(multiRewardsGauge).stakeOf(msg.sender);
 		require(_shares <= userTotalShares, "Not enough staked");
 
+		/* Multi Reward Gauge */
 		IMultiRewards(multiRewardsGauge).withdrawFor(msg.sender, _shares);
-		/* Burn sdLPToken */
 		_burn(address(this), _shares);
-		_infos.owner = address(0);
-		remove(getIndexKekId(msg.sender, _kekId), msg.sender);
-
-		uint256 _before = token.balanceOf(address(this));
-		fraxStrategy.withdraw2(address(token), _kekId);
-		uint256 _net = token.balanceOf(address(this)) - _before;
-		uint256 withdrawFee = 0; //(_net * withdrawalFee) / 10000;
-		token.transfer(governance, withdrawFee);
-
-		/* Burn gauge multi reward token */
 		IMultiRewards(multiRewardsGauge).burnFrom(msg.sender, _shares);
 
-		token.transfer(msg.sender, _shares - withdrawFee);
-		emit Withdraw(msg.sender, _shares - withdrawFee);
+		/* Update kekId mapping */
+		resetLockedInfos(_kekId);
+		remove(getIndexKekId(msg.sender, _kekId), msg.sender);
+
+		/* Create signature function for the strategy */
+		bytes memory _signature = abi.encodeWithSignature("withdrawLocked(bytes32,address)", _kekId, LIQUIDLOCKER);
+
+		/* Withdraw from frax gauge */
+		uint256 _before = token.balanceOf(address(this));
+		fraxStrategy.withdraw(address(token), _kekId, _signature);
+		uint256 _net = token.balanceOf(address(this)) - _before;
+		uint256 withdrawFee = (_net * withdrawalFee) / 10000;
+
+		/* Transfer */
+		token.transfer(governance, withdrawFee);
+		token.transfer(msg.sender, _infos.amount - withdrawFee);
+		emit Withdraw(msg.sender, _infos.amount - withdrawFee);
 	}
 
 	function getLockedInformations(bytes32 _kekId) public view returns (LockInformations memory) {
@@ -133,6 +139,22 @@ contract FraxVault is ERC20Upgradeable {
 		kekIdPerUser[_address][_index] = kekIdPerUser[_address][kekIdPerUser[_address].length - 1];
 		kekIdPerUser[_address].pop();
 	}
+
+	function resetLockedInfos(bytes32 _kekId) private {
+		require(infosPerKekId[_kekId].owner != address(0), "LockedInfos not exist");
+		infosPerKekId[_kekId] = LockInformations(address(0), 0, 0, 0, 0);
+	}
+
+	/*
+	function createSignature(
+		string _string,
+		address[] _address,
+		uint256[] _uint256,
+		bytes _bytes,
+		bytes32[] _bytes32
+	) public {
+
+	}*/
 
 	// No more earn function because all deposit are differents
 	/*
