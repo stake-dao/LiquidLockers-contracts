@@ -114,6 +114,7 @@ describe("Testing the Strategy Proxy for FRAX", function () {
         "Stake Dao FXSTEMPLE",
         "sdFXSTEMPLE",
         strategy.address,
+        "withdrawLocked(bytes32,address)", // Here is the feature :) 
         deployer._address,
         "Stake Dao FXSTEMPLE gauge",
         "sdFXSTEMPLE-gauge"

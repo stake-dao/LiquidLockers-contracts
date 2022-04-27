@@ -39,6 +39,7 @@ contract FraxVaultFactory {
 		string memory _vaultName,
 		string memory _vaultSymbol,
 		FraxStrategy _vaultFraxStrategy,
+		string memory _vaultWithdrawSignature,
 		address _gaugeGovernance,
 		string memory _gaugeName,
 		string memory _gaugeSymbol
@@ -49,7 +50,8 @@ contract FraxVaultFactory {
 			_vaultGovernance,
 			_vaultName,
 			_vaultSymbol,
-			_vaultFraxStrategy
+			_vaultFraxStrategy,
+			_vaultWithdrawSignature
 		);
 		address gaugeImplAddress = _cloneAndInitGauge(
 			gaugeImpl,
@@ -77,14 +79,15 @@ contract FraxVaultFactory {
 		address _governance,
 		string memory _name,
 		string memory _symbol,
-		FraxStrategy _fraxStrategy
+		FraxStrategy _fraxStrategy,
+		string memory _withdrawSignature
 	) internal returns (address) {
 		FraxVault deployed = cloneVault(
 			_impl,
 			_lpToken,
-			keccak256(abi.encodePacked(_governance, _name, _symbol, _fraxStrategy))
+			keccak256(abi.encodePacked(_governance, _name, _symbol, _fraxStrategy, _withdrawSignature))
 		);
-		deployed.init(_lpToken, address(this), _name, _symbol, _fraxStrategy);
+		deployed.init(_lpToken, address(this), _name, _symbol, _fraxStrategy, _withdrawSignature);
 		return address(deployed);
 	}
 

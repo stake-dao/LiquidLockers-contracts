@@ -122,17 +122,22 @@ contract FraxStrategy is BaseStrategy {
 	function withdraw(
 		address _token,
 		bytes32 _kekid,
-		bytes memory _signature
-	) public onlyApprovedVault {
+		string memory _encode
+	)
+		public
+		//bytes memory _signature
+		onlyApprovedVault
+	{
 		//using require instead of modifier for saving gas
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
 		uint256 _before = IERC20(_token).balanceOf(address(locker));
+		//string memory _decode = abi.decode(_encode, (string));
 		(bool success, ) = locker.execute(
 			gauge,
 			0,
-			_signature
-			//abi.encodeWithSignature("withdrawLocked(bytes32,address)", _kekid, address(locker)) // remark on the passes address
+			//_signature
+			abi.encodeWithSignature(_encode, _kekid, address(locker), 123456) // remark on the passes address
 		);
 		require(success, "Withdraw failed here!");
 		uint256 _after = IERC20(_token).balanceOf(address(locker));

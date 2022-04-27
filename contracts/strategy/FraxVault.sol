@@ -26,6 +26,7 @@ contract FraxVault is ERC20Upgradeable {
 	}
 
 	IERC20 public token;
+	string public withdrawSignature;
 	address public governance;
 	uint256 public withdrawalFee;
 	address public multiRewardsGauge;
@@ -44,13 +45,15 @@ contract FraxVault is ERC20Upgradeable {
 		address _governance,
 		string memory name_,
 		string memory symbol_,
-		FraxStrategy _fraxStrategy
+		FraxStrategy _fraxStrategy,
+		string memory _withdrawSignature
 	) public initializer {
 		__ERC20_init(name_, symbol_);
 		token = IERC20(_token);
 		governance = _governance;
 		withdrawalFee = 50; // %0.5
 		fraxStrategy = _fraxStrategy;
+		withdrawSignature = _withdrawSignature; 
 	}
 
 	/**
@@ -101,11 +104,15 @@ contract FraxVault is ERC20Upgradeable {
 		remove(getIndexKekId(msg.sender, _kekId), msg.sender);
 
 		/* Create signature function for the strategy */
-		bytes memory _signature = abi.encodeWithSignature("withdrawLocked(bytes32,address)", _kekId, LIQUIDLOCKER);
+		// Doesn't work but just to save it
+		//bytes memory _withdrawSignature = abi.encodeWithSignature(_func, _kekId, LIQUIDLOCKER);
+		//bytes32 _signature1 = keccak256(abi.encodeWithSignature(_func, _kekId, LIQUIDLOCKER));
+		//bytes32 _signature2 = keccak256(abi.encodeWithSignature("withdrawLocked(bytes32,address)", _kekId, LIQUIDLOCKER));
+		//require(_signature1 == _signature2, "not the same");
 
 		/* Withdraw from frax gauge */
 		uint256 _before = token.balanceOf(address(this));
-		fraxStrategy.withdraw(address(token), _kekId, _signature);
+		fraxStrategy.withdraw(address(token), _kekId, withdrawSignature);
 		uint256 _net = token.balanceOf(address(this)) - _before;
 		uint256 withdrawFee = (_net * withdrawalFee) / 10000;
 
