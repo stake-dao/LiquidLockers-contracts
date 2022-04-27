@@ -69,8 +69,9 @@ contract AngleStrategy is BaseStrategy {
 	function claim(address _token) external override {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
-		ILiquidityGauge(gauge).user_checkpoint(address(locker));
-		(bool success, ) = locker.execute(
+		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("user_checkpoint(address)", address(locker)));
+		require(success, "Checkpoint failed!");
+		(success, ) = locker.execute(
 			gauge,
 			0,
 			abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
