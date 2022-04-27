@@ -6,14 +6,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy("sdCRV", {
-    contract: "sdToken",
-    args: ["Stake DAO CRV", "sdCRV"],
+  await deploy("ClaimRewardsNew", {
+    contract: "ClaimRewards",
     from: deployer,
+    args: [],
     log: true
   });
 };
 export default func;
 
-func.skip = async () => true;
-func.tags = ["sdToken"];
+func.skip = async () => false;
+func.tags = ["ClaimRewardsNew"];
