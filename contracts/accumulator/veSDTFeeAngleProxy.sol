@@ -57,6 +57,13 @@ contract veSDTFeeAngleProxy is Ownable {
 		return outputs[1];
 	}
 
+	function claimableByKeeper() public view returns (uint256) {
+		uint256 angleBalance = IERC20(angle).balanceOf(address(this));
+		uint256[] memory amounts = IUniswapRouter(sushiRouter).getAmountsOut(angleBalance, angleToFraxPath);
+		uint256 minAmount = (amounts[angleToFraxPath.length - 1] * (10000 - maxSlippage)) / (10000);
+		return (minAmount * claimerFee) / BASE_FEE;
+	}
+
 	function setSlippage(uint256 newSlippage) external onlyOwner {
 		maxSlippage = newSlippage;
 	}
@@ -67,5 +74,9 @@ contract veSDTFeeAngleProxy is Ownable {
 
 	function setSwapPath(address[] memory newPath) external onlyOwner {
 		angleToFraxPath = newPath;
+	}
+
+	function recoverERC20(address _token, uint256 _amount) external onlyOwner {
+		IERC20(_token).transfer(owner(), _amount);
 	}
 }

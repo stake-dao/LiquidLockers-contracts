@@ -251,6 +251,12 @@ describe("ANGLE Strategy", function () {
       expect(msAngleBalanceAfter.sub(msAngleBalanceBefore)).to.be.equal(perfFee);
       expect(accumulatorAngleBalanceAfter.sub(accumulatorAngleBalanceBefore)).to.be.equal(accumulatorPart);
     });
+    it("it should get maximum boost from angle liquidity gauge", async () => {
+      const workingBalance = await sanUsdcEurLiqudityGauge.working_balances(locker.address);
+      const stakedAmount = await sanUsdcEurLiqudityGauge.balanceOf(locker.address);
+      const boost = workingBalance.mul(BigNumber.from(10).pow(18)).div(stakedAmount.mul(4).div(10));
+      expect(boost).to.be.eq(parseEther("2.5"));
+    });
     it("it should be able swap angles and transfer to feeDistributor from veSDTFeeAngleProxy", async () => {
       const fraxBalanceOfClaimer = await frax.balanceOf(localDeployer.address);
       const sd3CrvBalanceOfFeeD = await sdFrax3Crv.balanceOf(STAKEDAO_FEE_DISTRIBUTOR);
@@ -306,6 +312,14 @@ describe("ANGLE Strategy", function () {
       const sanUsdcEurAngleGaugeStakedAfter = await sanDaiEurLiqudityGauge.balanceOf(locker.address);
       expect(sanUsdcEurAngleGaugeStakedBefore).to.be.equal(0);
       expect(sanUsdcEurAngleGaugeStakedAfter).to.be.equal(parseEther("10000"));
+    });
+    it("it should transfer governance of locker by execute function through angleStrategy", async () => {
+      let setGovernanceFunction = ["function setGovernance(address _governance)"];
+      let iSetGovernance = new ethers.utils.Interface(setGovernanceFunction);
+      const data = iSetGovernance.encodeFunctionData("setGovernance", [dummyMs.address]);
+      await strategy.connect(deployer).execute(locker.address, 0, data);
+      const newGovernance = await locker.governance();
+      expect(newGovernance).to.be.equal(dummyMs.address);
     });
   });
 });

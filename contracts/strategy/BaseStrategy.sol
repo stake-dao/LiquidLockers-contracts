@@ -21,8 +21,6 @@ contract BaseStrategy {
 	event Deposited(address _gauge, address _token, uint256 _amount);
 	event Withdrawn(address _gauge, address _token, uint256 _amount);
 	event Claimed(address _gauge, address _token, uint256 _amount);
-	event Boosted(address _gauge, address _user);
-	event RewardReceiverSet(address _gauge, address _receiver);
 	event VaultToggled(address _vault, bool _newState);
 	event GaugeSet(address _gauge, address _token);
 
@@ -51,12 +49,6 @@ contract BaseStrategy {
 	function deposit(address _token, uint256 _amount) external virtual onlyApprovedVault {}
 
 	function withdraw(address _token, uint256 _amount) external virtual onlyApprovedVault {}
-
-	function disableGauge(address _gauge) external virtual onlyGovernance {}
-
-	function boost(address _gauge) external virtual onlyGovernance {}
-
-	function set_rewards_receiver(address _gauge, address _receiver) external virtual onlyGovernance {}
 
 	function claim(address _gauge) external virtual {}
 

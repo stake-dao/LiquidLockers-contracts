@@ -60,10 +60,9 @@ contract AngleVault is ERC20Upgradeable {
 		uint256 tokenBalance = token.balanceOf(address(this));
 		uint256 withdrawFee;
 		if (_shares > tokenBalance) {
-			uint256 beforeBal = token.balanceOf(address(this));
-			angleStrategy.withdraw(address(token), _shares);
-			uint256 withdrawn = token.balanceOf(address(this)) - beforeBal;
-			withdrawFee = (withdrawn * withdrawalFee) / 10000;
+			uint256 amountToWithdraw = _shares - tokenBalance;
+			angleStrategy.withdraw(address(token), amountToWithdraw);
+			withdrawFee = (amountToWithdraw * withdrawalFee) / 10000;
 			token.safeTransfer(governance, withdrawFee);
 		}
 		IMultiRewards(multiRewardsGauge).burnFrom(msg.sender, _shares);

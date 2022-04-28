@@ -26,12 +26,14 @@ contract AngleStrategy is BaseStrategy {
 		ILocker _locker,
 		address _governance,
 		address _receiver,
-		AngleAccumulator _accumulator
+		AngleAccumulator _accumulator,
+		address _veSDTFeeProxy
 	) BaseStrategy(_locker, _governance, _receiver) {
 		veSDTFee = 500; // %5
 		accumulatorFee = 800; // %8
 		claimerReward = 50; //%0.5
 		accumulator = _accumulator;
+		veSDTFeeProxy = _veSDTFeeProxy;
 	}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
@@ -59,11 +61,6 @@ contract AngleStrategy is BaseStrategy {
 		(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _net));
 		require(success, "Transfer failed!");
 		emit Withdrawn(gauge, _token, _amount);
-	}
-
-	function sendToAccumulator(address _token, uint256 _amount) external onlyGovernance {
-		IERC20(_token).approve(address(accumulator), _amount);
-		accumulator.depositToken(_token, _amount);
 	}
 
 	function claim(address _token) external override {
@@ -115,18 +112,6 @@ contract AngleStrategy is BaseStrategy {
 		return pendings;
 	}
 
-	function boost(address _gauge) external override onlyGovernance {
-		(bool success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("user_checkpoint(address)", address(locker)));
-		require(success, "Boost failed!");
-		emit Boosted(_gauge, address(locker));
-	}
-
-	function set_rewards_receiver(address _gauge, address _receiver) external override onlyGovernance {
-		(bool success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("set_rewards_receiver(address)", _receiver));
-		require(success, "Set rewards receiver failed!");
-		emit RewardReceiverSet(_gauge, _receiver);
-	}
-
 	function toggleVault(address _vault) external override onlyGovernance {
 		vaults[_vault] = !vaults[_vault];
 		emit VaultToggled(_vault, vaults[_vault]);
@@ -151,6 +136,10 @@ contract AngleStrategy is BaseStrategy {
 
 	function setRewardsReceiver(address _newRewardsReceiver) external onlyGovernance {
 		rewardsReceiver = _newRewardsReceiver;
+	}
+
+	function setGovernance(address _newGovernance) external onlyGovernance {
+		governance = _newGovernance;
 	}
 
 	function manageFee(

@@ -8,7 +8,7 @@ import "../staking/GaugeMultiRewards.sol";
 
 /**
  * @title Factory contract usefull for creating new angle vaults that supports LP related
- * tto the angle platform, and the gauge multi rewards attached to it.
+ * to the angle platform, and the gauge multi rewards attached to it.
  */
 contract AngleVaultFactory {
 	using ClonesUpgradeable for address;
