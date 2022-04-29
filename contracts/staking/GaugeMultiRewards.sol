@@ -197,6 +197,16 @@ contract GaugeMultiRewards is ReentrancyGuardUpgradeable, PausableUpgradeable, E
 		_burn(_from, _amount);
 	}
 
+	function _transfer(
+		address sender,
+		address recipient,
+		uint256 amount
+	) internal override updateReward(sender) {
+		super._transfer(sender, recipient, amount);
+		_stakes[sender] = _stakes[sender] - amount;
+		_stakes[recipient] = _stakes[recipient] + amount;
+	}
+
 	function decimals() public view override returns (uint8) {
 		return stakingToken.decimals();
 	}

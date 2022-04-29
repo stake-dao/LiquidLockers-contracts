@@ -117,10 +117,16 @@ describe("ANGLE Strategy", function () {
     sdFrax3Crv = await ethers.getContractAt(ERC20ABI, SDFRAX3CRV);
     sdAngleGauge = await ethers.getContractAt("LiquidityGaugeV4", SDANGLEGAUGE);
     angleAccumulator = await ethers.getContractAt("AngleAccumulatorV2", ANGLEACCUMULATOR);
-
-    strategy = await AngleStrategy.deploy(locker.address, deployer._address, dummyMs.address, ANGLEACCUMULATOR);
     const veSdtAngleProxyFactory = await ethers.getContractFactory("veSDTFeeAngleProxy");
     VeSdtProxy = await veSdtAngleProxyFactory.deploy([ANGLE, WETH, FRAX]);
+    strategy = await AngleStrategy.deploy(
+      locker.address,
+      deployer._address,
+      dummyMs.address,
+      ANGLEACCUMULATOR,
+      VeSdtProxy.address
+    );
+
     await locker.connect(deployer).setGovernance(strategy.address);
 
     // await sanUsdcEur.connect(sanLPHolder).transfer(locker.address, parseUnits("10000", "6"));
@@ -149,7 +155,6 @@ describe("ANGLE Strategy", function () {
     sanUsdcEurLiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", sanUSDC_EUR_GAUGE);
     sanDaiEurLiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", sanDAI_EUR_GAUGE);
     await strategy.connect(deployer).setMultiGauge(sanUSDC_EUR_GAUGE, sanUSDCEurMultiGauge.address);
-    await strategy.connect(deployer).setVeSDTProxy(VeSdtProxy.address);
     await strategy.connect(deployer).manageFee(0, sanUsdcEurLiqudityGauge.address, 200); // %2
     await sanUSDCEurMultiGauge.addReward(ANGLE, strategy.address, 60 * 60 * 24 * 7);
   });
@@ -158,32 +163,31 @@ describe("ANGLE Strategy", function () {
     it("Should deposit sanUSDC-EUR to vault and get gauge tokens", async function () {
       const vaultSanUsdcEurBalanceBeforeDeposit = await sanUsdcEur.balanceOf(sanUSDCEurVault.address);
       await sanUsdcEur.connect(sanLPHolder).approve(sanUSDCEurVault.address, parseUnits("1000", 6));
-      await sanUSDCEurVault.connect(sanLPHolder).deposit(parseUnits("1000", 6));
+      await sanUSDCEurVault.connect(sanLPHolder).deposit(parseUnits("1000", 6), false);
       const vaultSanUsdcEurBalanceAfterDeposit = await sanUsdcEur.balanceOf(sanUSDCEurVault.address);
       const gaugeTokenBalanceOfDepositor = await sanUSDCEurMultiGauge.balanceOf(sanLPHolder._address);
       expect(vaultSanUsdcEurBalanceBeforeDeposit).to.be.eq(0);
       expect(vaultSanUsdcEurBalanceAfterDeposit).to.be.equal(parseUnits("1000", 6).toString());
-      expect(gaugeTokenBalanceOfDepositor).to.be.equal(parseUnits("1000", 6).toString());
+      expect(gaugeTokenBalanceOfDepositor).to.be.equal(parseUnits("999", 6).toString());
     });
     it("Should be able to withdraw deposited amount and gauge tokens should be burned", async function () {
       const vaultSanUsdcEurBalanceBeforeWithdraw = await sanUsdcEur.balanceOf(sanUSDCEurVault.address);
-      await sanUsdcEur.connect(sanLPHolder).approve(sanUSDCEurVault.address, parseUnits("1000", 6));
-      await sanUSDCEurVault.connect(sanLPHolder).withdraw(parseUnits("1000", 6));
+      await sanUSDCEurVault.connect(sanLPHolder).withdraw(parseUnits("999", 6));
       const vaultSanUsdcEurBalanceAfterWithdraw = await sanUsdcEur.balanceOf(sanUSDCEurVault.address);
       const gaugeTokenBalanceOfDepositor = await sanUSDCEurMultiGauge.balanceOf(sanLPHolder._address);
       expect(vaultSanUsdcEurBalanceBeforeWithdraw).to.be.gt(0);
-      expect(vaultSanUsdcEurBalanceAfterWithdraw).to.be.eq(0);
+      expect(vaultSanUsdcEurBalanceAfterWithdraw).to.be.eq(parseUnits("1", 6));
       expect(gaugeTokenBalanceOfDepositor).to.be.eq(0);
     });
     it("Shouldn't be able to withdraw when there is no enough gauge token", async function () {
       await sanUsdcEur.connect(sanLPHolder).approve(sanUSDCEurVault.address, parseUnits("1000", 6));
-      await sanUSDCEurVault.connect(sanLPHolder).deposit(parseUnits("1000", 6));
-      await sanUSDCEurMultiGauge.connect(sanLPHolder).transfer(deployer._address, parseUnits("500", 6));
+      await sanUSDCEurVault.connect(sanLPHolder).deposit(parseUnits("1000", 6), false);
+      await sanUSDCEurMultiGauge.connect(sanLPHolder).transfer(deployer._address, parseUnits("499", 6));
       const tx = await sanUSDCEurVault
         .connect(sanLPHolder)
-        .withdraw(parseUnits("1000", 6))
+        .withdraw(parseUnits("999", 6))
         .catch((e: any) => e);
-      expect(tx.message).to.have.string("ERC20: burn amount exceeds balance");
+      expect(tx.message).to.have.string("Not enough staked");
     });
     it("it should not be able withdraw from multigauge if not vault", async () => {
       const stakedBalance = await sanUSDCEurMultiGauge.stakeOf(sanLPHolder._address);
@@ -202,16 +206,19 @@ describe("ANGLE Strategy", function () {
       const tx = await strategy.setGauge(SAN_USDC_EUR, sanUSDC_EUR_GAUGE).catch((e: any) => e);
       expect(tx.message).to.have.string("!governance");
     });
-    it("Should be able to call earn and stake the amounts to the Angle gauge", async function () {
+    it("Should be able to call earn therefore get accumulated fees as staked amount and stake the amounts to the Angle gauge", async function () {
       const sanUsdcEurAngleGaugeStakedBefore = await sanUsdcEurLiqudityGauge.balanceOf(locker.address);
       await strategy.connect(deployer).toggleVault(sanUSDCEurVault.address);
       await strategy.connect(deployer).setGauge(SAN_USDC_EUR, sanUSDC_EUR_GAUGE);
-      const tx = await (await sanUSDCEurVault.earn()).wait();
+      const accumulatedFees = await sanUSDCEurVault.accumulatedFee();
+      const tx = await (await sanUSDCEurVault.deposit(0, true)).wait();
+      const deployerStakedAmount = await sanUSDCEurMultiGauge.stakeOf(localDeployer.address);
       const vaultSanUsdcEurBalanceAfterEarn = await sanUsdcEur.balanceOf(sanUSDCEurVault.address);
       const sanUsdcEurAngleGaugeStakedAfter = await sanUsdcEurLiqudityGauge.balanceOf(locker.address);
       expect(sanUsdcEurAngleGaugeStakedBefore).to.be.eq(0);
-      expect(sanUsdcEurAngleGaugeStakedAfter).to.be.eq(parseUnits("1000", 6));
+      expect(sanUsdcEurAngleGaugeStakedAfter).to.be.eq(parseUnits("1001", 6));
       expect(vaultSanUsdcEurBalanceAfterEarn).to.be.equal(0);
+      expect(deployerStakedAmount).to.be.eq(accumulatedFees);
     });
     it("Should pay withdraw fee if withdraw from Angle gauge", async function () {
       const sanUsdcEurBalanceBeforeWithdraw = await sanUsdcEur.balanceOf(sanLPHolder._address);
@@ -222,13 +229,12 @@ describe("ANGLE Strategy", function () {
       expect(sanUsdcEurBalanceAfterWithdraw.sub(sanUsdcEurBalanceBeforeWithdraw)).to.be.equal(
         parseUnits("500", 6).sub(fee)
       );
-      expect(sanUsdcEurAngleGaugeStakedAfterWithdraw).to.be.equal(parseUnits("500", 6));
+      expect(sanUsdcEurAngleGaugeStakedAfterWithdraw).to.be.equal(parseUnits("501", 6));
     });
 
     it("should be able to claim rewards when some time pass", async () => {
       await sanUsdcEur.connect(sanLPHolder).approve(sanUSDCEurVault.address, parseUnits("100000", 6));
-      await sanUSDCEurVault.connect(sanLPHolder).deposit(parseUnits("100000", 6));
-      await (await sanUSDCEurVault.earn()).wait();
+      await sanUSDCEurVault.connect(sanLPHolder).deposit(parseUnits("100000", 6), true);
       // increase the timestamp by 1 month
       await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 30]);
       await network.provider.send("evm_mine", []);
@@ -296,10 +302,10 @@ describe("ANGLE Strategy", function () {
     it("it should be able to deposit sanDAIEur to new vault", async () => {
       const gaugeTokenBalanceBeforeDeposit = await sanDaiEurMultiGauge.balanceOf(sanDAILPHolder._address);
       await sanDaiEur.connect(sanDAILPHolder).approve(sanDaiEurVault.address, ethers.constants.MaxUint256);
-      await sanDaiEurVault.connect(sanDAILPHolder).deposit(parseEther("10000"));
+      await sanDaiEurVault.connect(sanDAILPHolder).deposit(parseEther("10000"), false);
       const gaugeTokenBalanceAfterDeposit = await sanDaiEurMultiGauge.balanceOf(sanDAILPHolder._address);
       expect(gaugeTokenBalanceBeforeDeposit).to.be.equal(0);
-      expect(gaugeTokenBalanceAfterDeposit.sub(gaugeTokenBalanceBeforeDeposit)).to.be.equal(parseEther("10000"));
+      expect(gaugeTokenBalanceAfterDeposit.sub(gaugeTokenBalanceBeforeDeposit)).to.be.equal(parseEther("9990"));
     });
     it("it should send tokens to angle gauge after call earn for new vault", async () => {
       await strategy.connect(deployer).setMultiGauge(sanDAI_EUR_GAUGE, sanDaiEurMultiGauge.address);
@@ -308,7 +314,7 @@ describe("ANGLE Strategy", function () {
       await strategy.connect(deployer).toggleVault(sanDaiEurVault.address);
       await strategy.connect(deployer).setGauge(SAN_DAI_EUR, sanDAI_EUR_GAUGE);
       const sanUsdcEurAngleGaugeStakedBefore = await sanDaiEurLiqudityGauge.balanceOf(locker.address);
-      await (await sanDaiEurVault.earn()).wait();
+      await (await sanDaiEurVault.deposit(0, true)).wait();
       const sanUsdcEurAngleGaugeStakedAfter = await sanDaiEurLiqudityGauge.balanceOf(locker.address);
       expect(sanUsdcEurAngleGaugeStakedBefore).to.be.equal(0);
       expect(sanUsdcEurAngleGaugeStakedAfter).to.be.equal(parseEther("10000"));
