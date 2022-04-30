@@ -201,7 +201,7 @@ contract GaugeMultiRewards is ReentrancyGuardUpgradeable, PausableUpgradeable, E
 		address sender,
 		address recipient,
 		uint256 amount
-	) internal override updateReward(sender) {
+	) internal override updateReward(sender) updateReward(recipient) {
 		super._transfer(sender, recipient, amount);
 		_stakes[sender] = _stakes[sender] - amount;
 		_stakes[recipient] = _stakes[recipient] + amount;

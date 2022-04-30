@@ -11420,7 +11420,7 @@
       ]
     },
     "AngleVaultFactory": {
-      "address": "0xC23B940f1E47A0373644FD02152dD885eB71e2aA",
+      "address": "0x46Fa5c155901b321b5588986019C68688c374030",
       "abi": [
         {
           "anonymous": false,

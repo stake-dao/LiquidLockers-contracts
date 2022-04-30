@@ -182,12 +182,16 @@ describe("ANGLE Strategy", function () {
     it("Shouldn't be able to withdraw when there is no enough gauge token", async function () {
       await sanUsdcEur.connect(sanLPHolder).approve(sanUSDCEurVault.address, parseUnits("1000", 6));
       await sanUSDCEurVault.connect(sanLPHolder).deposit(parseUnits("1000", 6), false);
+      const deployerStaked = await sanUSDCEurMultiGauge.stakeOf(deployer._address);
       await sanUSDCEurMultiGauge.connect(sanLPHolder).transfer(deployer._address, parseUnits("499", 6));
+      const deployerStakedAfterTransfer = await sanUSDCEurMultiGauge.stakeOf(deployer._address);
       const tx = await sanUSDCEurVault
         .connect(sanLPHolder)
         .withdraw(parseUnits("999", 6))
         .catch((e: any) => e);
       expect(tx.message).to.have.string("Not enough staked");
+      expect(deployerStaked).to.be.equal(0);
+      expect(deployerStakedAfterTransfer).to.be.equal(parseUnits("499", 6));
     });
     it("it should not be able withdraw from multigauge if not vault", async () => {
       const stakedBalance = await sanUSDCEurMultiGauge.stakeOf(sanLPHolder._address);
