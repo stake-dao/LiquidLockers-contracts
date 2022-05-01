@@ -26,12 +26,14 @@ contract CurveStrategy is BaseStrategy {
 		ILocker _locker,
 		address _governance,
 		address _receiver,
-		CurveAccumulator _accumulator
+		CurveAccumulator _accumulator,
+		address _veSDTFeeProxy
 	) BaseStrategy(_locker, _governance, _receiver) {
 		veSDTFee = 500; // %5
 		accumulatorFee = 800; // %8
 		claimerReward = 50; //%0.5
 		accumulator = _accumulator;
+		veSDTFeeProxy = _veSDTFeeProxy;
 	}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
@@ -69,7 +71,9 @@ contract CurveStrategy is BaseStrategy {
 	function claim(address _token) external override {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
-		(bool success, ) = locker.execute(
+		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("user_checkpoint(address)", address(locker)));
+		require(success, "Checkpoint failed!");
+		(success, ) = locker.execute(
 			gauge,
 			0,
 			abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
@@ -113,42 +117,43 @@ contract CurveStrategy is BaseStrategy {
 		return pendings;
 	}
 
-	function boost(address _gauge) external override onlyGovernance {
-		(bool success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("user_checkpoint(address)", address(locker)));
-		require(success, "Boost failed!");
-		emit Boosted(_gauge, address(locker));
-	}
-
-	function set_rewards_receiver(address _gauge, address _receiver) external override onlyGovernance {
-		(bool success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("set_rewards_receiver(address)", _receiver));
-		require(success, "Set rewards receiver failed!");
-		emit RewardReceiverSet(_gauge, _receiver);
-	}
-
 	function toggleVault(address _vault) external override onlyGovernance {
+		require(_vault != address(0), "zero address");
 		vaults[_vault] = !vaults[_vault];
 		emit VaultToggled(_vault, vaults[_vault]);
 	}
 
 	function setGauge(address _token, address _gauge) external override onlyGovernance {
+		require(_token != address(0), "zero address");
+		require(_gauge != address(0), "zero address");
 		gauges[_token] = _gauge;
 		emit GaugeSet(_gauge, _token);
 	}
 
 	function setMultiGauge(address _gauge, address _multiGauge) external override onlyGovernance {
+		require(_gauge != address(0), "zero address");
+		require(_multiGauge != address(0), "zero address");
 		multiGauges[_gauge] = _multiGauge;
 	}
 
 	function setVeSDTProxy(address _newVeSDTProxy) external onlyGovernance {
+		require(_newVeSDTProxy != address(0), "zero address");
 		veSDTFeeProxy = _newVeSDTProxy;
 	}
 
 	function setAccumulator(address _newAccumulator) external onlyGovernance {
+		require(_newAccumulator != address(0), "zero address");
 		accumulator = CurveAccumulator(_newAccumulator);
 	}
 
 	function setRewardsReceiver(address _newRewardsReceiver) external onlyGovernance {
+		require(_newRewardsReceiver != address(0), "zero address");
 		rewardsReceiver = _newRewardsReceiver;
+	}
+
+	function setGovernance(address _newGovernance) external onlyGovernance {
+		require(_newGovernance != address(0), "zero address");
+		governance = _newGovernance;
 	}
 
 	function manageFee(
