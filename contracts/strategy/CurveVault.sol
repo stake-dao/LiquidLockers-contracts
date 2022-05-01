@@ -20,7 +20,7 @@ contract CurveVault is ERC20Upgradeable {
 	uint256 public accumulatedFee;
 	CurveStrategy public curveStrategy;
 	uint256 public min;
-	uint256 public constant max = 10000;
+	uint256 public constant MAX = 10000;
 	event Earn(address _token, uint256 _amount);
 	event Deposit(address _depositor, uint256 _amount);
 	event Withdraw(address _depositor, uint256 _amount);
@@ -62,10 +62,6 @@ contract CurveVault is ERC20Upgradeable {
 		emit Deposit(msg.sender, _amount);
 	}
 
-	// function depositAll() external {
-	// 	deposit(token.balanceOf(msg.sender));
-	// }
-
 	function withdraw(uint256 _shares) public {
 		uint256 userTotalShares = IMultiRewards(multiRewardsGauge).stakeOf(msg.sender);
 		require(_shares <= userTotalShares, "Not enough staked");
@@ -90,21 +86,25 @@ contract CurveVault is ERC20Upgradeable {
 
 	function setGovernance(address _governance) external {
 		require(msg.sender == governance, "!governance");
+		require(_governance != address(0), "zero address");
 		governance = _governance;
 	}
 
 	function setKeeperFee(uint256 _newFee) external {	
-		require(msg.sender == governance, "!governance");	
+		require(msg.sender == governance, "!governance");
+		require(_newFee <= MAX, "more than 100%");	
 		keeperFee = _newFee;	
 	}
 
 	function setGaugeMultiRewards(address _multiRewardsGauge) external {
 		require(msg.sender == governance, "!governance");
+		require(_multiRewardsGauge != address(0), "zero address");
 		multiRewardsGauge = _multiRewardsGauge;
 	}
 
 	function setCurveStrategy(CurveStrategy _newStrat) external {
 		require(msg.sender == governance, "!governance");
+		require(address(_newStrat) != address(0), "zero address");
 		curveStrategy = _newStrat;
 	}
 
@@ -114,16 +114,18 @@ contract CurveVault is ERC20Upgradeable {
 
 	function setWithdrawnFee(uint256 _newFee) external {
 		require(msg.sender == governance, "!governance");
+		require(_newFee <= MAX, "more than 100%");
 		withdrawalFee = _newFee;
 	}
 
 	function setMin(uint256 _min) external {
 		require(msg.sender == governance, "!governance");
+		require(_min <= MAX, "more than 100%");
 		min = _min;
 	}
 
 	function available() public view returns (uint256) {
-		return ((token.balanceOf(address(this)) - accumulatedFee) * min) / max;
+		return ((token.balanceOf(address(this)) - accumulatedFee) * min) / MAX;
 	}
 
 	function earn() internal {

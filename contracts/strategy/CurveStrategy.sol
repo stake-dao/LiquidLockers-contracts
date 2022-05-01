@@ -37,6 +37,9 @@ contract CurveStrategy is BaseStrategy {
 	}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
+	/// @notice function to deposit into a gauge
+	/// @param _token token address
+	/// @param _amount amount to deposit
 	function deposit(address _token, uint256 _amount) external override onlyApprovedVault {
 		IERC20(_token).transferFrom(msg.sender, address(locker), _amount);
 		address gauge = gauges[_token];
@@ -49,6 +52,9 @@ contract CurveStrategy is BaseStrategy {
 		emit Deposited(gauge, _token, _amount);
 	}
 
+	/// @notice function to withdraw from a gauge
+	/// @param _token token address
+	/// @param _amount amount to withdraw
 	function withdraw(address _token, uint256 _amount) external override onlyApprovedVault {
 		uint256 _before = IERC20(_token).balanceOf(address(locker));
 		address gauge = gauges[_token];
@@ -63,11 +69,16 @@ contract CurveStrategy is BaseStrategy {
 		emit Withdrawn(gauge, _token, _amount);
 	}
 
+	/// @notice function to send funds into the related accumulator
+	/// @param _token token address
+	/// @param _amount amount to send
 	function sendToAccumulator(address _token, uint256 _amount) external onlyGovernance {
 		IERC20(_token).approve(address(accumulator), _amount);
 		accumulator.depositToken(_token, _amount);
 	}
 
+	/// @notice function to claim the reward
+	/// @param _token token address
 	function claim(address _token) external override {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
@@ -101,6 +112,8 @@ contract CurveStrategy is BaseStrategy {
 		}
 	}
 
+	/// @notice view function to fetch the pending rewards claimable
+	/// @param _token token address
 	function claimerPendingRewards(address _token) external view returns (ClaimerReward[] memory) {
 		ClaimerReward[] memory pendings = new ClaimerReward[](8);
 		address gauge = gauges[_token];
@@ -117,12 +130,17 @@ contract CurveStrategy is BaseStrategy {
 		return pendings;
 	}
 
+	/// @notice function to toggle a vault
+	/// @param _vault vault address
 	function toggleVault(address _vault) external override onlyGovernance {
 		require(_vault != address(0), "zero address");
 		vaults[_vault] = !vaults[_vault];
 		emit VaultToggled(_vault, vaults[_vault]);
 	}
 
+	/// @notice function to set a new gauge
+	/// @param _token token address
+	/// @param _gauge gauge address
 	function setGauge(address _token, address _gauge) external override onlyGovernance {
 		require(_token != address(0), "zero address");
 		require(_gauge != address(0), "zero address");
@@ -130,40 +148,56 @@ contract CurveStrategy is BaseStrategy {
 		emit GaugeSet(_gauge, _token);
 	}
 
+	/// @notice function to set a multi gauge
+	/// @param _gauge gauge address
+	/// @param _multiGauge multi gauge address
 	function setMultiGauge(address _gauge, address _multiGauge) external override onlyGovernance {
 		require(_gauge != address(0), "zero address");
 		require(_multiGauge != address(0), "zero address");
 		multiGauges[_gauge] = _multiGauge;
 	}
 
+	/// @notice function to set a new veSDTProxy
+	/// @param _newVeSDTProxy veSdtProxy address
 	function setVeSDTProxy(address _newVeSDTProxy) external onlyGovernance {
 		require(_newVeSDTProxy != address(0), "zero address");
 		veSDTFeeProxy = _newVeSDTProxy;
 	}
 
+	/// @notice function to set a new accumulator
+	/// @param _newAccumulator accumulator address
 	function setAccumulator(address _newAccumulator) external onlyGovernance {
 		require(_newAccumulator != address(0), "zero address");
 		accumulator = CurveAccumulator(_newAccumulator);
 	}
 
+	/// @notice function to set a new reward receiver
+	/// @param _newRewardsReceiver reward receiver address
 	function setRewardsReceiver(address _newRewardsReceiver) external onlyGovernance {
 		require(_newRewardsReceiver != address(0), "zero address");
 		rewardsReceiver = _newRewardsReceiver;
 	}
 
+	/// @notice function to set a new governance address
+	/// @param _newGovernance governance address
 	function setGovernance(address _newGovernance) external onlyGovernance {
 		require(_newGovernance != address(0), "zero address");
 		governance = _newGovernance;
 	}
 
+	/// @notice function to set new fees 
+	/// @param _manageFee manageFee 
+	/// @param _gauge gauge address 
+	/// @param _newFee new fee to set
 	function manageFee(
 		MANAGEFEE _manageFee,
 		address _gauge,
 		uint256 _newFee
 	) external onlyGovernance {
+		require(_gauge != address(0), "zero address");
+		require(_newFee <= BASE_FEE, "fee to high");
 		if (_manageFee == MANAGEFEE.PERFFEE) {
 			// 0
-			require(_gauge != address(0), "zero address");
 			perfFee[_gauge] = _newFee;
 		} else if (_manageFee == MANAGEFEE.VESDTFEE) {
 			// 1
@@ -178,15 +212,15 @@ contract CurveStrategy is BaseStrategy {
 	}
 
 	/// @notice execute a function
-	/// @param to Address to sent the value to
-	/// @param value Value to be sent
-	/// @param data Call function data
+	/// @param _to Address to sent the value to
+	/// @param _value Value to be sent
+	/// @param _data Call function data
 	function execute(
-		address to,
-		uint256 value,
-		bytes calldata data
+		address _to,
+		uint256 _value,
+		bytes calldata _data
 	) external onlyGovernance returns (bool, bytes memory) {
-		(bool success, bytes memory result) = to.call{ value: value }(data);
+		(bool success, bytes memory result) = _to.call{ value: _value }(_data);
 		return (success, result);
 	}
 }
