@@ -9,7 +9,11 @@ import "../interfaces/IMultiRewards.sol";
 
 contract CurveStrategy is BaseStrategy {
 	using SafeERC20 for IERC20;
+
     CurveAccumulator public accumulator;
+	address public constant CRV_FEE_D = 0xA464e6DCda8AC41e03616F95f4BC98a13b8922Dc;
+	address public constant CRV3 = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
+
 	struct ClaimerReward {
 		address rewardToken;
 		uint256 amount;
@@ -20,6 +24,8 @@ contract CurveStrategy is BaseStrategy {
 		ACCUMULATORFEE,
 		CLAIMERREWARD
 	}
+
+	event Crv3Claimed(uint256 amount, bool notified);
 
 	/* ========== CONSTRUCTOR ========== */
 	constructor(
@@ -128,6 +134,33 @@ contract CurveStrategy is BaseStrategy {
 			pendings[i] = pendingReward;
 		}
 		return pendings;
+	}
+
+	/// @notice function to claim 3crv every week from the curve Fee Distributor
+	/// @param _notify choose if claim or claim and notify the amount to the related gauge
+	function claim3Crv(bool _notify) external {
+		// Claim 3crv from the curve fee Distributor
+		// It will send 3crv to the crv locker
+		bool success;
+		(success, ) = locker.execute(
+			CRV_FEE_D,
+			0,
+			abi.encodeWithSignature("claim()")
+		);
+		require(success, "3crv claim failed");
+		// Send 3crv from the locker to the accumulator
+		uint256 amountToSend = IERC20(CRV3).balanceOf(address(locker));
+		require(amountToSend > 0, "nothing claimed");
+		(success, ) = locker.execute(
+			CRV3,
+			0,
+			abi.encodeWithSignature("transfer(address,uint256)", address(accumulator), amountToSend)
+		);
+		require(success, "3crv transfer failed");
+		if (_notify) {
+			accumulator.notifyAll();
+		}
+		emit Crv3Claimed(amountToSend, _notify);
 	}
 
 	/// @notice function to toggle a vault
