@@ -41,6 +41,9 @@ contract CurveVault is ERC20Upgradeable {
 		curveStrategy = _curveStrategy;
 	}
 
+	/// @notice function to deposit a new amount
+	/// @param _amount amount to deposit
+	/// @param _earn earn or not 
 	function deposit(uint256 _amount, bool _earn) public {
 		require(address(multiRewardsGauge) != address(0), "Gauge not yet initialized");
 		token.safeTransferFrom(msg.sender, address(this), _amount);
@@ -62,6 +65,8 @@ contract CurveVault is ERC20Upgradeable {
 		emit Deposit(msg.sender, _amount);
 	}
 
+	/// @notice function to withdraw
+	/// @param _shares amount to withdraw
 	function withdraw(uint256 _shares) public {
 		uint256 userTotalShares = IMultiRewards(multiRewardsGauge).stakeOf(msg.sender);
 		require(_shares <= userTotalShares, "Not enough staked");
@@ -80,54 +85,70 @@ contract CurveVault is ERC20Upgradeable {
 		emit Withdraw(msg.sender, _shares - withdrawFee);
 	}
 
+	/// @notice function to withdraw all curve LPs deposited
 	function withdrawAll() external {
 		withdraw(balanceOf(msg.sender));
 	}
 
+	/// @notice function to set the governance
+	/// @param _governance governance address
 	function setGovernance(address _governance) external {
 		require(msg.sender == governance, "!governance");
 		require(_governance != address(0), "zero address");
 		governance = _governance;
 	}
 
+	/// @notice function to set the keeper fee
+	/// @param _newFee keeper fee
 	function setKeeperFee(uint256 _newFee) external {	
 		require(msg.sender == governance, "!governance");
 		require(_newFee <= MAX, "more than 100%");	
 		keeperFee = _newFee;	
 	}
 
+	/// @notice function to set the gauge multi rewards
+	/// @param _multiRewardsGauge gauge address
 	function setGaugeMultiRewards(address _multiRewardsGauge) external {
 		require(msg.sender == governance, "!governance");
 		require(_multiRewardsGauge != address(0), "zero address");
 		multiRewardsGauge = _multiRewardsGauge;
 	}
 
+	/// @notice function to set the curve strategy
+	/// @param _newStrat curve strategy infos
 	function setCurveStrategy(CurveStrategy _newStrat) external {
 		require(msg.sender == governance, "!governance");
 		require(address(_newStrat) != address(0), "zero address");
 		curveStrategy = _newStrat;
 	}
 
+	/// @notice function to return the vault token decimals
 	function decimals() public view override returns (uint8) {
 		return token.decimals();
 	}
 
+	/// @notice function to set the withdrawn fee
+	/// @param _newFee withdrawn fee
 	function setWithdrawnFee(uint256 _newFee) external {
 		require(msg.sender == governance, "!governance");
 		require(_newFee <= MAX, "more than 100%");
 		withdrawalFee = _newFee;
 	}
 
+	/// @notice function to set the min (it needs to be lower than MAX)
+	/// @param _min min amount
 	function setMin(uint256 _min) external {
 		require(msg.sender == governance, "!governance");
 		require(_min <= MAX, "more than 100%");
 		min = _min;
 	}
 
+	/// @notice view function to fetch the available amount to send to the strategy
 	function available() public view returns (uint256) {
 		return ((token.balanceOf(address(this)) - accumulatedFee) * min) / MAX;
 	}
 
+	/// @notice internal function to move funds to the strategy
 	function earn() internal {
 		uint256 tokenBalance = available();
 		token.approve(address(curveStrategy), 0);
