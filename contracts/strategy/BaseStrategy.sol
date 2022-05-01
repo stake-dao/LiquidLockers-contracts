@@ -11,6 +11,7 @@ contract BaseStrategy {
 	address public veSDTFeeProxy;
 	uint256 public accumulatorFee;
 	uint256 public claimerReward;
+	address public vaultGaugeFactory;
 	uint256 public constant BASE_FEE = 10000;
 	mapping(address => address) public gauges;
 	mapping(address => bool) public vaults;
@@ -33,6 +34,10 @@ contract BaseStrategy {
 	}
 	modifier onlyApprovedVault() {
 		require(vaults[msg.sender], "!approved vault");
+		_;
+	}
+	modifier onlyGovernanceOrFactory() {
+		require(msg.sender == governance || msg.sender == vaultGaugeFactory, "!governance && !factory");
 		_;
 	}
 
@@ -60,9 +65,9 @@ contract BaseStrategy {
 
 	function claim(address _gauge) external virtual {}
 
-	function toggleVault(address _vault) external virtual onlyGovernance {}
+	function toggleVault(address _vault) external virtual onlyGovernanceOrFactory {}
 
-	function setGauge(address _token, address _gauge) external virtual onlyGovernance {}
+	function setGauge(address _token, address _gauge) external virtual onlyGovernanceOrFactory {}
 
-	function setMultiGauge(address _gauge, address _multiGauge) external virtual onlyGovernance {}
+	function setMultiGauge(address _gauge, address _multiGauge) external virtual onlyGovernanceOrFactory {}
 }

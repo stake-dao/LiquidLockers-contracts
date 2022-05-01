@@ -10,7 +10,7 @@ import "../interfaces/IMultiRewards.sol";
 contract CurveStrategy is BaseStrategy {
 	using SafeERC20 for IERC20;
 
-    CurveAccumulator public accumulator;
+	CurveAccumulator public accumulator;
 	address public constant CRV_FEE_D = 0xA464e6DCda8AC41e03616F95f4BC98a13b8922Dc;
 	address public constant CRV3 = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
 
@@ -142,11 +142,7 @@ contract CurveStrategy is BaseStrategy {
 		// Claim 3crv from the curve fee Distributor
 		// It will send 3crv to the crv locker
 		bool success;
-		(success, ) = locker.execute(
-			CRV_FEE_D,
-			0,
-			abi.encodeWithSignature("claim()")
-		);
+		(success, ) = locker.execute(CRV_FEE_D, 0, abi.encodeWithSignature("claim()"));
 		require(success, "3crv claim failed");
 		// Send 3crv from the locker to the accumulator
 		uint256 amountToSend = IERC20(CRV3).balanceOf(address(locker));
@@ -165,7 +161,7 @@ contract CurveStrategy is BaseStrategy {
 
 	/// @notice function to toggle a vault
 	/// @param _vault vault address
-	function toggleVault(address _vault) external override onlyGovernance {
+	function toggleVault(address _vault) external override onlyGovernanceOrFactory {
 		require(_vault != address(0), "zero address");
 		vaults[_vault] = !vaults[_vault];
 		emit VaultToggled(_vault, vaults[_vault]);
@@ -174,7 +170,7 @@ contract CurveStrategy is BaseStrategy {
 	/// @notice function to set a new gauge
 	/// @param _token token address
 	/// @param _gauge gauge address
-	function setGauge(address _token, address _gauge) external override onlyGovernance {
+	function setGauge(address _token, address _gauge) external override onlyGovernanceOrFactory {
 		require(_token != address(0), "zero address");
 		require(_gauge != address(0), "zero address");
 		gauges[_token] = _gauge;
@@ -184,7 +180,7 @@ contract CurveStrategy is BaseStrategy {
 	/// @notice function to set a multi gauge
 	/// @param _gauge gauge address
 	/// @param _multiGauge multi gauge address
-	function setMultiGauge(address _gauge, address _multiGauge) external override onlyGovernance {
+	function setMultiGauge(address _gauge, address _multiGauge) external override onlyGovernanceOrFactory {
 		require(_gauge != address(0), "zero address");
 		require(_multiGauge != address(0), "zero address");
 		multiGauges[_gauge] = _multiGauge;
@@ -218,15 +214,20 @@ contract CurveStrategy is BaseStrategy {
 		governance = _newGovernance;
 	}
 
-	/// @notice function to set new fees 
-	/// @param _manageFee manageFee 
-	/// @param _gauge gauge address 
+	function setVaultGaugeFactory(address _newVaultGaugeFactory) external onlyGovernance {
+		require(_newVaultGaugeFactory != address(0), "zero address");
+		vaultGaugeFactory = _newVaultGaugeFactory;
+	}
+
+	/// @notice function to set new fees
+	/// @param _manageFee manageFee
+	/// @param _gauge gauge address
 	/// @param _newFee new fee to set
 	function manageFee(
 		MANAGEFEE _manageFee,
 		address _gauge,
 		uint256 _newFee
-	) external onlyGovernance {
+	) external onlyGovernanceOrFactory {
 		require(_gauge != address(0), "zero address");
 		require(_newFee <= BASE_FEE, "fee to high");
 		if (_manageFee == MANAGEFEE.PERFFEE) {
