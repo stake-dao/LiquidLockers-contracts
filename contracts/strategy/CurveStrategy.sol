@@ -85,7 +85,7 @@ contract CurveStrategy is BaseStrategy {
 
 	/// @notice function to claim the reward
 	/// @param _token token address
-	function claim(address _token) external override {
+	function claim(address _token) public override {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
 		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("user_checkpoint(address)", address(locker)));
@@ -168,12 +168,38 @@ contract CurveStrategy is BaseStrategy {
 	}
 
 	/// @notice function to set a new gauge
+	/// if the gauge exists, it manages the migration as well
 	/// @param _token token address
 	/// @param _gauge gauge address
 	function setGauge(address _token, address _gauge) external override onlyGovernanceOrFactory {
 		require(_token != address(0), "zero address");
 		require(_gauge != address(0), "zero address");
-		gauges[_token] = _gauge;
+		if (gauges[_token] != address(0)) {
+			// migrate LPs to the new gauge
+			address oldGauge = gauges[_token];
+			uint256 amountToMigrate = IERC20(oldGauge).balanceOf(address(locker));
+
+			// Withdraw LPs from the old gauge
+			bool success;
+			(success, ) = locker.execute(oldGauge, 0, abi.encodeWithSignature("withdraw(uint256)", amountToMigrate));
+			require(success, "Withdraw failed!");
+
+			// Transfer LPs here
+			(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", address(this), amountToMigrate));
+			require(success, "Transfer failed!");
+
+			// Set new gauge
+			claim(_token); // claim before storing the new gauge address
+			gauges[_token] = _gauge;
+
+			// Deposit LPs to the new gauge
+			locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", _gauge, 0));
+			locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", _gauge, amountToMigrate));
+			(success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("deposit(uint256)", amountToMigrate));
+			require(success, "Deposit failed!");
+		} else {
+			gauges[_token] = _gauge;
+		}
 		emit GaugeSet(_gauge, _token);
 	}
 
