@@ -8,11 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../interfaces/IMultiRewards.sol";
 import "./FraxStrategy.sol";
 
-/**
-Idea :
-Do we want to make the sdLPToken transferable ? Answer : No
-*/
-
 contract FraxVault is ERC20Upgradeable {
 	using SafeERC20Upgradeable for ERC20Upgradeable;
 	using AddressUpgradeable for address;
@@ -53,18 +48,8 @@ contract FraxVault is ERC20Upgradeable {
 		governance = _governance;
 		withdrawalFee = 50; // %0.5
 		fraxStrategy = _fraxStrategy;
-		withdrawSignature = _withdrawSignature; 
+		withdrawSignature = _withdrawSignature;
 	}
-
-	/**
-	Idea :
-	Do we want to send directly LP token to the liquid locker, or make it through different step ?
-
-	Optimised path for LP token : 
-	user => frax vault => frax locker => frax gauge
-	Multiple step path for LP token :
-	user => frax vault => frax strategy => frax locker => frax gauge // better
-	*/
 
 	function deposit(uint256 _amount, uint256 _sec) public {
 		require(address(multiRewardsGauge) != address(0), "Gauge not yet initialized");
@@ -102,13 +87,6 @@ contract FraxVault is ERC20Upgradeable {
 		/* Update kekId mapping */
 		resetLockedInfos(_kekId);
 		remove(getIndexKekId(msg.sender, _kekId), msg.sender);
-
-		/* Create signature function for the strategy */
-		// Doesn't work but just to save it
-		//bytes memory _withdrawSignature = abi.encodeWithSignature(_func, _kekId, LIQUIDLOCKER);
-		//bytes32 _signature1 = keccak256(abi.encodeWithSignature(_func, _kekId, LIQUIDLOCKER));
-		//bytes32 _signature2 = keccak256(abi.encodeWithSignature("withdrawLocked(bytes32,address)", _kekId, LIQUIDLOCKER));
-		//require(_signature1 == _signature2, "not the same");
 
 		/* Withdraw from frax gauge */
 		uint256 _before = token.balanceOf(address(this));
@@ -152,32 +130,6 @@ contract FraxVault is ERC20Upgradeable {
 		infosPerKekId[_kekId] = LockInformations(address(0), 0, 0, 0, 0);
 	}
 
-	/*
-	function createSignature(
-		string _string,
-		address[] _address,
-		uint256[] _uint256,
-		bytes _bytes,
-		bytes32[] _bytes32
-	) public {
-
-	}*/
-
-	// No more earn function because all deposit are differents
-	/*
-	function earn() external {
-		require(msg.sender == governance, "!governance");
-		uint256 tokenBalance = available();
-		token.increaseAllowance(address(fraxStrategy), tokenBalance);
-		fraxStrategy.deposit(address(token), tokenBalance);
-		emit Earn(address(token), tokenBalance);
-	}
-
-	function available() public view returns (uint256) {
-		return (token.balanceOf(address(this)) * min) / max;
-	}*/
-
-	// use enum for all of the setter
 	function setGovernance(address _governance) public {
 		require(msg.sender == governance, "!governance");
 		governance = _governance;
@@ -201,11 +153,4 @@ contract FraxVault is ERC20Upgradeable {
 		require(msg.sender == governance, "!governance");
 		withdrawalFee = _newFee;
 	}
-
-	/*
-	function setMin(uint256 _min) external {
-		require(msg.sender == governance, "!governance");
-		min = _min;
-	}
-	*/
 }

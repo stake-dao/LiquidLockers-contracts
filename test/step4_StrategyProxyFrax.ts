@@ -16,6 +16,14 @@ const FXS_TEMPLE_LOCKER_ABI = require("./fixtures/FraxUnifiedFarm_ERC20_Temple_F
 /* ********************* Addresses ********************* */
 /* ===================================================== */
 
+/* ==== StakeDAO ==== */
+const STDDEPLOYER = "0xb36a0671b3d49587236d7833b01e79798175875f";
+const SDFXSGAUGE = "0xF3C6e8fbB946260e8c2a55d48a5e01C82fD63106";
+
+const ANGLE = "0x31429d1856aD1377A8A0079410B297e1a9e214c2";
+const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+const FRAX = "0x853d955aCEf822Db058eb8505911ED77F175b99e";
+
 /* ==== Liquid Locker ====*/
 const LIQUIDLOCKER_ADDRESS = "0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f"; // Liquid Locker Address
 const LIQUIDLOCKER_GOVERNANCE = "0xb36a0671B3D49587236d7833B01E79798175875f";
@@ -53,11 +61,15 @@ describe("Testing the Strategy Proxy for FRAX", function () {
 
   /* ==== Contract ==== */
   let StrategyProxyFRAX;
+  let VeSdtFraxProxyFactory
   let strategy: Contract;
+  let veSdtProxy: Contract;
   let fxs_templeVault: Contract;
   let fraxVaultFactoryContract: Contract;
   let fxs_templeMultiGauge: Contract;
   let fxs_templeLiquidityGauge: Contract;
+  let sdFxsGauge: Contract
+  let fxs_accumulator: Contract;
   let fxs_sushi_LP: Contract;
   let fxs_temple_LP: Contract;
   let liquidLocker: Contract;
@@ -70,15 +82,16 @@ describe("Testing the Strategy Proxy for FRAX", function () {
   before(async function () {
     /* ==== Get Signers With Address ==== */
     const [user_0, user_1, user_2, dummyMs] = await ethers.getSigners();
-    deployer = ethers.provider.getSigner(user_0.address);
     account_1 = ethers.provider.getSigner(user_1.address);
     account_2 = ethers.provider.getSigner(user_2.address);
 
     /* ==== Impersonate Account ==== */
     await ethers.provider.send("hardhat_impersonateAccount", [FXS_TEMPLE_WHALE]);
     await ethers.provider.send("hardhat_impersonateAccount", [LIQUIDLOCKER_GOVERNANCE]);
+    await ethers.provider.send("hardhat_impersonateAccount", [STDDEPLOYER])
     whale_fxs_temple = ethers.provider.getSigner(FXS_TEMPLE_WHALE);
     governance = ethers.provider.getSigner(LIQUIDLOCKER_GOVERNANCE);
+    deployer = ethers.provider.getSigner(STDDEPLOYER)
 
     /* ==== Give Ether for Transactions ==== */
     await account_1.sendTransaction({
@@ -91,6 +104,8 @@ describe("Testing the Strategy Proxy for FRAX", function () {
     liquidLocker = await ethers.getContractAt(LIQUIDLOCKER_ABI, LIQUIDLOCKER_ADDRESS);
     fxs_temple_LP = await ethers.getContractAt(ERC20_ABI, FXS_TEMPLE_ADDRESS);
     fxs_temple_locker = await ethers.getContractAt(FXS_TEMPLE_LOCKER_ABI, FXS_TEMPLE_LOCKER_ADDRESS);
+    sdFxsGauge = await ethers.getContractAt("LiquidityGaugeV4", SDFXSGAUGE)
+    fxs_accumulator = await ethers.getContractAt("FxsAccumulator", FXS_ACCUMULATOR)
 
     /* ==== Deploye Strategy ==== */
     StrategyProxyFRAX = await ethers.getContractFactory("FraxStrategy");
@@ -100,7 +115,12 @@ describe("Testing the Strategy Proxy for FRAX", function () {
       dummyMs.address,
       FXS_ACCUMULATOR
     );
+    await strategy.connect(deployer).setOptimisedSignature("withdrawLocked(bytes32,address)")
     await liquidLocker.connect(governance).setGovernance(strategy.address);
+
+    // Create veSDTFRAXProxyFactory
+    VeSdtFraxProxyFactory = await ethers.getContractFactory("veSDTFeeFraxProxy");
+    veSdtProxy = await VeSdtFraxProxyFactory.deploy([ANGLE, WETH, FRAX]); // Deployed in fast and dirty
 
     /* ==== Deploye Vault Facory ==== */
     const fraxVaultFactory = await ethers.getContractFactory("FraxVaultFactory");
@@ -124,6 +144,9 @@ describe("Testing the Strategy Proxy for FRAX", function () {
     fxs_templeMultiGauge = await ethers.getContractAt("GaugeMultiRewards", cloneTx.events[1].args[0]);
     fxs_templeLiquidityGauge = await ethers.getContractAt("LiquidityGaugeV4", FXS_TEMPLE_LOCKER_ADDRESS);
     await strategy.connect(deployer).setMultiGauge(FXS_TEMPLE_LOCKER_ADDRESS, fxs_templeMultiGauge.address);
+    await strategy.connect(deployer).setVeSDTProxy(veSdtProxy.address);
+    await strategy.connect(deployer).manageFee(0, fxs_templeLiquidityGauge.address, 200); // %2
+    await fxs_templeMultiGauge.connect(deployer).addReward(FXS_ADDRESS, strategy.address, 60 * 60 * 24 * 7)
 
     /* ==== Give LP ==== */
     await fxs_temple_LP.connect(whale_fxs_temple).transfer(account_1._address, ethers.utils.parseEther("100.0"));
@@ -141,7 +164,7 @@ describe("Testing the Strategy Proxy for FRAX", function () {
     const LIST = await fxs_templeVault.getKekIdUser(account_1._address);
     const gauge = await strategy.gauges(FXS_TEMPLE_ADDRESS);
     const LockedStacked = await fxs_temple_locker.lockedStakesOf(LIQUIDLOCKER_ADDRESS);
-    console.log(BAL.toString());
+    //console.log(BAL.toString());
     //console.log(LockedStacked);
   });
   it("Should test to claim", async function () {
@@ -156,6 +179,6 @@ describe("Testing the Strategy Proxy for FRAX", function () {
     const AFTER = await fxs_temple_LP.balanceOf(account_1._address);
     const RES = await strategy.result();
     const LISTAfter = await fxs_templeVault.getKekIdUser(account_1._address);
-    console.log(AFTER.toString());
+    //console.log(AFTER.toString());
   });
 });

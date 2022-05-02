@@ -11,6 +11,7 @@ contract FraxStrategy is BaseStrategy {
 	using SafeERC20 for IERC20;
 	FxsAccumulator public accumulator;
 	bytes public result;
+	string public optimisedSignature;
 	struct ClaimerReward {
 		address rewardToken;
 		uint256 amount;
@@ -31,7 +32,7 @@ contract FraxStrategy is BaseStrategy {
 	) BaseStrategy(_locker, _governance, _receiver) {
 		veSDTFee = 500; // %5
 		accumulatorFee = 800; // %8
-		claimerReward = 50; //%0.5
+		claimerReward = 50; // %0.5
 		accumulator = _accumulator;
 	}
 
@@ -92,59 +93,50 @@ contract FraxStrategy is BaseStrategy {
 			IERC20(rewardToken).approve(address(accumulator), accumulatorPart);
 			accumulator.depositToken(rewardToken, accumulatorPart);
 			IERC20(rewardToken).transfer(rewardsReceiver, multisigFee);
-			// To be setup after
-			//IERC20(rewardToken).transfer(veSDTFeeProxy, veSDTPart);
+			IERC20(rewardToken).transfer(veSDTFeeProxy, veSDTPart);
 			IERC20(rewardToken).transfer(msg.sender, claimerPart);
 			uint256 netRewards = rewardsBalance - multisigFee - accumulatorPart - veSDTPart - claimerPart;
-			IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
 			// To be setup after
+			//IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
 			//IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, netRewards); // To be setup after
 			emit Claimed(gauge, rewardToken, rewardsBalance);
 		}
 	}
 
-	/*
-	Global path of the LP token : 
-	frax gauge => frax locker => frax vault => user
-	Optimised path of the LP token : 
-	frax gauge => frax vault => user // better
-
-	But withdrawLocked with a specified address is not permitted for every frax gauge
-	So do we want to have a global path logic, who is the same for every frax gauge 
-	or do we want to optimise path when possible with a specified withdraw address? 
-
-	Or maybe we will have to create different withdraw function, depending 
-	on the withdrawLocked function signature?
-
-	What about calling claim function during the withdraw? Answer : No 
-
-	*/
 	function withdraw(
 		address _token,
 		bytes32 _kekid,
-		string memory _encode
-	)
-		public
-		//bytes memory _signature
-		onlyApprovedVault
-	{
+		string memory _withdrawSignature
+	) public onlyApprovedVault {
 		//using require instead of modifier for saving gas
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
 		uint256 _before = IERC20(_token).balanceOf(address(locker));
-		//string memory _decode = abi.decode(_encode, (string));
-		(bool success, ) = locker.execute(
-			gauge,
-			0,
-			//_signature
-			abi.encodeWithSignature(_encode, _kekid, address(locker), 123456) // remark on the passes address
-		);
-		require(success, "Withdraw failed here!");
-		uint256 _after = IERC20(_token).balanceOf(address(locker));
-		uint256 _net = _after - _before;
+		bool success;
+		if (keccak256(abi.encode(_withdrawSignature)) == keccak256(abi.encode(optimisedSignature))) {
+			// optimised way : 612844 gas (1.82% gas saved)
+			// but not global
+			(success, ) = locker.execute(
+				gauge,
+				0,
+				abi.encodeWithSignature(_withdrawSignature, _kekid, msg.sender, 123456) // remark on the passes address
+			);
+			require(success, "Withdraw failed!");
+		} else {
+			// unoptimised way : 624218 gas
+			// global
+			(success, ) = locker.execute(
+				gauge,
+				0,
+				abi.encodeWithSignature(_withdrawSignature, _kekid, address(locker), 123456) // remark on the passes address
+			);
+			require(success, "Withdraw failed here!");
+			uint256 _after = IERC20(_token).balanceOf(address(locker));
+			uint256 _net = _after - _before;
 
-		(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _net));
-		require(success, "Transfer failed!");
+			(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _net));
+			require(success, "Transfer failed!");
+		}
 		emit Withdrawn(gauge, _token, 0);
 	}
 
@@ -167,6 +159,10 @@ contract FraxStrategy is BaseStrategy {
 			pendings[i] = pendingReward;
 		}
 		return pendings;
+	}
+
+	function setOptimisedSignature(string memory _optimisedSignature) public onlyGovernance {
+		optimisedSignature = _optimisedSignature;
 	}
 
 	function boost(address _gauge) external override onlyGovernance {
