@@ -190,16 +190,14 @@ contract CurveStrategy is BaseStrategy {
 
 			// Set new gauge
 			claim(_token); // claim before storing the new gauge address
-			gauges[_token] = _gauge;
 
 			// Deposit LPs to the new gauge
 			locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", _gauge, 0));
 			locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", _gauge, amountToMigrate));
 			(success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("deposit(uint256)", amountToMigrate));
 			require(success, "Deposit failed!");
-		} else {
-			gauges[_token] = _gauge;
 		}
+		gauges[_token] = _gauge;
 		emit GaugeSet(_gauge, _token);
 	}
 
