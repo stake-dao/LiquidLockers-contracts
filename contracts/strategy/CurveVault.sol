@@ -119,7 +119,11 @@ contract CurveVault is ERC20Upgradeable {
 	function setCurveStrategy(CurveStrategy _newStrat) external {
 		require(msg.sender == governance, "!governance");
 		require(address(_newStrat) != address(0), "zero address");
+		// migration
+		curveStrategy.migrateLP(address(token), address(this));
 		curveStrategy = _newStrat;
+		// deposit LPs into the new strategy
+		earn();
 	}
 
 	/// @notice function to return the vault token decimals

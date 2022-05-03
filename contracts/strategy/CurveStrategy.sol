@@ -201,49 +201,49 @@ contract CurveStrategy is BaseStrategyV2 {
 		require(_token != address(0), "zero address");
 		require(_gauge != address(0), "zero address");
 		if (gauges[_token] != address(0)) {
-			// migrate LPs to the new gauge
-			address oldGauge = gauges[_token];
-			uint256 amountToMigrate = IERC20(oldGauge).balanceOf(address(locker));
-
-			// Withdraw LPs from the old gauge
-			bool success;
-			(success, ) = locker.execute(oldGauge, 0, abi.encodeWithSignature("withdraw(uint256)", amountToMigrate));
-			require(success, "Withdraw failed!");
-
-			// Transfer LPs here
-			(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", address(this), amountToMigrate));
-			require(success, "Transfer failed!");
-
-			// claim before storing the new gauge address
-			claim(_token);
-
-			// Deposit LPs to the new gauge
-			locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", _gauge, 0));
-			locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", _gauge, amountToMigrate));
-			(success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("deposit(uint256)", amountToMigrate));
-			require(success, "Deposit failed!");
+			// soft migration
+			migrate(_token, address(this));
 		}
 		// Set new gauge
 		gauges[_token] = _gauge;
 		emit GaugeSet(_gauge, _token);
 	}
 
-	function migrateLP(address _token) external onlyGovernance {
+	/// @notice function to migrate any LP to another strategy contract (hard migration)
+	/// @param _token token address
+	/// @param _recipient recipient to send LPs
+	function migrateLP(address _token, address _recipient) external onlyApprovedVault {
 		require(gauges[_token] != address(0), "not existent gauge");
-		address gauge = gauges[_token];
-		uint256 amountToMigrate = IERC20(gauge).balanceOf(address(locker));
+		migrate(_token, _recipient);
+		gauges[_token] = address(0);
+	}
 
+	/// @notice function to migrate any LP, soft and hard migration supported
+	/// @param _token token address
+	/// @param _recipient recipient to send LPs
+	function migrate(address _token, address _recipient) internal {
+		address gauge = gauges[_token];
+		uint256 amount = IERC20(gauge).balanceOf(address(locker));
 		// Withdraw LPs from the old gauge
 		bool success;
-		(success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("withdraw(uint256)", amountToMigrate));
+		(success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("withdraw(uint256)", amount));
 		require(success, "Withdraw failed!");
 
-		// Transfer LPs here
-		(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", address(this), amountToMigrate));
+		// Transfer LPs
+		(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", _recipient, amount));
 		require(success, "Transfer failed!");
 
-		// claim before storing the new gauge address
+		// claim before changing the gauge address
 		claim(_token);
+
+		// soft migration 
+		if(_recipient == address(this)) {
+			// Deposit LPs to the new gauge
+			locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, 0));
+			locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, amount));
+			(success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("deposit(uint256)", amount));
+			require(success, "Deposit failed!");
+		}
 	}
 
 	/// @notice function to set a multi gauge
