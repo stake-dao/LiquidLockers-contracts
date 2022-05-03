@@ -22,6 +22,7 @@ contract FraxVault is ERC20Upgradeable {
 
 	IERC20 public token;
 	string public withdrawSignature;
+	string public depositSignature;
 	address public governance;
 	uint256 public withdrawalFee;
 	address public multiRewardsGauge;
@@ -41,6 +42,7 @@ contract FraxVault is ERC20Upgradeable {
 		string memory name_,
 		string memory symbol_,
 		FraxStrategy _fraxStrategy,
+		string memory _depositSignature,
 		string memory _withdrawSignature
 	) public initializer {
 		__ERC20_init(name_, symbol_);
@@ -48,6 +50,7 @@ contract FraxVault is ERC20Upgradeable {
 		governance = _governance;
 		withdrawalFee = 50; // %0.5
 		fraxStrategy = _fraxStrategy;
+		depositSignature = _depositSignature;
 		withdrawSignature = _withdrawSignature;
 	}
 
@@ -63,10 +66,14 @@ contract FraxVault is ERC20Upgradeable {
 		IMultiRewards(multiRewardsGauge).stakeFor(msg.sender, _sdAmount);
 		IMultiRewards(multiRewardsGauge).mintFor(msg.sender, _sdAmount);
 
-		bytes32 _kekId = fraxStrategy.deposit(address(token), _amount, _sec);
+		bytes32 _kekId = fraxStrategy.deposit(
+			address(token),
+			_amount,
+			abi.encodeWithSignature(depositSignature, _amount, _sec)
+		);
 		kekIdPerUser[msg.sender].push(_kekId);
-
 		infosPerKekId[_kekId] = LockInformations(msg.sender, _amount, _sdAmount, block.timestamp, _sec);
+
 		emit Deposit(msg.sender, _amount);
 	}
 
@@ -90,7 +97,7 @@ contract FraxVault is ERC20Upgradeable {
 
 		/* Withdraw from frax gauge */
 		uint256 _before = token.balanceOf(address(this));
-		fraxStrategy.withdraw(address(token), _kekId, withdrawSignature);
+		fraxStrategy.withdraw(address(token), abi.encodeWithSignature(withdrawSignature, _kekId, LIQUIDLOCKER));
 		uint256 _net = token.balanceOf(address(this)) - _before;
 		uint256 withdrawFee = (_net * withdrawalFee) / 10000;
 

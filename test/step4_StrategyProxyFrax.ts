@@ -115,7 +115,6 @@ describe("Testing the Strategy Proxy for FRAX", function () {
       dummyMs.address,
       FXS_ACCUMULATOR
     );
-    await strategy.connect(deployer).setOptimisedSignature("withdrawLocked(bytes32,address)")
     await liquidLocker.connect(governance).setGovernance(strategy.address);
 
     // Create veSDTFRAXProxyFactory
@@ -134,6 +133,7 @@ describe("Testing the Strategy Proxy for FRAX", function () {
         "Stake Dao FXSTEMPLE",
         "sdFXSTEMPLE",
         strategy.address,
+        "stakeLocked(uint256,uint256)", // Here is the feature :)
         "withdrawLocked(bytes32,address)", // Here is the feature :) 
         deployer._address,
         "Stake Dao FXSTEMPLE gauge",
@@ -142,11 +142,12 @@ describe("Testing the Strategy Proxy for FRAX", function () {
     ).wait();
     fxs_templeVault = await ethers.getContractAt("FraxVault", cloneTx.events[0].args[0]);
     fxs_templeMultiGauge = await ethers.getContractAt("GaugeMultiRewards", cloneTx.events[1].args[0]);
+    //console.log(cloneTx.events)
     fxs_templeLiquidityGauge = await ethers.getContractAt("LiquidityGaugeV4", FXS_TEMPLE_LOCKER_ADDRESS);
     await strategy.connect(deployer).setMultiGauge(FXS_TEMPLE_LOCKER_ADDRESS, fxs_templeMultiGauge.address);
     await strategy.connect(deployer).setVeSDTProxy(veSdtProxy.address);
     await strategy.connect(deployer).manageFee(0, fxs_templeLiquidityGauge.address, 200); // %2
-    await fxs_templeMultiGauge.connect(deployer).addReward(FXS_ADDRESS, strategy.address, 60 * 60 * 24 * 7)
+    //await fxs_templeMultiGauge.connect(deployer).addReward(FXS_ADDRESS, strategy.address, 60 * 60 * 24 * 7)
 
     /* ==== Give LP ==== */
     await fxs_temple_LP.connect(whale_fxs_temple).transfer(account_1._address, ethers.utils.parseEther("100.0"));
@@ -177,8 +178,7 @@ describe("Testing the Strategy Proxy for FRAX", function () {
     const LIST = await fxs_templeVault.getKekIdUser(account_1._address);
     await fxs_templeVault.connect(account_1).withdraw(LIST[0]);
     const AFTER = await fxs_temple_LP.balanceOf(account_1._address);
-    const RES = await strategy.result();
     const LISTAfter = await fxs_templeVault.getKekIdUser(account_1._address);
-    //console.log(AFTER.toString());
+    console.log(AFTER.toString());
   });
 });

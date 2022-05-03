@@ -10,8 +10,6 @@ import "../interfaces/IMultiRewards.sol";
 contract FraxStrategy is BaseStrategy {
 	using SafeERC20 for IERC20;
 	FxsAccumulator public accumulator;
-	bytes public result;
-	string public optimisedSignature;
 	struct ClaimerReward {
 		address rewardToken;
 		uint256 amount;
@@ -39,7 +37,7 @@ contract FraxStrategy is BaseStrategy {
 	function deposit(
 		address _token,
 		uint256 _amount,
-		uint256 _sec
+		bytes memory _encodedDeposit
 	) public onlyApprovedVault returns (bytes32) {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
@@ -53,8 +51,8 @@ contract FraxStrategy is BaseStrategy {
 		);
 		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, 0));
 		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, _amount));
-		uint256 _lockedLiquidity = ILiquidityGaugeFRAX(gauge).lockedLiquidityOf(address(locker));
-		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("stakeLocked(uint256,uint256)", _amount, _sec));
+		uint256 _lockedLiquidity = ILiquidityGaugeFRAX(gauge).lockedLiquidityOf(address(locker)); // Needed for the calculation of the kekId
+		(bool success, ) = locker.execute(gauge, 0, _encodedDeposit);
 		require(success, "Deposit failed!");
 
 		// Fetching the kekid directly form the calling of the stakeLocked function
@@ -97,46 +95,25 @@ contract FraxStrategy is BaseStrategy {
 			IERC20(rewardToken).transfer(msg.sender, claimerPart);
 			uint256 netRewards = rewardsBalance - multisigFee - accumulatorPart - veSDTPart - claimerPart;
 			// To be setup after
-			//IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
-			//IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, netRewards); // To be setup after
+			// IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
+			// IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, netRewards); // To be setup after
 			emit Claimed(gauge, rewardToken, rewardsBalance);
 		}
 	}
 
-	function withdraw(
-		address _token,
-		bytes32 _kekid,
-		string memory _withdrawSignature
-	) public onlyApprovedVault {
+	function withdraw(address _token, bytes memory _encodedWithdraw) public onlyApprovedVault {
 		//using require instead of modifier for saving gas
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
-		uint256 _before = IERC20(_token).balanceOf(address(locker));
-		bool success;
-		if (keccak256(abi.encode(_withdrawSignature)) == keccak256(abi.encode(optimisedSignature))) {
-			// optimised way : 612844 gas (1.82% gas saved)
-			// but not global
-			(success, ) = locker.execute(
-				gauge,
-				0,
-				abi.encodeWithSignature(_withdrawSignature, _kekid, msg.sender, 123456) // remark on the passes address
-			);
-			require(success, "Withdraw failed!");
-		} else {
-			// unoptimised way : 624218 gas
-			// global
-			(success, ) = locker.execute(
-				gauge,
-				0,
-				abi.encodeWithSignature(_withdrawSignature, _kekid, address(locker), 123456) // remark on the passes address
-			);
-			require(success, "Withdraw failed here!");
-			uint256 _after = IERC20(_token).balanceOf(address(locker));
-			uint256 _net = _after - _before;
 
-			(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _net));
-			require(success, "Transfer failed!");
-		}
+		uint256 _before = IERC20(_token).balanceOf(address(locker));
+		(bool success, ) = locker.execute(gauge, 0, _encodedWithdraw);
+		require(success, "Withdraw failed!");
+		uint256 _after = IERC20(_token).balanceOf(address(locker));
+		uint256 _net = _after - _before;
+
+		(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _net));
+		require(success, "Transfer failed!");
 		emit Withdrawn(gauge, _token, 0);
 	}
 
@@ -159,10 +136,6 @@ contract FraxStrategy is BaseStrategy {
 			pendings[i] = pendingReward;
 		}
 		return pendings;
-	}
-
-	function setOptimisedSignature(string memory _optimisedSignature) public onlyGovernance {
-		optimisedSignature = _optimisedSignature;
 	}
 
 	function boost(address _gauge) external override onlyGovernance {
