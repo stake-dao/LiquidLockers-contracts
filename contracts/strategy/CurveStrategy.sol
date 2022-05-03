@@ -2,17 +2,19 @@
 pragma solidity 0.8.7;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./BaseStrategy.sol";
+import "./BaseStrategyV2.sol";
 import "../accumulator/CurveAccumulator.sol";
 import "../interfaces/ILiquidityGauge.sol";
 import "../interfaces/IMultiRewards.sol";
 
-contract CurveStrategy is BaseStrategy {
+contract CurveStrategy is BaseStrategyV2 {
 	using SafeERC20 for IERC20;
 
 	CurveAccumulator public accumulator;
 	address public constant CRV_FEE_D = 0xA464e6DCda8AC41e03616F95f4BC98a13b8922Dc;
 	address public constant CRV3 = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
+	address public constant CRV_MINTER = 0xd061D61a4d941c39E5453435B6345Dc261C2fcE0;
+	address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
 
 	struct ClaimerReward {
 		address rewardToken;
@@ -34,10 +36,10 @@ contract CurveStrategy is BaseStrategy {
 		address _receiver,
 		CurveAccumulator _accumulator,
 		address _veSDTFeeProxy
-	) BaseStrategy(_locker, _governance, _receiver) {
-		veSDTFee = 500; // %5
-		accumulatorFee = 800; // %8
-		claimerReward = 50; //%0.5
+	) BaseStrategyV2(_locker, _governance, _receiver) {
+		//veSDTFee = 500; // %5
+		//accumulatorFee = 800; // %8
+		//claimerReward = 50; //%0.5
 		accumulator = _accumulator;
 		veSDTFeeProxy = _veSDTFeeProxy;
 	}
@@ -88,8 +90,26 @@ contract CurveStrategy is BaseStrategy {
 	function claim(address _token) public override {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
-		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("user_checkpoint(address)", address(locker)));
-		require(success, "Checkpoint failed!");
+
+		// Claim CRV
+		// within the mint() it calls the user checkpoint
+		(bool success, ) = locker.execute(
+			CRV_MINTER,
+			0,
+			abi.encodeWithSignature("mint(address)", gauge)
+		);
+		require(success, "CRV mint failed!");
+
+		uint256 crvMinted = IERC20(CRV).balanceOf(address(locker));
+		// Send CRV to here
+		(success, ) = locker.execute(
+			CRV,
+			0,
+			abi.encodeWithSignature("transfer(address,uint256)", address(this), crvMinted)
+		);
+		require(success, "CRV transfer failed!");
+
+		// Claim extra token
 		(success, ) = locker.execute(
 			gauge,
 			0,
@@ -102,20 +122,26 @@ contract CurveStrategy is BaseStrategy {
 				break;
 			}
 			uint256 rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
-			uint256 multisigFee = (rewardsBalance * perfFee[gauge]) / BASE_FEE;
-			uint256 accumulatorPart = (rewardsBalance * accumulatorFee) / BASE_FEE;
-			uint256 veSDTPart = (rewardsBalance * veSDTFee) / BASE_FEE;
-			uint256 claimerPart = (rewardsBalance * claimerReward) / BASE_FEE;
-			IERC20(rewardToken).approve(address(accumulator), accumulatorPart);
-			accumulator.depositToken(rewardToken, accumulatorPart);
-			IERC20(rewardToken).transfer(rewardsReceiver, multisigFee);
-			IERC20(rewardToken).transfer(veSDTFeeProxy, veSDTPart);
-			IERC20(rewardToken).transfer(msg.sender, claimerPart);
-			uint256 netRewards = rewardsBalance - multisigFee - accumulatorPart - veSDTPart - claimerPart;
+			uint256 netRewards = sendFee(gauge, rewardToken, rewardsBalance);
 			IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
 			IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, netRewards);
 			emit Claimed(gauge, rewardToken, rewardsBalance);
 		}
+	}
+
+	function sendFee(address _gauge, address _rewardToken, uint256 _rewardsBalance) internal returns(uint256) {
+		// calculate the amount for each fee recipient
+		uint256 multisigFee = (_rewardsBalance * perfFee[_gauge]) / BASE_FEE;
+		uint256 accumulatorPart = (_rewardsBalance * accumulatorFee[_gauge]) / BASE_FEE;
+		uint256 veSDTPart = (_rewardsBalance * veSDTFee[_gauge]) / BASE_FEE;
+		uint256 claimerPart = (_rewardsBalance * claimerRewardFee[_gauge]) / BASE_FEE;
+		// send 
+		IERC20(_rewardToken).approve(address(accumulator), accumulatorPart);
+		accumulator.depositToken(_rewardToken, accumulatorPart);
+		IERC20(_rewardToken).transfer(rewardsReceiver, multisigFee);
+		IERC20(_rewardToken).transfer(veSDTFeeProxy, veSDTPart);
+		IERC20(_rewardToken).transfer(msg.sender, claimerPart);
+		return _rewardsBalance - multisigFee - accumulatorPart - veSDTPart - claimerPart;
 	}
 
 	/// @notice view function to fetch the pending rewards claimable
@@ -129,7 +155,7 @@ contract CurveStrategy is BaseStrategy {
 				break;
 			}
 			uint256 rewardsBalance = ILiquidityGauge(gauge).claimable_reward(address(locker), rewardToken);
-			uint256 pendingAmount = (rewardsBalance * claimerReward) / BASE_FEE;
+			uint256 pendingAmount = (rewardsBalance * claimerRewardFee[gauge]) / BASE_FEE;
 			ClaimerReward memory pendingReward = ClaimerReward(rewardToken, pendingAmount);
 			pendings[i] = pendingReward;
 		}
@@ -188,8 +214,8 @@ contract CurveStrategy is BaseStrategy {
 			(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", address(this), amountToMigrate));
 			require(success, "Transfer failed!");
 
-			// Set new gauge
-			claim(_token); // claim before storing the new gauge address
+			// claim before storing the new gauge address
+			claim(_token);
 
 			// Deposit LPs to the new gauge
 			locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", _gauge, 0));
@@ -197,8 +223,27 @@ contract CurveStrategy is BaseStrategy {
 			(success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("deposit(uint256)", amountToMigrate));
 			require(success, "Deposit failed!");
 		}
+		// Set new gauge
 		gauges[_token] = _gauge;
 		emit GaugeSet(_gauge, _token);
+	}
+
+	function migrateLP(address _token) external onlyGovernance {
+		require(gauges[_token] != address(0), "not existent gauge");
+		address gauge = gauges[_token];
+		uint256 amountToMigrate = IERC20(gauge).balanceOf(address(locker));
+
+		// Withdraw LPs from the old gauge
+		bool success;
+		(success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("withdraw(uint256)", amountToMigrate));
+		require(success, "Withdraw failed!");
+
+		// Transfer LPs here
+		(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", address(this), amountToMigrate));
+		require(success, "Transfer failed!");
+
+		// claim before storing the new gauge address
+		claim(_token);
 	}
 
 	/// @notice function to set a multi gauge
@@ -259,13 +304,13 @@ contract CurveStrategy is BaseStrategy {
 			perfFee[_gauge] = _newFee;
 		} else if (_manageFee == MANAGEFEE.VESDTFEE) {
 			// 1
-			veSDTFee = _newFee;
+			veSDTFee[_gauge] = _newFee;
 		} else if (_manageFee == MANAGEFEE.ACCUMULATORFEE) {
 			//2
-			accumulatorFee = _newFee;
+			accumulatorFee[_gauge] = _newFee;
 		} else if (_manageFee == MANAGEFEE.CLAIMERREWARD) {
 			// 3
-			claimerReward = _newFee;
+			claimerRewardFee[_gauge] = _newFee;
 		}
 	}
 
