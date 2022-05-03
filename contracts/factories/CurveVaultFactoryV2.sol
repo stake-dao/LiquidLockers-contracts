@@ -24,6 +24,7 @@ contract CurveVaultFactoryV2 {
 	address public gaugeImpl = address(new GaugeMultiRewards());
 	address public constant governance = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063;
 	address public constant gaugeController = 0x2F50D538606Fa9EDD2B11E2446BEb18C9D5846bB;
+	address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
 	address public curveStrategy;
 	event VaultDeployed(address proxy, address lpToken, address impl);
 	event GaugeDeployed(address proxy, address stakeToken, address impl);
@@ -63,6 +64,8 @@ contract CurveVaultFactoryV2 {
 		CurveStrategy(curveStrategy).setGauge(vaultLpToken, _crvGaugeAddress);
 		CurveStrategy(curveStrategy).setMultiGauge(_crvGaugeAddress, gaugeImplAddress);
 		CurveStrategy(curveStrategy).manageFee(CurveStrategy.MANAGEFEE.PERFFEE, _crvGaugeAddress, 200); //%2 default
+		GaugeMultiRewards(gaugeImplAddress).addReward(CRV, curveStrategy, 604800);
+		GaugeMultiRewards(gaugeImplAddress).setGovernance(governance);
 	}
 
 	/**
@@ -111,7 +114,7 @@ contract CurveVaultFactoryV2 {
 			_stakingToken,
 			keccak256(abi.encodePacked(_governance, _name, _symbol))
 		);
-		deployed.init(_stakingToken, _stakingToken, _governance, _name, _symbol);
+		deployed.init(_stakingToken, _stakingToken, address(this), _name, _symbol);
 		return address(deployed);
 	}
 
