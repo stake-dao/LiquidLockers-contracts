@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../interfaces/IMultiRewards.sol";
+import "../interfaces/ILiquidityGaugeStrat.sol";
 import "./AngleStrategy.sol";
 
 contract AngleVault is ERC20Upgradeable {
@@ -16,7 +16,7 @@ contract AngleVault is ERC20Upgradeable {
 	address public governance;
 	uint256 public withdrawalFee;
 	uint256 public keeperFee;
-	address public multiRewardsGauge;
+	address public liquidityGauge;
 	uint256 public accumulatedFee;
 	AngleStrategy public angleStrategy;
 	uint256 public min;
@@ -35,14 +35,13 @@ contract AngleVault is ERC20Upgradeable {
 		__ERC20_init(name_, symbol_);
 		token = _token;
 		governance = _governance;
-		withdrawalFee = 50; // %0.5
 		min = 10000;
 		keeperFee = 10; // %0.1
 		angleStrategy = _angleStrategy;
 	}
 
 	function deposit(uint256 _amount, bool _earn) public {
-		require(address(multiRewardsGauge) != address(0), "Gauge not yet initialized");
+		require(address(liquidityGauge) != address(0), "Gauge not yet initialized");
 		token.safeTransferFrom(msg.sender, address(this), _amount);
 		if (!_earn) {
 			uint256 keeperCut = (_amount * keeperFee) / 10000;
@@ -53,9 +52,8 @@ contract AngleVault is ERC20Upgradeable {
 			accumulatedFee = 0;
 		}
 		_mint(address(this), _amount);
-		ERC20Upgradeable(address(this)).approve(multiRewardsGauge, _amount);
-		IMultiRewards(multiRewardsGauge).stakeFor(msg.sender, _amount);
-		IMultiRewards(multiRewardsGauge).mintFor(msg.sender, _amount);
+		ERC20Upgradeable(address(this)).approve(liquidityGauge, _amount);
+		ILiquidityGaugeStrat(liquidityGauge).deposit(_amount, msg.sender);
 		if (_earn) {
 			earn();
 		}
@@ -63,9 +61,9 @@ contract AngleVault is ERC20Upgradeable {
 	}
 
 	function withdraw(uint256 _shares) public {
-		uint256 userTotalShares = IMultiRewards(multiRewardsGauge).stakeOf(msg.sender);
+		uint256 userTotalShares = ILiquidityGaugeStrat(liquidityGauge).balanceOf(msg.sender);
 		require(_shares <= userTotalShares, "Not enough staked");
-		IMultiRewards(multiRewardsGauge).withdrawFor(msg.sender, _shares);
+		ILiquidityGaugeStrat(liquidityGauge).withdraw(_shares, msg.sender, true);
 		_burn(address(this), _shares);
 		uint256 tokenBalance = token.balanceOf(address(this)) - accumulatedFee;
 		uint256 withdrawFee;
@@ -75,7 +73,6 @@ contract AngleVault is ERC20Upgradeable {
 			withdrawFee = (amountToWithdraw * withdrawalFee) / 10000;
 			token.safeTransfer(governance, withdrawFee);
 		}
-		IMultiRewards(multiRewardsGauge).burnFrom(msg.sender, _shares);
 		token.safeTransfer(msg.sender, _shares - withdrawFee);
 		emit Withdraw(msg.sender, _shares - withdrawFee);
 	}
@@ -94,9 +91,9 @@ contract AngleVault is ERC20Upgradeable {
 		keeperFee = _newFee;
 	}
 
-	function setGaugeMultiRewards(address _multiRewardsGauge) external {
+	function setLiquidityGauge(address _liquidityGauge) external {
 		require(msg.sender == governance, "!governance");
-		multiRewardsGauge = _multiRewardsGauge;
+		liquidityGauge = _liquidityGauge;
 	}
 
 	function setAngleStrategy(AngleStrategy _newStrat) external {

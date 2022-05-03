@@ -7,20 +7,22 @@ contract BaseStrategy {
 	ILocker locker;
 	address public governance;
 	address public rewardsReceiver;
-	uint256 public veSDTFee;
 	address public veSDTFeeProxy;
-	uint256 public accumulatorFee;
-	uint256 public claimerReward;
+	address public vaultGaugeFactory;
 	uint256 public constant BASE_FEE = 10000;
 	mapping(address => address) public gauges;
 	mapping(address => bool) public vaults;
 	mapping(address => uint256) public perfFee;
 	mapping(address => address) public multiGauges;
+	mapping(address => uint256) public accumulatorFee; // gauge -> fee
+	mapping(address => uint256) public claimerRewardFee; // gauge -> fee
+	mapping(address => uint256) public veSDTFee; // gauge -> fee
 
 	/* ========== EVENTS ========== */
 	event Deposited(address _gauge, address _token, uint256 _amount);
 	event Withdrawn(address _gauge, address _token, uint256 _amount);
 	event Claimed(address _gauge, address _token, uint256 _amount);
+	event RewardReceiverSet(address _gauge, address _receiver);
 	event VaultToggled(address _vault, bool _newState);
 	event GaugeSet(address _gauge, address _token);
 
@@ -31,6 +33,10 @@ contract BaseStrategy {
 	}
 	modifier onlyApprovedVault() {
 		require(vaults[msg.sender], "!approved vault");
+		_;
+	}
+	modifier onlyGovernanceOrFactory() {
+		require(msg.sender == governance || msg.sender == vaultGaugeFactory, "!governance && !factory");
 		_;
 	}
 
@@ -52,9 +58,9 @@ contract BaseStrategy {
 
 	function claim(address _gauge) external virtual {}
 
-	function toggleVault(address _vault) external virtual onlyGovernance {}
+	function toggleVault(address _vault) external virtual onlyGovernanceOrFactory {}
 
-	function setGauge(address _token, address _gauge) external virtual onlyGovernance {}
+	function setGauge(address _token, address _gauge) external virtual onlyGovernanceOrFactory {}
 
-	function setMultiGauge(address _gauge, address _multiGauge) external virtual onlyGovernance {}
+	function setMultiGauge(address _gauge, address _multiGauge) external virtual onlyGovernanceOrFactory {}
 }
