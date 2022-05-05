@@ -61,7 +61,7 @@ describe("CRV Migration", function () {
   let crvLocker: Contract;
 
   before(async function () {
-    //this.enableTimeouts(false);
+    //this.timeout(0);
     [deployer] = await ethers.getSigners();
     await network.provider.request({
       method: "hardhat_impersonateAccount",
@@ -165,7 +165,7 @@ describe("CRV Migration", function () {
   });
 
   it("sdveCrv minting should be disable", async function () {
-    //this.enableTimeouts(false);
+    //this.timeout(0);
     const crvToDeposit = parseEther("10");
     await crv.connect(crvWhale).approve(sdVeCrv.address, crvToDeposit);
     await expect(sdVeCrv.connect(crvWhale).deposit(crvToDeposit)).to.be.reverted;
@@ -179,14 +179,14 @@ describe("CRV Migration", function () {
   });
 
   it("user with sdVeCRV should be able to lock & receive equal amount in sdCRV", async function () {
-    //this.enableTimeouts(false);
+    //this.timeout(0);
     await sdVeCrv.connect(sdVeCrvWhale1).approve(crvDepositor.address, parseEther("1"));
     await crvDepositor.connect(sdVeCrvWhale1).lockSdveCrvToSdCrv(parseEther("1"));
     expect(await sdCRVToken.balanceOf(crvDepositor.address)).to.equal(parseEther("1"));
   });
 
   it("user with sdVeCRV should be able to lock sdVeCRV a second time & receive equal amount in sdCRV", async function () {
-    //this.enableTimeouts(false);
+    //this.timeout(0);
     await sdVeCrv.connect(sdVeCrvWhale1).approve(crvDepositor.address, parseEther("1"));
     await crvDepositor.connect(sdVeCrvWhale1).lockSdveCrvToSdCrv(parseEther("1"));
     expect(await sdCRVToken.balanceOf(crvDepositor.address)).to.equal(parseEther("2"));

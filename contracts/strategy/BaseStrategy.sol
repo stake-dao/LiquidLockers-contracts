@@ -9,7 +9,7 @@ contract BaseStrategy {
 	address public rewardsReceiver;
 	address public veSDTFeeProxy;
 	address public vaultGaugeFactory;
-	uint256 public constant BASE_FEE = 10000;
+	uint256 public constant BASE_FEE = 10_000;
 	mapping(address => address) public gauges;
 	mapping(address => bool) public vaults;
 	mapping(address => uint256) public perfFee;

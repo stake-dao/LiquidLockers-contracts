@@ -153,23 +153,21 @@ describe("ANGLE Strategy", function () {
     masterchef = await ethers.getContractAt(MASTERCHEFABI, MASTERCHEF);
 
     let ABI_SDTD = [
-      "function initialize(address _rewardToken, address _controller, address _masterchef, address governor, address guardian, address _delegate_gauge)"
+      "function initialize(address _controller, address governor, address guardian, address _delegate_gauge)"
     ];
     let iface = new ethers.utils.Interface(ABI_SDTD);
     // Contracts upgradeable
     sdtDistributor = await SdtDistributor.deploy();
     gc = await GaugeController.connect(deployer).deploy(SDT, VE_SDT, deployer._address);
     const dataSdtD = iface.encodeFunctionData("initialize", [
-      SDT,
       gc.address,
-      masterchef.address,
       deployer._address,
       deployer._address,
       deployer._address
     ]);
 
     sdtDProxy = await Proxy.connect(deployer).deploy(sdtDistributor.address, proxyAdmin.address, dataSdtD);
-    sdtDProxy = await ethers.getContractAt("SdtDistributor", sdtDProxy.address);
+    sdtDProxy = await ethers.getContractAt("SdtDistributorV2", sdtDProxy.address);
     strategy = await AngleStrategy.deploy(
       locker.address,
       deployer._address,
@@ -197,8 +195,11 @@ describe("ANGLE Strategy", function () {
     );
     await strategy.connect(deployer).setVaultGaugeFactory(angleVaultFactoryContract.address);
     const cloneTx = await (await angleVaultFactoryContract.cloneAndInit(sanUSDC_EUR_GAUGE)).wait();
+    const gauge = cloneTx.events.filter((e: { event: string; }) => e.event == "GaugeDeployed")[0].args[0]
+
     sanUSDCEurVault = await ethers.getContractAt("AngleVault", cloneTx.events[0].args[0]);
-    sanUSDCEurMultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", cloneTx.events[1].args[0]);
+    sanUSDCEurMultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", gauge);
+
     sanUsdcEurLiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", sanUSDC_EUR_GAUGE);
     sanDaiEurLiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", sanDAI_EUR_GAUGE);
     // Add gauge types
@@ -321,7 +322,8 @@ describe("ANGLE Strategy", function () {
       const perfFee = claimable.mul(BigNumber.from(200)).div(BigNumber.from(10000));
       const accumulatorPart = claimable.mul(BigNumber.from(800)).div(BigNumber.from(10000));
       const claimed = tx.events.find((e: any) => e.event === "Claimed");
-
+      const sdtBalance = await sdt.balanceOf(sanUSDCEurMultiGauge.address);
+      const sdtBalanceOfDistributor = await sdt.balanceOf(sdtDProxy.address);
       expect(claimed.args[2]).to.be.equal(claimable);
       expect(multiGaugeRewardRateBefore[3]).to.be.equal(0);
       expect(multiGaugeRewardRateAfter[3]).to.be.gt(0);
@@ -359,7 +361,10 @@ describe("ANGLE Strategy", function () {
     it("it should create new vault and multigauge rewards for different Angle LP token", async () => {
       const cloneTx = await (await angleVaultFactoryContract.cloneAndInit(sanDAI_EUR_GAUGE)).wait();
       sanDaiEurVault = await ethers.getContractAt("AngleVault", cloneTx.events[0].args[0]);
-      sanDaiEurMultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", cloneTx.events[1].args[0]);
+
+      const gauge = cloneTx.events.filter((e: { event: string; }) => e.event == "GaugeDeployed")[0].args[0]
+
+      sanDaiEurMultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", gauge);
       const tokenOfVault = await sanDaiEurVault.token();
       // add sanDaiEur gauge to gaugecontroller
       await gc.connect(deployer)["add_gauge(address,int128,uint256)"](sanDaiEurMultiGauge.address, 0, 0); // gauge - type - weight
@@ -416,6 +421,9 @@ describe("ANGLE Strategy", function () {
       await strategy.claim(sanUsdcEur.address);
       const sdtBalanceOfDistributor = await sdt.balanceOf(sdtDProxy.address);
       expect(sdtBalanceOfDistributor).to.be.equal(0);
+    });
+
+    it("should distribute to gauge", async () => {
     });
   });
 });

@@ -27,7 +27,7 @@ describe("veSDT", () => {
   let owner: SignerWithAddress;
 
   before(async function () {
-    this.enableTimeouts(false);
+    this.timeout(0);
 
     [owner] = await ethers.getSigners();
 

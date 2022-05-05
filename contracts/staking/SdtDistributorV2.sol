@@ -9,19 +9,19 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 
 	uint256 public timePeriod;
 
+	/// @notice Address of the SDT token given as a reward
+	IERC20 public constant rewardToken = IERC20(0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F);
+
+	/// @notice Address of the masterchef
+	IMasterchef public constant masterchef = IMasterchef(0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c);
+
 	/// @notice Role for governors only
 	bytes32 public constant GOVERNOR_ROLE = keccak256("GOVERNOR_ROLE");
 	/// @notice Role for the guardian
 	bytes32 public constant GUARDIAN_ROLE = keccak256("GUARDIAN_ROLE");
 
-	/// @notice Address of the SDT token given as a reward
-	IERC20 public rewardToken;
-
 	/// @notice Address of the token that will be deposited in masterchef
 	IERC20 public masterchefToken;
-
-	/// @notice Address of the masterchef
-	IMasterchef public masterchef;
 
 	/// @notice Address of the `GaugeController` contract
 	IGaugeController public controller;
@@ -62,28 +62,22 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 	mapping(uint256 => mapping(address => bool)) public isGaugePaid;
 
 	/// @notice Initialize function
-	/// @param _rewardToken token address used as reward
 	/// @param _controller gauge controller to manage votes
-	/// @param _masterchef masterchef address to redeem SDT
 	/// @param _governor governor address
 	/// @param _guardian guardian address
 	/// @param _delegateGauge delegate gauge address
 	function initialize(
-		address _rewardToken,
 		address _controller,
-		address _masterchef,
 		address _governor,
 		address _guardian,
 		address _delegateGauge
 	) external initializer {
 		require(
-			_controller != address(0) && _rewardToken != address(0) && _guardian != address(0) && _governor != address(0),
+			_controller != address(0) && _guardian != address(0) && _governor != address(0),
 			"0"
 		);
-		rewardToken = IERC20(_rewardToken);
 		controller = IGaugeController(_controller);
 		delegateGauge = _delegateGauge;
-		masterchef = IMasterchef(_masterchef);
 		masterchefToken = IERC20(address(new MasterchefMasterToken()));
 		distributionsOn = false;
 		startTime = block.timestamp;
@@ -122,7 +116,12 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 	function _distribute(address gaugeAddr) internal nonReentrant {
 		require(distributionsOn == true, "not allowed");
 		int128 gaugeType = controller.gauge_types(gaugeAddr);
-		require(gaugeType >= 0 && !killedGauges[gaugeAddr], "Unrecognized or killed gauge");
+		require(gaugeType >= 0, "Unrecognized or killed gauge");
+
+		if(killedGauges[gaugeAddr]){
+			return;
+		}
+
 		uint256 midnight = (block.timestamp / 1 days) * 1 days;
 		uint256 totalDistribute;
 		if (block.timestamp > lastMasterchefPull + timePeriod) {
@@ -157,6 +156,7 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 		uint256 claimerReward = (totalDistribute * claimerFee) / 10000;
 		rewardToken.transfer(msg.sender, claimerReward);
 		totalDistribute -= claimerReward;
+
 		if (gaugeType == 1) {
 			rewardToken.safeTransfer(gaugeAddr, totalDistribute);
 			IStakingRewards(gaugeAddr).notifyRewardAmount(totalDistribute);
