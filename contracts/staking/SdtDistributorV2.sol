@@ -56,6 +56,7 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 
 	uint256 public startTime;
 	uint256 public claimerFee;
+	uint256 public lookPastDays;
 
 	/// @notice Maps the timestamp of last pull to the gauge addresses then keeps the data if particular gauge paid in the last pull
 	mapping(uint256 => mapping(address => bool)) public isGaugePaid;
@@ -87,6 +88,7 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 		distributionsOn = false;
 		startTime = block.timestamp;
 		timePeriod = 3600 * 24; // One day in seconds
+		lookPastDays = 45; // for past 45 days check
 
 		_setRoleAdmin(GOVERNOR_ROLE, GOVERNOR_ROLE);
 		_setRoleAdmin(GUARDIAN_ROLE, GOVERNOR_ROLE);
@@ -129,8 +131,8 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 			pulls[midnight] = rewardToken.balanceOf(address(this)) - sdtBefore;
 			lastMasterchefPull = block.timestamp;
 		}
-		// check past 45 days
-		for (uint256 i; i < 45; i++) {
+		// check past n days
+		for (uint256 i; i < lookPastDays; i++) {
 			uint256 currentTimestamp = midnight - (i * 86400);
 			if (currentTimestamp < startTime) {
 				break;
@@ -138,7 +140,7 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 			if (pulls[currentTimestamp] > 0) {
 				bool isPaid = isGaugePaid[currentTimestamp][gaugeAddr];
 				if (isPaid) {
-					continue;
+					break;
 				}
 				uint256 sdtBalance = pulls[currentTimestamp];
 				uint256 gaugeRelativeWeight;
@@ -147,7 +149,6 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 				} else {
 					gaugeRelativeWeight = controller.gauge_relative_weight(gaugeAddr, currentTimestamp);
 				}
-
 				uint256 sdtDistributed = (sdtBalance * gaugeRelativeWeight) / 1e18;
 				totalDistribute += sdtDistributed;
 				isGaugePaid[currentTimestamp][gaugeAddr] = true;
@@ -278,6 +279,12 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 
 	function setClaimerFee(uint256 _newFee) external onlyRole(GOVERNOR_ROLE) {
 		claimerFee = _newFee;
+	}
+
+	/// @notice Set the how many days we should look back for reward distribution
+	/// @param _newLookPastDays new value for how many days we should look back
+	function setLookPastDays(uint256 _newLookPastDays) external onlyRole(GOVERNOR_ROLE) {
+		lookPastDays = _newLookPastDays;
 	}
 
 	/// @notice Withdraws ERC20 tokens that could accrue on this contract
