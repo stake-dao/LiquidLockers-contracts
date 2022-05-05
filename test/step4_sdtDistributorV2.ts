@@ -244,12 +244,13 @@ describe("SDTDistributor V2 using Angle Strategy", function () {
       const before_DistributorBalance_1 = await sdt.balanceOf(sanUSDCEurMultiGauge.address);
       const before_DistributorBalance_2 = await sdt.balanceOf(sanDaiEurMultiGauge.address);
 
-      let weight = await gc["gauge_relative_weight(address)"](sanUSDCEurMultiGauge.address);
       // increase the timestamp by 8 days
       await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 8]);
       await network.provider.send("evm_mine", []);
       await gc.connect(veSdtHolder).checkpoint_gauge(sanUSDCEurMultiGauge.address);
-      weight = await gc["gauge_relative_weight(address)"](sanUSDCEurMultiGauge.address);
+      await gc.connect(veSdtHolder).checkpoint_gauge(sanDaiEurMultiGauge.address);
+
+      await sdtDProxy.connect(deployer).distribute(sanUSDCEurMultiGauge.address);
 
       let lastBlock = await ethers.provider.getBlock("latest")
       // Rounded down to day
@@ -275,6 +276,54 @@ describe("SDTDistributor V2 using Angle Strategy", function () {
       expect(Number(firstPull) / 2).to.be.equal(expectedDistribution_1);
       expect((Number(firstPull) + Number(secondPull)) / 2).to.be.equal(expectedDistribution_2);
       // TODO
+    });
+
+    it("should distribute to single gauge when days past 46 with leftover", async () => {
+      await gc.connect(veSdtHolder).vote_for_gauge_weights(sanUSDCEurMultiGauge.address, 5000);
+      await gc.connect(veSdtHolder).vote_for_gauge_weights(sanDaiEurMultiGauge.address, 5000);
+
+      await sdtDProxy.connect(deployer).approveGauge(sanUSDCEurMultiGauge.address);
+      await sdtDProxy.connect(deployer).approveGauge(sanDaiEurMultiGauge.address);
+
+      const before_DistributorBalance_1 = await sdt.balanceOf(sanUSDCEurMultiGauge.address);
+      const before_DistributorBalance_2 = await sdt.balanceOf(sanDaiEurMultiGauge.address);
+
+      // increase the timestamp by 8 days
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 8]);
+      await network.provider.send("evm_mine", []);
+
+      await gc.connect(veSdtHolder).checkpoint_gauge(sanUSDCEurMultiGauge.address);
+      await gc.connect(veSdtHolder).checkpoint_gauge(sanDaiEurMultiGauge.address);
+
+      await sdtDProxy.connect(deployer).distribute(sanUSDCEurMultiGauge.address);
+
+      let lastBlock = await ethers.provider.getBlock("latest")
+      // Rounded down to day
+      let currentTimestamp = lastBlock.timestamp - (lastBlock.timestamp % 86_400)
+      const firstPull = await sdtDProxy.pulls(currentTimestamp)
+
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 38]);
+      await network.provider.send("evm_mine", []);
+
+      await sdtDProxy.connect(deployer).distribute(sanDaiEurMultiGauge.address);
+
+      lastBlock = await ethers.provider.getBlock("latest")
+      // Rounded down to day
+      currentTimestamp = lastBlock.timestamp - (lastBlock.timestamp % 86_400)
+      const secondPull = await sdtDProxy.pulls(currentTimestamp)
+
+      const after_DistributorBalance_1 = await sdt.balanceOf(sanUSDCEurMultiGauge.address);
+      const after_DistributorBalance_2 = await sdt.balanceOf(sanDaiEurMultiGauge.address);
+
+
+      const expectedDistribution_1 = after_DistributorBalance_1 - before_DistributorBalance_1;
+      const expectedDistribution_2 = after_DistributorBalance_2 - before_DistributorBalance_2;
+
+      const leftover = await sdt.balanceOf(sdtDProxy.address);
+
+      expect(Number(firstPull) / 2).to.be.equal(expectedDistribution_1);
+      expect(Number(firstPull) / 2 + (Number(secondPull)) / 2).to.be.equal(expectedDistribution_2);
+      expect(Number(leftover)).to.be.equal(Number(secondPull) / 2);
     });
 
     it("should distribute to multiple gauges", async () => {
