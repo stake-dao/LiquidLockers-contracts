@@ -128,7 +128,7 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 			uint256 sdtBefore = rewardToken.balanceOf(address(this));
 			_pullSDT();
 			pulls[midnight] = rewardToken.balanceOf(address(this)) - sdtBefore;
-			lastMasterchefPull = block.timestamp;
+			lastMasterchefPull = midnight;
 		}
 		// check past n days
 		for (uint256 i; i < lookPastDays; i++) {
