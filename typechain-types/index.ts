@@ -70,6 +70,7 @@ export type { LiquidityGaugeV4Strat } from "./LiquidityGaugeV4Strat";
 export type { MasterchefMasterToken } from "./MasterchefMasterToken";
 export type { SdtDistributor } from "./SdtDistributor";
 export type { SdtDistributorEvents } from "./SdtDistributorEvents";
+export type { SdtDistributorV2 } from "./SdtDistributorV2";
 export type { VeBoostProxy } from "./VeBoostProxy";
 export type { AngleStrategy } from "./AngleStrategy";
 export type { AngleVault } from "./AngleVault";
@@ -144,6 +145,7 @@ export { LiquidityGaugeV4Strat__factory } from "./factories/LiquidityGaugeV4Stra
 export { MasterchefMasterToken__factory } from "./factories/MasterchefMasterToken__factory";
 export { SdtDistributor__factory } from "./factories/SdtDistributor__factory";
 export { SdtDistributorEvents__factory } from "./factories/SdtDistributorEvents__factory";
+export { SdtDistributorV2__factory } from "./factories/SdtDistributorV2__factory";
 export { VeBoostProxy__factory } from "./factories/VeBoostProxy__factory";
 export { AngleStrategy__factory } from "./factories/AngleStrategy__factory";
 export { AngleVault__factory } from "./factories/AngleVault__factory";

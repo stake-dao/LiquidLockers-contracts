@@ -64,6 +64,7 @@ describe("ANGLE Strategy", function () {
   let angle: Contract;
   let sanUsdcEur: Contract;
   let sanDaiEur: Contract;
+  let sdt: Contract;
 
   let deployer: JsonRpcSigner;
   let dummyMs: SignerWithAddress;
@@ -114,7 +115,7 @@ describe("ANGLE Strategy", function () {
       params: [VESDT_HOLDER]
     });
     const AngleStrategy = await ethers.getContractFactory("AngleStrategy");
-    const SdtDistributor = await ethers.getContractFactory("SdtDistributor");
+    const SdtDistributor = await ethers.getContractFactory("SdtDistributorV2");
     const GaugeController = await ethers.getContractFactory("GaugeController");
     const Proxy = await ethers.getContractFactory("TransparentUpgradeableProxy");
     const ProxyAdmin = await ethers.getContractFactory("ProxyAdmin");
@@ -133,6 +134,7 @@ describe("ANGLE Strategy", function () {
     sanDaiEur = await ethers.getContractAt(ERC20ABI, SAN_DAI_EUR);
     angle = await ethers.getContractAt(ERC20ABI, ANGLE);
     frax = await ethers.getContractAt(ERC20ABI, FRAX);
+    sdt = await ethers.getContractAt(ERC20ABI, SDT);
     sdFrax3Crv = await ethers.getContractAt(ERC20ABI, SDFRAX3CRV);
     sdAngleGauge = await ethers.getContractAt("LiquidityGaugeV4", SDANGLEGAUGE);
     angleAccumulator = await ethers.getContractAt("AngleAccumulatorV2", ANGLEACCUMULATOR);
@@ -296,13 +298,14 @@ describe("ANGLE Strategy", function () {
       // increase the timestamp by 1 month
       await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 30]);
       await network.provider.send("evm_mine", []);
-      await gc.connect(veSdtHolder).checkpoint_gauge(sanUSDCEurMultiGauge.address);
-      const angleGRWA = await gc["gauge_relative_weight(address)"](sanUSDCEurMultiGauge.address);
+      // await gc.connect(veSdtHolder).checkpoint_gauge(sanUSDCEurMultiGauge.address);
+
       const multiGaugeRewardRateBefore = await sanUSDCEurMultiGauge.reward_data(angle.address);
       const msAngleBalanceBefore = await angle.balanceOf(dummyMs.address);
       const accumulatorAngleBalanceBefore = await angle.balanceOf(ANGLEACCUMULATOR);
       const claimable = await sanUsdcEurLiqudityGauge.claimable_reward(locker.address, angle.address);
       const tx = await (await strategy.claim(sanUsdcEur.address)).wait();
+      const angleGRWA = await gc["gauge_relative_weight(address)"](sanUSDCEurMultiGauge.address);
       const accumulatorAngleBalanceAfter = await angle.balanceOf(ANGLEACCUMULATOR);
       const multiGaugeRewardRateAfter = await sanUSDCEurMultiGauge.reward_data(angle.address);
       const sdtRewardsAfter = await sanUSDCEurMultiGauge.reward_data(SDT);
@@ -310,6 +313,10 @@ describe("ANGLE Strategy", function () {
       const perfFee = claimable.mul(BigNumber.from(200)).div(BigNumber.from(10000));
       const accumulatorPart = claimable.mul(BigNumber.from(800)).div(BigNumber.from(10000));
       const claimed = tx.events.find((e: any) => e.event === "Claimed");
+      const sdtBalance = await sdt.balanceOf(sanUSDCEurMultiGauge.address);
+      const sdtBalanceOfDistributor = await sdt.balanceOf(sdtDProxy.address);
+      console.log(`sdtBalance ${sdtBalance}`);
+      console.log(`sdtBalanceOfDistributor ${sdtBalanceOfDistributor}`);
       expect(claimed.args[2]).to.be.equal(claimable);
       expect(multiGaugeRewardRateBefore[3]).to.be.equal(0);
       expect(multiGaugeRewardRateAfter[3]).to.be.gt(0);

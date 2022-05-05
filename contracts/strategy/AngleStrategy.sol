@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./BaseStrategy.sol";
 import "../accumulator/AngleAccumulator.sol";
 import "../interfaces/ILiquidityGauge.sol";
-import "../staking/SdtDistributor.sol";
+import "../staking/SdtDistributorV2.sol";
 
 contract AngleStrategy is BaseStrategy {
 	using SafeERC20 for IERC20;
@@ -31,9 +31,6 @@ contract AngleStrategy is BaseStrategy {
 		address _veSDTFeeProxy,
 		address _sdtDistributor
 	) BaseStrategy(_locker, _governance, _receiver) {
-		// veSDTFee = 500; // %5
-		// accumulatorFee = 800; // %8
-		// claimerReward = 50; //%0.5
 		accumulator = _accumulator;
 		veSDTFeeProxy = _veSDTFeeProxy;
 		sdtDistributor = _sdtDistributor;
@@ -77,9 +74,7 @@ contract AngleStrategy is BaseStrategy {
 			abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
 		);
 		require(success, "Claim failed!");
-		address[] memory liquidityGauges = new address[](1);
-		liquidityGauges[0] = multiGauges[gauge];
-		SdtDistributor(sdtDistributor).distributeMulti(liquidityGauges);
+		SdtDistributorV2(sdtDistributor).distribute(multiGauges[gauge]);
 		for (uint8 i = 0; i < 8; i++) {
 			address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
 			if (rewardToken == address(0)) {
