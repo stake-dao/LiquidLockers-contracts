@@ -114,25 +114,27 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 	}
 
 	function _distribute(address gaugeAddr) internal nonReentrant {
-		require(distributionsOn == true, "not allowed");
+		require(distributionsOn, "not allowed");
 		int128 gaugeType = controller.gauge_types(gaugeAddr);
-		require(gaugeType >= 0, "Unrecognized or killed gauge");
+		require(gaugeType >= 0, "Unrecognized gauge");
 
 		if(killedGauges[gaugeAddr]){
 			return;
 		}
 
-		uint256 midnight = (block.timestamp / 1 days) * 1 days;
+		// Rounded to beginning of the day -> 00:00 UTC
+		uint256 roundedTimestamp = (block.timestamp / 1 days) * 1 days;
+
 		uint256 totalDistribute;
 		if (block.timestamp > lastMasterchefPull + timePeriod) {
 			uint256 sdtBefore = rewardToken.balanceOf(address(this));
 			_pullSDT();
-			pulls[midnight] = rewardToken.balanceOf(address(this)) - sdtBefore;
-			lastMasterchefPull = midnight;
+			pulls[roundedTimestamp] = rewardToken.balanceOf(address(this)) - sdtBefore;
+			lastMasterchefPull = roundedTimestamp;
 		}
 		// check past n days
 		for (uint256 i; i < lookPastDays; i++) {
-			uint256 currentTimestamp = midnight - (i * 86400);
+			uint256 currentTimestamp = roundedTimestamp - (i * 86400);
 			if (currentTimestamp < startTime) {
 				break;
 			}
@@ -153,8 +155,9 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 				isGaugePaid[currentTimestamp][gaugeAddr] = true;
 			}
 		}
-		uint256 claimerReward = (totalDistribute * claimerFee) / 10000;
-		rewardToken.transfer(msg.sender, claimerReward);
+
+		uint256 claimerReward = (totalDistribute * claimerFee) / 10_000;
+		rewardToken.safeTransfer(msg.sender, claimerReward);
 		totalDistribute -= claimerReward;
 
 		if (gaugeType == 1) {

@@ -7,7 +7,7 @@ import { JsonRpcSigner } from "@ethersproject/providers";
 import MASTERCHEFABI from "./fixtures/Masterchef.json";
 import ERC20ABI from "./fixtures/ERC20.json";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { parseEther, parseUnits } from "@ethersproject/units";
+import { parseEther } from "@ethersproject/units";
 import AngleLockerABI from "./fixtures/AngleLocker.json";
 import {
   SDT,
@@ -18,59 +18,42 @@ import {
   TIMELOCK,
   MASTERCHEF,
   STDDEPLOYER,
-  SAN_DAI_EUR,
-  SDANGLEGAUGE,
-  VESDT_HOLDER,
-  SAN_USDC_EUR,
   ANGLE_LOCKER,
+  VESDT_HOLDER,
   sanDAI_EUR_GAUGE,
   ANGLEACCUMULATOR,
   sanUSDC_EUR_GAUGE,
   SAN_DAI_EUR_HOLDER,
   SAN_USDC_EUR_HOLDER,
 } from "./constant";
-import { assert } from "console";
 
 const ETH_100 = BigNumber.from(10).mul(BigNumber.from(10).pow(18)).toHexString();
 
-describe("SDTDistributor V2 using Angle Strategy", function () {
+describe("SDTDistributor V2 using Angle Gauges", function () {
   let snapshotId: any;
   let pidSdtD: number;
-  let locker: Contract;
-  let angle: Contract;
-  let sanUsdcEur: Contract;
-  let sanDaiEur: Contract;
-  let sdt: Contract;
 
   let deployer: JsonRpcSigner;
-  let dummyMs: SignerWithAddress;
-  let VeSdtProxy: Contract;
-  let sanLPHolder: JsonRpcSigner;
-  let sanDAILPHolder: JsonRpcSigner;
-  let localDeployer: SignerWithAddress;
-
-  let strategy: Contract;
-  let sanUSDCEurVault: Contract;
-  let sanUSDCEurMultiGauge: Contract;
-  let sanUsdcEurLiqudityGauge: Contract;
-  let angleVaultFactoryContract: Contract;
-
-  let sanDaiEurVault: Contract;
-  let sanDaiEurMultiGauge: Contract;
-  let sanDaiEurLiqudityGauge: Contract;
-
-  let sdAngleGauge: Contract;
-  let angleAccumulator: Contract;
-  let masterchef: Contract;
-  let sdtDistributor: Contract;
-  let gc: Contract;
-  let sdtDProxy: Contract;
   let timelock: JsonRpcSigner;
   let veSdtHolder: JsonRpcSigner;
 
+  let dummyMs: SignerWithAddress;
+
+  let gc: Contract;
+  let sdt: Contract;
+  let locker: Contract;
+  let strategy: Contract;
+  let sdtDProxy: Contract;
+  let masterchef: Contract;
+  let VeSdtProxy: Contract;
+  let sdtDistributor: Contract;
+  let sanDaiEurMultiGauge: Contract;
+  let sanUSDCEurMultiGauge: Contract;
+  let angleVaultFactoryContract: Contract;
+
   before(async function () {
 
-    [localDeployer, dummyMs] = await ethers.getSigners();
+    [dummyMs] = await ethers.getSigners();
 
     await network.provider.request({
       method: "hardhat_impersonateAccount",
@@ -101,8 +84,6 @@ describe("SDTDistributor V2 using Angle Strategy", function () {
     const ProxyAdmin = await ethers.getContractFactory("ProxyAdmin");
 
     deployer = ethers.provider.getSigner(STDDEPLOYER);
-    sanLPHolder = ethers.provider.getSigner(SAN_USDC_EUR_HOLDER);
-    sanDAILPHolder = ethers.provider.getSigner(SAN_DAI_EUR_HOLDER);
     timelock = await ethers.provider.getSigner(TIMELOCK);
     veSdtHolder = await ethers.provider.getSigner(VESDT_HOLDER);
 
@@ -112,12 +93,7 @@ describe("SDTDistributor V2 using Angle Strategy", function () {
     await network.provider.send("hardhat_setBalance", [timelock._address, parseEther("10").toHexString()]);
 
     locker = await ethers.getContractAt(AngleLockerABI, ANGLE_LOCKER);
-    sanUsdcEur = await ethers.getContractAt(ERC20ABI, SAN_USDC_EUR);
-    sanDaiEur = await ethers.getContractAt(ERC20ABI, SAN_DAI_EUR);
-    angle = await ethers.getContractAt(ERC20ABI, ANGLE);
     sdt = await ethers.getContractAt(ERC20ABI, SDT);
-    sdAngleGauge = await ethers.getContractAt("LiquidityGaugeV4", SDANGLEGAUGE);
-    angleAccumulator = await ethers.getContractAt("AngleAccumulatorV2", ANGLEACCUMULATOR);
     masterchef = await ethers.getContractAt(MASTERCHEFABI, MASTERCHEF);
 
     const veSdtAngleProxyFactory = await ethers.getContractFactory("veSDTFeeAngleProxy");
@@ -167,17 +143,12 @@ describe("SDTDistributor V2 using Angle Strategy", function () {
     let cloneTx = await (await angleVaultFactoryContract.cloneAndInit(sanUSDC_EUR_GAUGE)).wait();
     let gauge = cloneTx.events.filter((e: { event: string; }) => e.event == "GaugeDeployed")[0].args[0]
 
-    sanUSDCEurVault = await ethers.getContractAt("AngleVault", cloneTx.events[0].args[0]);
     sanUSDCEurMultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", gauge);
 
     cloneTx = await (await angleVaultFactoryContract.cloneAndInit(sanDAI_EUR_GAUGE)).wait();
     gauge = cloneTx.events.filter((e: { event: string; }) => e.event == "GaugeDeployed")[0].args[0]
 
-    sanDaiEurVault = await ethers.getContractAt("AngleVault", cloneTx.events[0].args[0]);
     sanDaiEurMultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", gauge);
-
-    sanUsdcEurLiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", sanUSDC_EUR_GAUGE);
-    sanDaiEurLiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", sanDAI_EUR_GAUGE);
 
     // Add Gauge Types
     const typesWeight = parseEther("1");
@@ -234,7 +205,7 @@ describe("SDTDistributor V2 using Angle Strategy", function () {
       expect(Number(lastPull)).to.be.equal(expectedDistribution);
     });
 
-    it("should distribute to single gauge if days past 40", async () => {
+    it("should distribute to gauges if days past 40", async () => {
       await gc.connect(veSdtHolder).vote_for_gauge_weights(sanUSDCEurMultiGauge.address, 5000);
       await gc.connect(veSdtHolder).vote_for_gauge_weights(sanDaiEurMultiGauge.address, 5000);
 
@@ -278,7 +249,7 @@ describe("SDTDistributor V2 using Angle Strategy", function () {
       // TODO
     });
 
-    it("should distribute to single gauge when days past 46 with leftover", async () => {
+    it("should distribute to gauges when days past 46 with leftover", async () => {
       await gc.connect(veSdtHolder).vote_for_gauge_weights(sanUSDCEurMultiGauge.address, 5000);
       await gc.connect(veSdtHolder).vote_for_gauge_weights(sanDaiEurMultiGauge.address, 5000);
 
@@ -314,7 +285,6 @@ describe("SDTDistributor V2 using Angle Strategy", function () {
 
       const after_DistributorBalance_1 = await sdt.balanceOf(sanUSDCEurMultiGauge.address);
       const after_DistributorBalance_2 = await sdt.balanceOf(sanDaiEurMultiGauge.address);
-
 
       const expectedDistribution_1 = after_DistributorBalance_1 - before_DistributorBalance_1;
       const expectedDistribution_2 = after_DistributorBalance_2 - before_DistributorBalance_2;

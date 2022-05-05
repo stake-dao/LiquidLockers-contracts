@@ -19,7 +19,7 @@ import "../external/AccessControlUpgradeable.sol";
 /// @title SdtDistributorEvents
 /// @author StakeDAO Core Team
 /// @notice All the events used in `SdtDistributor` contract
- contract SdtDistributorEvents {
+ abstract contract SdtDistributorEvents {
 	event DelegateGaugeUpdated(address indexed _gaugeAddr, address indexed _delegateGauge);
 	event DistributionsToggled(bool _distributionsOn);
 	event GaugeControllerUpdated(address indexed _controller);
