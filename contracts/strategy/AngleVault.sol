@@ -40,7 +40,11 @@ contract AngleVault is ERC20Upgradeable {
 		angleStrategy = _angleStrategy;
 	}
 
-	function deposit(uint256 _amount, bool _earn) public {
+	function deposit(
+		address _staker,
+		uint256 _amount,
+		bool _earn
+	) public {
 		require(address(liquidityGauge) != address(0), "Gauge not yet initialized");
 		token.safeTransferFrom(msg.sender, address(this), _amount);
 		if (!_earn) {
@@ -53,11 +57,11 @@ contract AngleVault is ERC20Upgradeable {
 		}
 		_mint(address(this), _amount);
 		ERC20Upgradeable(address(this)).approve(liquidityGauge, _amount);
-		ILiquidityGaugeStrat(liquidityGauge).deposit(_amount, msg.sender);
+		ILiquidityGaugeStrat(liquidityGauge).deposit(_amount, _staker);
 		if (_earn) {
 			earn();
 		}
-		emit Deposit(msg.sender, _amount);
+		emit Deposit(_staker, _amount);
 	}
 
 	function withdraw(uint256 _shares) public {

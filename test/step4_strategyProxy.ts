@@ -195,7 +195,7 @@ describe("ANGLE Strategy", function () {
     );
     await strategy.connect(deployer).setVaultGaugeFactory(angleVaultFactoryContract.address);
     const cloneTx = await (await angleVaultFactoryContract.cloneAndInit(sanUSDC_EUR_GAUGE)).wait();
-    const gauge = cloneTx.events.filter((e: { event: string; }) => e.event == "GaugeDeployed")[0].args[0]
+    const gauge = cloneTx.events.filter((e: { event: string }) => e.event == "GaugeDeployed")[0].args[0];
 
     sanUSDCEurVault = await ethers.getContractAt("AngleVault", cloneTx.events[0].args[0]);
     sanUSDCEurMultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", gauge);
@@ -231,7 +231,7 @@ describe("ANGLE Strategy", function () {
     it("Should deposit sanUSDC-EUR to vault and get gauge tokens", async function () {
       const vaultSanUsdcEurBalanceBeforeDeposit = await sanUsdcEur.balanceOf(sanUSDCEurVault.address);
       await sanUsdcEur.connect(sanLPHolder).approve(sanUSDCEurVault.address, parseUnits("1000", 6));
-      await sanUSDCEurVault.connect(sanLPHolder).deposit(parseUnits("1000", 6), false);
+      await sanUSDCEurVault.connect(sanLPHolder).deposit(sanLPHolder._address, parseUnits("1000", 6), false);
       const vaultSanUsdcEurBalanceAfterDeposit = await sanUsdcEur.balanceOf(sanUSDCEurVault.address);
       const gaugeTokenBalanceOfDepositor = await sanUSDCEurMultiGauge.balanceOf(sanLPHolder._address);
       expect(vaultSanUsdcEurBalanceBeforeDeposit).to.be.eq(0);
@@ -249,7 +249,7 @@ describe("ANGLE Strategy", function () {
     });
     it("Shouldn't be able to withdraw when there is no enough gauge token", async function () {
       await sanUsdcEur.connect(sanLPHolder).approve(sanUSDCEurVault.address, parseUnits("1000", 6));
-      await sanUSDCEurVault.connect(sanLPHolder).deposit(parseUnits("1000", 6), false);
+      await sanUSDCEurVault.connect(sanLPHolder).deposit(sanLPHolder._address, parseUnits("1000", 6), false);
       const deployerStaked = await sanUSDCEurMultiGauge.balanceOf(deployer._address);
       await sanUSDCEurMultiGauge.connect(sanLPHolder).transfer(deployer._address, parseUnits("499", 6));
       const deployerStakedAfterTransfer = await sanUSDCEurMultiGauge.balanceOf(deployer._address);
@@ -278,7 +278,7 @@ describe("ANGLE Strategy", function () {
     it("Should be able to call earn therefore get accumulated fees as staked amount and stake the amounts to the Angle gauge", async function () {
       const sanUsdcEurAngleGaugeStakedBefore = await sanUsdcEurLiqudityGauge.balanceOf(locker.address);
       const accumulatedFees = await sanUSDCEurVault.accumulatedFee();
-      const tx = await (await sanUSDCEurVault.deposit(0, true)).wait();
+      const tx = await (await sanUSDCEurVault.deposit(localDeployer.address, 0, true)).wait();
       const deployerStakedAmount = await sanUSDCEurMultiGauge.balanceOf(localDeployer.address);
       const vaultSanUsdcEurBalanceAfterEarn = await sanUsdcEur.balanceOf(sanUSDCEurVault.address);
       const sanUsdcEurAngleGaugeStakedAfter = await sanUsdcEurLiqudityGauge.balanceOf(locker.address);
@@ -302,7 +302,7 @@ describe("ANGLE Strategy", function () {
     it("should be able to claim rewards when some time pass", async () => {
       await gc.connect(veSdtHolder).vote_for_gauge_weights(sanUSDCEurMultiGauge.address, 10000);
       await sanUsdcEur.connect(sanLPHolder).approve(sanUSDCEurVault.address, parseUnits("100000", 6));
-      await sanUSDCEurVault.connect(sanLPHolder).deposit(parseUnits("100000", 6), true);
+      await sanUSDCEurVault.connect(sanLPHolder).deposit(sanLPHolder._address, parseUnits("100000", 6), true);
       await sdtDProxy.connect(deployer).approveGauge(sanUSDCEurMultiGauge.address);
       // increase the timestamp by 1 month
       await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 30]);
@@ -362,7 +362,7 @@ describe("ANGLE Strategy", function () {
       const cloneTx = await (await angleVaultFactoryContract.cloneAndInit(sanDAI_EUR_GAUGE)).wait();
       sanDaiEurVault = await ethers.getContractAt("AngleVault", cloneTx.events[0].args[0]);
 
-      const gauge = cloneTx.events.filter((e: { event: string; }) => e.event == "GaugeDeployed")[0].args[0]
+      const gauge = cloneTx.events.filter((e: { event: string }) => e.event == "GaugeDeployed")[0].args[0];
 
       sanDaiEurMultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", gauge);
       const tokenOfVault = await sanDaiEurVault.token();
@@ -374,14 +374,14 @@ describe("ANGLE Strategy", function () {
     it("it should be able to deposit sanDAIEur to new vault", async () => {
       const gaugeTokenBalanceBeforeDeposit = await sanDaiEurMultiGauge.balanceOf(sanDAILPHolder._address);
       await sanDaiEur.connect(sanDAILPHolder).approve(sanDaiEurVault.address, ethers.constants.MaxUint256);
-      await sanDaiEurVault.connect(sanDAILPHolder).deposit(parseEther("10000"), false);
+      await sanDaiEurVault.connect(sanDAILPHolder).deposit(sanDAILPHolder._address, parseEther("10000"), false);
       const gaugeTokenBalanceAfterDeposit = await sanDaiEurMultiGauge.balanceOf(sanDAILPHolder._address);
       expect(gaugeTokenBalanceBeforeDeposit).to.be.equal(0);
       expect(gaugeTokenBalanceAfterDeposit.sub(gaugeTokenBalanceBeforeDeposit)).to.be.equal(parseEther("9990"));
     });
     it("it should send tokens to angle gauge after call earn for new vault", async () => {
       const sanDaiEurAngleGaugeStakedBefore = await sanDaiEurLiqudityGauge.balanceOf(locker.address);
-      await (await sanDaiEurVault.deposit(0, true)).wait();
+      await (await sanDaiEurVault.deposit(localDeployer.address, 0, true)).wait();
       const sanUsdcEurAngleGaugeStakedAfter = await sanDaiEurLiqudityGauge.balanceOf(locker.address);
       expect(sanDaiEurAngleGaugeStakedBefore).to.be.equal(0);
       expect(sanUsdcEurAngleGaugeStakedAfter).to.be.equal(parseEther("10000"));
@@ -423,7 +423,6 @@ describe("ANGLE Strategy", function () {
       expect(sdtBalanceOfDistributor).to.be.equal(0);
     });
 
-    it("should distribute to gauge", async () => {
-    });
+    it("should distribute to gauge", async () => {});
   });
 });
