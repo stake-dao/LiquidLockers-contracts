@@ -94,9 +94,13 @@ contract FraxStrategy is BaseStrategy {
 			IERC20(rewardToken).transfer(veSDTFeeProxy, veSDTPart);
 			IERC20(rewardToken).transfer(msg.sender, claimerPart);
 			uint256 netRewards = rewardsBalance - multisigFee - accumulatorPart - veSDTPart - claimerPart;
-			// To be setup after
-			// IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
-			// IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, netRewards); // To be setup after
+			// Comment : 
+			// If the rewardToken has not been added as a rewardToken, this will revert : 
+			// Because on the GaugeMultiReward contract the mapping rewardData[_rewardsToken].rewardsDuration == address(null)
+			// And the then require(rewardData[_rewardsToken].rewardsDistributor == msg.sender); crash.
+			// But maybe this is the expected behavior 
+			IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
+			IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, netRewards); // To be setup after
 			emit Claimed(gauge, rewardToken, rewardsBalance);
 		}
 	}

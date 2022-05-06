@@ -23,13 +23,14 @@ const SDFXSGAUGE = "0xF3C6e8fbB946260e8c2a55d48a5e01C82fD63106";
 const ANGLE = "0x31429d1856aD1377A8A0079410B297e1a9e214c2";
 const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 const FRAX = "0x853d955aCEf822Db058eb8505911ED77F175b99e";
+const TEMPLE = "0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7";
 
 /* ==== Liquid Locker ====*/
 const LIQUIDLOCKER_ADDRESS = "0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f"; // Liquid Locker Address
 const LIQUIDLOCKER_GOVERNANCE = "0xb36a0671B3D49587236d7833B01E79798175875f";
 const FXS_ACCUMULATOR = "0x1CC16bEdaaCD15848bcA5eB80188e0931bC59fB2";
 
-const FXS_ADDRESS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0"; // Token FXS Address
+const FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0"; // Token FXS Address
 /* ==== FXS/SUSHI ==== */
 const SUSHI_ADDRESS = "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2"; // Token Sushi Address
 const FXS_SUSHI_ADDRESS = "0xe06F8d30AC334c857Fc8c380C85969C150f38A6A"; // LP token FXS/SUSHI
@@ -100,7 +101,7 @@ describe("Testing the Strategy Proxy for FRAX", function () {
     });
 
     /* ==== Other Contract ==== */
-    fxs = await ethers.getContractAt(ERC20_ABI, FXS_ADDRESS);
+    fxs = await ethers.getContractAt(ERC20_ABI, FXS);
     liquidLocker = await ethers.getContractAt(LIQUIDLOCKER_ABI, LIQUIDLOCKER_ADDRESS);
     fxs_temple_LP = await ethers.getContractAt(ERC20_ABI, FXS_TEMPLE_ADDRESS);
     fxs_temple_locker = await ethers.getContractAt(FXS_TEMPLE_LOCKER_ABI, FXS_TEMPLE_LOCKER_ADDRESS);
@@ -147,7 +148,8 @@ describe("Testing the Strategy Proxy for FRAX", function () {
     await strategy.connect(deployer).setMultiGauge(FXS_TEMPLE_LOCKER_ADDRESS, fxs_templeMultiGauge.address);
     await strategy.connect(deployer).setVeSDTProxy(veSdtProxy.address);
     await strategy.connect(deployer).manageFee(0, fxs_templeLiquidityGauge.address, 200); // %2
-    //await fxs_templeMultiGauge.connect(deployer).addReward(FXS_ADDRESS, strategy.address, 60 * 60 * 24 * 7)
+    await fxs_templeMultiGauge.connect(deployer).addReward(FXS, strategy.address, 60 * 60 * 24 * 7)
+    await fxs_templeMultiGauge.connect(deployer).addReward(TEMPLE, strategy.address, 60 * 60 * 24 * 7)
 
     /* ==== Give LP ==== */
     await fxs_temple_LP.connect(whale_fxs_temple).transfer(account_1._address, ethers.utils.parseEther("100.0"));
