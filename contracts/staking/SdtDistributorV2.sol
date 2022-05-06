@@ -54,7 +54,6 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 	/// @notice Maps the timestapm of pull action to the amount of SDT that pulled
 	mapping(uint256 => uint256) public pulls; // day => SDT amount
 
-	uint256 public startTime;
 	uint256 public claimerFee;
 	uint256 public lookPastDays;
 
@@ -72,15 +71,11 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 		address _guardian,
 		address _delegateGauge
 	) external initializer {
-		require(
-			_controller != address(0) && _guardian != address(0) && _governor != address(0),
-			"0"
-		);
+		require(_controller != address(0) && _guardian != address(0) && _governor != address(0), "0");
 		controller = IGaugeController(_controller);
 		delegateGauge = _delegateGauge;
 		masterchefToken = IERC20(address(new MasterchefMasterToken()));
 		distributionsOn = false;
-		startTime = block.timestamp;
 		timePeriod = 3600 * 24; // One day in seconds
 		lookPastDays = 45; // for past 45 days check
 
@@ -118,7 +113,7 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 		int128 gaugeType = controller.gauge_types(gaugeAddr);
 		require(gaugeType >= 0, "Unrecognized gauge");
 
-		if(killedGauges[gaugeAddr]){
+		if (killedGauges[gaugeAddr]) {
 			return;
 		}
 
@@ -135,9 +130,6 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 		// check past n days
 		for (uint256 i; i < lookPastDays; i++) {
 			uint256 currentTimestamp = roundedTimestamp - (i * 86400);
-			if (currentTimestamp < startTime) {
-				break;
-			}
 			if (pulls[currentTimestamp] > 0) {
 				bool isPaid = isGaugePaid[currentTimestamp][gaugeAddr];
 				if (isPaid) {
