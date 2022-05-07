@@ -44,11 +44,6 @@ export default {
       }
     }
   },
-  gasReporter: {
-    enabled: true,
-    currency: "USD",
-    coinmarketcap: process.env.COINMARKETCAP_KEY
-  },
   etherscan: {
     apiKey: process.env.ETHERSCAN_KEY
   },

@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../interfaces/IMultiRewards.sol";
+import "../interfaces/ILiquidityGaugeStrat.sol";
 import "./FraxStrategy.sol";
 
 contract FraxVault is ERC20Upgradeable {
@@ -21,12 +21,11 @@ contract FraxVault is ERC20Upgradeable {
 	}
 
 	IERC20 public token;
-	string public withdrawSignature;
-	string public depositSignature;
 	address public governance;
 	uint256 public withdrawalFee;
-	address public multiRewardsGauge;
-	address public constant LIQUIDLOCKER = 0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f;
+	address public liquidityGauge;
+	uint256 public accumulatedFee;
+	address public locker = 0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f;
 	FraxStrategy public fraxStrategy;
 
 	mapping(address => bytes32[]) public kekIdPerUser;
@@ -41,35 +40,30 @@ contract FraxVault is ERC20Upgradeable {
 		address _governance,
 		string memory name_,
 		string memory symbol_,
-		FraxStrategy _fraxStrategy,
-		string memory _depositSignature,
-		string memory _withdrawSignature
+		FraxStrategy _fraxStrategy
 	) public initializer {
 		__ERC20_init(name_, symbol_);
 		token = IERC20(_token);
 		governance = _governance;
-		withdrawalFee = 50; // %0.5
 		fraxStrategy = _fraxStrategy;
-		depositSignature = _depositSignature;
-		withdrawSignature = _withdrawSignature;
 	}
 
 	function deposit(uint256 _amount, uint256 _sec) public {
-		require(address(multiRewardsGauge) != address(0), "Gauge not yet initialized");
+		require(address(liquidityGauge) != address(0), "Gauge not yet initialized");
 
 		token.transferFrom(msg.sender, address(this), _amount);
 		token.approve(address(fraxStrategy), _amount);
 
-		uint256 _sdAmount = (_sec * _amount) / (60 * 60 * 24 * 364);
+		uint256 _sdAmount = (_amount * _sec) / (60 * 60 * 24 * 364);
 		_mint(address(this), _sdAmount);
-		ERC20Upgradeable(address(this)).approve(multiRewardsGauge, _sdAmount);
-		IMultiRewards(multiRewardsGauge).stakeFor(msg.sender, _sdAmount);
-		IMultiRewards(multiRewardsGauge).mintFor(msg.sender, _sdAmount);
+		
+		ERC20Upgradeable(address(this)).approve(liquidityGauge, _sdAmount);
+		ILiquidityGaugeStrat(liquidityGauge).deposit(_sdAmount, msg.sender);
 
 		bytes32 _kekId = fraxStrategy.deposit(
 			address(token),
 			_amount,
-			abi.encodeWithSignature(depositSignature, _amount, _sec)
+			abi.encodeWithSignature("stakeLocked(uint256,uint256)", _amount, _sec)
 		);
 		kekIdPerUser[msg.sender].push(_kekId);
 		infosPerKekId[_kekId] = LockInformations(msg.sender, _amount, _sdAmount, block.timestamp, _sec);
@@ -77,27 +71,27 @@ contract FraxVault is ERC20Upgradeable {
 		emit Deposit(msg.sender, _amount);
 	}
 
+	
 	function withdraw(bytes32 _kekId) public {
 		require(infosPerKekId[_kekId].owner == msg.sender, "not owner of this kekid");
 		LockInformations memory _infos = infosPerKekId[_kekId];
 
 		/* Shares calculation */
 		uint256 _shares = _infos.shares;
-		uint256 userTotalShares = IMultiRewards(multiRewardsGauge).stakeOf(msg.sender);
+		uint256 userTotalShares = ILiquidityGaugeStrat(liquidityGauge).balanceOf(msg.sender);
 		require(_shares <= userTotalShares, "Not enough staked");
 
-		/* Multi Reward Gauge */
-		IMultiRewards(multiRewardsGauge).withdrawFor(msg.sender, _shares);
+		/* Liquidity Gauge Strat */
+		ILiquidityGaugeStrat(liquidityGauge).withdraw(_shares, msg.sender, true);
 		_burn(address(this), _shares);
-		IMultiRewards(multiRewardsGauge).burnFrom(msg.sender, _shares);
 
 		/* Update kekId mapping */
 		resetLockedInfos(_kekId);
 		remove(getIndexKekId(msg.sender, _kekId), msg.sender);
 
-		/* Withdraw from frax gauge */
+		/* Withdraw from Frax gauge */
 		uint256 _before = token.balanceOf(address(this));
-		fraxStrategy.withdraw(address(token), abi.encodeWithSignature(withdrawSignature, _kekId, LIQUIDLOCKER));
+		fraxStrategy.withdraw(address(token), abi.encodeWithSignature("withdrawLocked(bytes32,address)", _kekId, address(this)));
 		uint256 _net = token.balanceOf(address(this)) - _before;
 		uint256 withdrawFee = (_net * withdrawalFee) / 10000;
 
@@ -137,23 +131,23 @@ contract FraxVault is ERC20Upgradeable {
 		infosPerKekId[_kekId] = LockInformations(address(0), 0, 0, 0, 0);
 	}
 
-	function setGovernance(address _governance) public {
+	function setGovernance(address _governance) external {
 		require(msg.sender == governance, "!governance");
 		governance = _governance;
 	}
 
-	function setGaugeMultiRewards(address _multiRewardsGauge) public {
+	function setLiquidityGauge(address _liquidityGauge) external {
 		require(msg.sender == governance, "!governance");
-		multiRewardsGauge = _multiRewardsGauge;
+		liquidityGauge = _liquidityGauge;
 	}
 
-	function setFraxStrategy(FraxStrategy _newStrat) public {
+	function setAngleStrategy(FraxStrategy _newStrat) external {
 		require(msg.sender == governance, "!governance");
 		fraxStrategy = _newStrat;
 	}
 
-	function decimals() public view override returns (uint8) {
-		return 18; //token.decimals();
+	function decimals() public pure override returns (uint8) {
+		return 18;
 	}
 
 	function setWithdrawnFee(uint256 _newFee) external {

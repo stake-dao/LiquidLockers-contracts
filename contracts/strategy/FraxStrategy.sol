@@ -4,12 +4,14 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./BaseStrategy.sol";
 import "../accumulator/FxsAccumulator.sol";
+import "../interfaces/ILiquidityGauge.sol";
 import "../interfaces/ILiquidityGaugeFRAX.sol";
-import "../interfaces/IMultiRewards.sol";
+import "../staking/SdtDistributorV2.sol";
 
 contract FraxStrategy is BaseStrategy {
 	using SafeERC20 for IERC20;
 	FxsAccumulator public accumulator;
+	address public sdtDistributor;
 	struct ClaimerReward {
 		address rewardToken;
 		uint256 amount;
@@ -26,31 +28,40 @@ contract FraxStrategy is BaseStrategy {
 		ILocker _locker,
 		address _governance,
 		address _receiver,
-		FxsAccumulator _accumulator
+		FxsAccumulator _accumulator,
+		address _veSDTFeeProxy,
+		address _sdtDistributor
 	) BaseStrategy(_locker, _governance, _receiver) {
-		veSDTFee = 500; // %5
-		accumulatorFee = 800; // %8
-		claimerReward = 50; // %0.5
 		accumulator = _accumulator;
+		veSDTFeeProxy = _veSDTFeeProxy;
+		sdtDistributor = _sdtDistributor;
 	}
 
-	function deposit(
+	/* ========== MUTATIVE FUNCTIONS ========== */
+	/*
+	function deposit(address _token, uint256 _amount) public override onlyApprovedVault {
+		IERC20(_token).transferFrom(msg.sender, address(locker), _amount);
+		address gauge = gauges[_token];
+		require(gauge != address(0), "!gauge");
+		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, 0));
+		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, _amount));
+
+		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("deposit(uint256)", _amount));
+		require(success, "Deposit failed!");
+		emit Deposited(gauge, _token, _amount);
+	}*/
+		function deposit(
 		address _token,
 		uint256 _amount,
 		bytes memory _encodedDeposit
 	) public onlyApprovedVault returns (bytes32) {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
-		IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-		IERC20(_token).approve(address(locker), _amount);
 
-		locker.execute(
-			_token,
-			0,
-			abi.encodeWithSignature("transferFrom(address,address,uint256)", address(this), address(locker), _amount)
-		);
+		IERC20(_token).transferFrom(msg.sender, address(locker), _amount);
 		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, 0));
 		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, _amount));
+
 		uint256 _lockedLiquidity = ILiquidityGaugeFRAX(gauge).lockedLiquidityOf(address(locker)); // Needed for the calculation of the kekId
 		(bool success, ) = locker.execute(gauge, 0, _encodedDeposit);
 		require(success, "Deposit failed!");
@@ -64,107 +75,88 @@ contract FraxStrategy is BaseStrategy {
 		bytes32 _kekIdCalculated = keccak256(abi.encodePacked(address(locker), block.timestamp, _amount, _lockedLiquidity));
 		// Idea : second seems better
 
-		require(_kekId == _kekIdCalculated);
+		require(_kekId == _kekIdCalculated, "Kekid calculation failed");
 		emit Deposited(gauge, _token, _amount);
 		return (_kekId);
+	}
+
+	function withdraw(address _token, bytes memory _encodedWithdraw) public onlyApprovedVault {
+		//uint256 _before = IERC20(_token).balanceOf(address(locker));
+		address gauge = gauges[_token];
+		require(gauge != address(0), "!gauge");
+		(bool success, ) = locker.execute(gauge, 0, _encodedWithdraw);
+		require(success, "Withdraw failed!");
+		
+		// Not used because LP are directly send to FraxVault
+		// But need to be implemented for other "v1" type Frax gauge
+		//uint256 _after = IERC20(_token).balanceOf(address(locker));
+		//uint256 _net = _after - _before;
+		//(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _net));
+		//require(success, "Transfer failed!");
+		emit Withdrawn(gauge, _token, 0);
 	}
 
 	function claim(address _token) external override {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
-		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("getReward(address)", address(this)));
-		require(success, "getReward failed");
-		uint256 rewardLength = ILiquidityGaugeFRAX(gauge).getAllRewardTokens().length;
-		for (uint256 i = 0; i < rewardLength; i++) {
-			address rewardToken = ILiquidityGaugeFRAX(gauge).getAllRewardTokens()[i];
+		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("user_checkpoint(address)", address(locker)));
+		require(success, "Checkpoint failed!");
+		(success, ) = locker.execute(
+			gauge,
+			0,
+			abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
+		);
+		require(success, "Claim failed!");
+		SdtDistributorV2(sdtDistributor).distribute(multiGauges[gauge]);
+		for (uint8 i = 0; i < 8; i++) {
+			address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
 			if (rewardToken == address(0)) {
 				break;
 			}
 			uint256 rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
-			if (rewardsBalance == 0) {
-				continue;
-			}
 			uint256 multisigFee = (rewardsBalance * perfFee[gauge]) / BASE_FEE;
-			uint256 accumulatorPart = (rewardsBalance * accumulatorFee) / BASE_FEE;
-			uint256 veSDTPart = (rewardsBalance * veSDTFee) / BASE_FEE;
-			uint256 claimerPart = (rewardsBalance * claimerReward) / BASE_FEE;
+			uint256 accumulatorPart = (rewardsBalance * accumulatorFee[gauge]) / BASE_FEE;
+			uint256 veSDTPart = (rewardsBalance * veSDTFee[gauge]) / BASE_FEE;
+			uint256 claimerPart = (rewardsBalance * claimerRewardFee[gauge]) / BASE_FEE;
 			IERC20(rewardToken).approve(address(accumulator), accumulatorPart);
 			accumulator.depositToken(rewardToken, accumulatorPart);
 			IERC20(rewardToken).transfer(rewardsReceiver, multisigFee);
 			IERC20(rewardToken).transfer(veSDTFeeProxy, veSDTPart);
 			IERC20(rewardToken).transfer(msg.sender, claimerPart);
 			uint256 netRewards = rewardsBalance - multisigFee - accumulatorPart - veSDTPart - claimerPart;
-			// Comment : 
-			// If the rewardToken has not been added as a rewardToken, this will revert : 
-			// Because on the GaugeMultiReward contract the mapping rewardData[_rewardsToken].rewardsDuration == address(null)
-			// And the then require(rewardData[_rewardsToken].rewardsDistributor == msg.sender); crash.
-			// But maybe this is the expected behavior 
 			IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
-			IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, netRewards); // To be setup after
+			ILiquidityGauge(multiGauges[gauge]).deposit_reward_token(rewardToken, netRewards);
 			emit Claimed(gauge, rewardToken, rewardsBalance);
 		}
 	}
 
-	function withdraw(address _token, bytes memory _encodedWithdraw) public onlyApprovedVault {
-		//using require instead of modifier for saving gas
-		address gauge = gauges[_token];
-		require(gauge != address(0), "!gauge");
-
-		uint256 _before = IERC20(_token).balanceOf(address(locker));
-		(bool success, ) = locker.execute(gauge, 0, _encodedWithdraw);
-		require(success, "Withdraw failed!");
-		uint256 _after = IERC20(_token).balanceOf(address(locker));
-		uint256 _net = _after - _before;
-
-		(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _net));
-		require(success, "Transfer failed!");
-		emit Withdrawn(gauge, _token, 0);
-	}
-
-	function sendToAccumulator(address _token, uint256 _amount) external onlyGovernance {
-		IERC20(_token).approve(address(accumulator), _amount);
-		accumulator.depositToken(_token, _amount);
-	}
-
-	function claimerPendingReward(address _token) external view returns (ClaimerReward[] memory) {
+	function claimerPendingRewards(address _token) external view returns (ClaimerReward[] memory) {
 		ClaimerReward[] memory pendings = new ClaimerReward[](8);
 		address gauge = gauges[_token];
-		for (uint8 i; i < 8; i++) {
-			address rewardToken = ILiquidityGaugeFRAX(gauge).getAllRewardTokens()[i];
+		for (uint8 i = 0; i < 8; i++) {
+			address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
 			if (rewardToken == address(0)) {
 				break;
 			}
-			uint256 rewardsBalance = ILiquidityGaugeFRAX(gauge).earned(address(locker))[i];
-			uint256 pendingAmount = (rewardsBalance * claimerReward) / BASE_FEE;
+			uint256 rewardsBalance = ILiquidityGauge(gauge).claimable_reward(address(locker), rewardToken);
+			uint256 pendingAmount = (rewardsBalance * claimerRewardFee[gauge]) / BASE_FEE;
 			ClaimerReward memory pendingReward = ClaimerReward(rewardToken, pendingAmount);
 			pendings[i] = pendingReward;
 		}
 		return pendings;
 	}
 
-	function boost(address _gauge) external override onlyGovernance {
-		(bool success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("user_checkpoint(address)", address(locker)));
-		require(success, "Boost failed!");
-		emit Boosted(_gauge, address(locker));
-	}
-
-	function set_rewards_receiver(address _gauge, address _receiver) external override onlyGovernance {
-		(bool success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("set_rewards_receiver(address)", _receiver));
-		require(success, "Set rewards receiver failed!");
-		emit RewardReceiverSet(_gauge, _receiver);
-	}
-
-	function toggleVault(address _vault) external override onlyGovernance {
+	function toggleVault(address _vault) external override onlyGovernanceOrFactory {
 		vaults[_vault] = !vaults[_vault];
 		emit VaultToggled(_vault, vaults[_vault]);
 	}
 
-	function setGauge(address _token, address _gauge) external override onlyGovernance {
+	function setGauge(address _token, address _gauge) external override onlyGovernanceOrFactory {
 		gauges[_token] = _gauge;
 		emit GaugeSet(_gauge, _token);
 	}
 
-	function setMultiGauge(address _gauge, address _multiGauge) external override onlyGovernance {
+	function setMultiGauge(address _gauge, address _multiGauge) external override onlyGovernanceOrFactory {
 		multiGauges[_gauge] = _multiGauge;
 	}
 
@@ -180,24 +172,55 @@ contract FraxStrategy is BaseStrategy {
 		rewardsReceiver = _newRewardsReceiver;
 	}
 
+	function setGovernance(address _newGovernance) external onlyGovernance {
+		governance = _newGovernance;
+	}
+
+	function setSdtDistributor(address _newSdtDistributor) external onlyGovernance {
+		sdtDistributor = _newSdtDistributor;
+	}
+
+	function setVaultGaugeFactory(address _newVaultGaugeFactory) external onlyGovernance {
+		require(_newVaultGaugeFactory != address(0), "zero address");
+		vaultGaugeFactory = _newVaultGaugeFactory;
+	}
+
+	/// @notice function to set new fees
+	/// @param _manageFee manageFee
+	/// @param _gauge gauge address
+	/// @param _newFee new fee to set
 	function manageFee(
 		MANAGEFEE _manageFee,
 		address _gauge,
 		uint256 _newFee
-	) external onlyGovernance {
+	) external onlyGovernanceOrFactory {
+		require(_gauge != address(0), "zero address");
+		require(_newFee <= BASE_FEE, "fee to high");
 		if (_manageFee == MANAGEFEE.PERFFEE) {
 			// 0
-			require(_gauge != address(0), "zero address");
 			perfFee[_gauge] = _newFee;
 		} else if (_manageFee == MANAGEFEE.VESDTFEE) {
 			// 1
-			veSDTFee = _newFee;
+			veSDTFee[_gauge] = _newFee;
 		} else if (_manageFee == MANAGEFEE.ACCUMULATORFEE) {
 			//2
-			accumulatorFee = _newFee;
+			accumulatorFee[_gauge] = _newFee;
 		} else if (_manageFee == MANAGEFEE.CLAIMERREWARD) {
 			// 3
-			claimerReward = _newFee;
+			claimerRewardFee[_gauge] = _newFee;
 		}
+	}
+
+	/// @notice execute a function
+	/// @param to Address to sent the value to
+	/// @param value Value to be sent
+	/// @param data Call function data
+	function execute(
+		address to,
+		uint256 value,
+		bytes calldata data
+	) external onlyGovernance returns (bool, bytes memory) {
+		(bool success, bytes memory result) = to.call{ value: value }(data);
+		return (success, result);
 	}
 }
