@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../interfaces/ILocker.sol";
 import "../interfaces/ILiquidityGauge.sol";
-import {ISDTDistributor} from "../interfaces/ISDTDistributor.sol";
+import { ISDTDistributor } from "../interfaces/ISDTDistributor.sol";
 
 /// @title BaseAccumulator
 /// @notice A contract that defines the functions shared by all accumulators

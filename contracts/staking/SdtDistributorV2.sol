@@ -9,9 +9,9 @@ import "./SdtDistributorEvents.sol";
 contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable, SdtDistributorEvents {
 	using SafeERC20 for IERC20;
 
-    ////////////////////////////////////////////////////////////////
-    /// --- CONSTANTS
-    ///////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////
+	/// --- CONSTANTS
+	///////////////////////////////////////////////////////////////
 
 	/// @notice Accounting
 	uint256 public constant BASE_UNIT = 10_000;
@@ -27,9 +27,9 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 	/// @notice Role for the guardian
 	bytes32 public constant GUARDIAN_ROLE = keccak256("GUARDIAN_ROLE");
 
-    ////////////////////////////////////////////////////////////////
-    /// --- STORAGE SLOTS
-    ///////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////
+	/// --- STORAGE SLOTS
+	///////////////////////////////////////////////////////////////
 
 	/// @notice Time between SDT Harvest.
 	uint256 public timePeriod;
@@ -77,9 +77,9 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 	/// @notice Number of days to go through for past distributing.
 	uint256 public lookPastDays;
 
-    ////////////////////////////////////////////////////////////////
-    /// --- INITIALIZATION LOGIC
-    ///////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////
+	/// --- INITIALIZATION LOGIC
+	///////////////////////////////////////////////////////////////
 
 	/// @notice Initialize function
 	/// @param _controller gauge controller to manage votes
@@ -122,9 +122,9 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 		masterchef.deposit(_pid, 1e18);
 	}
 
-    ////////////////////////////////////////////////////////////////
-    /// --- DISTRIBUTION LOGIC
-    ///////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////
+	/// --- DISTRIBUTION LOGIC
+	///////////////////////////////////////////////////////////////
 
 	/// @notice Distribute SDT to Gauges
 	/// @param gaugeAddr Address of the gauge to distribute.
@@ -168,7 +168,6 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 			uint256 currentTimestamp = roundedTimestamp - (i * 86_400);
 
 			if (pulls[currentTimestamp] > 0) {
-
 				bool isPaid = isGaugePaid[currentTimestamp][gaugeAddr];
 				if (isPaid) {
 					break;
@@ -179,7 +178,7 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 				uint256 gaugeRelativeWeight;
 
 				if (i == 0) {
-				    // Makes sure the weight is checkpointed. Also returns the weight.
+					// Makes sure the weight is checkpointed. Also returns the weight.
 					gaugeRelativeWeight = controller.gauge_relative_weight_write(gaugeAddr, currentTimestamp);
 				} else {
 					gaugeRelativeWeight = controller.gauge_relative_weight(gaugeAddr, currentTimestamp);
@@ -190,37 +189,34 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 				isGaugePaid[currentTimestamp][gaugeAddr] = true;
 			}
 		}
-
-		uint256 claimerReward = (totalDistribute * claimerFee) / BASE_UNIT;
-		rewardToken.safeTransfer(msg.sender, claimerReward);
-		totalDistribute -= claimerReward;
-
-		if (gaugeType == 1) {
-			rewardToken.safeTransfer(gaugeAddr, totalDistribute);
-			IStakingRewards(gaugeAddr).notifyRewardAmount(totalDistribute);
-		} else if (gaugeType >= 2) {
-			// If it is defined, we use the specific delegate attached to the gauge
-			address delegate = delegateGauges[gaugeAddr];
-			if (delegate == address(0)) {
-				// If not, we check if a delegate common to all gauges with type >= 2 can be used
-				delegate = delegateGauge;
-			}
-			if (delegate != address(0)) {
-				// In the case where the gauge has a delegate (specific or not), then rewards are transferred to this gauge
-				rewardToken.safeTransfer(delegate, totalDistribute);
-				// If this delegate supports a specific interface, then rewards sent are notified through this
-				// interface
-				if (isInterfaceKnown[delegate]) {
-					ISdtMiddlemanGauge(delegate).notifyReward(gaugeAddr, totalDistribute);
+		if (totalDistribute > 0) {
+			if (gaugeType == 1) {
+				rewardToken.safeTransfer(gaugeAddr, totalDistribute);
+				IStakingRewards(gaugeAddr).notifyRewardAmount(totalDistribute);
+			} else if (gaugeType >= 2) {
+				// If it is defined, we use the specific delegate attached to the gauge
+				address delegate = delegateGauges[gaugeAddr];
+				if (delegate == address(0)) {
+					// If not, we check if a delegate common to all gauges with type >= 2 can be used
+					delegate = delegateGauge;
+				}
+				if (delegate != address(0)) {
+					// In the case where the gauge has a delegate (specific or not), then rewards are transferred to this gauge
+					rewardToken.safeTransfer(delegate, totalDistribute);
+					// If this delegate supports a specific interface, then rewards sent are notified through this
+					// interface
+					if (isInterfaceKnown[delegate]) {
+						ISdtMiddlemanGauge(delegate).notifyReward(gaugeAddr, totalDistribute);
+					}
+				} else {
+					rewardToken.safeTransfer(gaugeAddr, totalDistribute);
 				}
 			} else {
-				rewardToken.safeTransfer(gaugeAddr, totalDistribute);
+				ILiquidityGauge(gaugeAddr).deposit_reward_token(address(rewardToken), totalDistribute);
 			}
-		} else {
-			ILiquidityGauge(gaugeAddr).deposit_reward_token(address(rewardToken), totalDistribute);
-		}
 
-		emit RewardDistributed(gaugeAddr, totalDistribute, lastMasterchefPull);
+			emit RewardDistributed(gaugeAddr, totalDistribute, lastMasterchefPull);
+		}
 	}
 
 	/// @notice Internal function to pull SDT from the MasterChef
@@ -228,9 +224,9 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 		masterchef.withdraw(masterchefPID, 0);
 	}
 
-    ////////////////////////////////////////////////////////////////
-    /// --- RESTRICTIVE FUNCTIONS
-    ///////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////
+	/// --- RESTRICTIVE FUNCTIONS
+	///////////////////////////////////////////////////////////////
 
 	/// @notice Sets the distribution state (on/off)
 	/// @param _state new distribution state
