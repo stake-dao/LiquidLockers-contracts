@@ -273,13 +273,11 @@ describe("FRAX Strategy", function () {
       const multiGaugeRewardRateBefore = await fxsTempleMultiGauge.reward_data(fxs.address);
       const msFxsBalanceBefore = await fxs.balanceOf(dummyMs.address)
       const accumulatorFxsBalanceBefore = await fxs.balanceOf(FXSACCUMULATOR)
-      const deci = await fxsTempleGauge.lock_time_min()
-      console.log(deci.toString())
-      //const claimable = await fxsTempleLiqudityGauge.claimable_reward(FXSLOCKER, SDT)
-      //const claim = await strategy.claim(fxsTemple.address)
-      const gauge = await strategy.gauges(fxsTemple.address)
-      const multiGauge = await strategy.multiGauges(gauge)
-      console.log(multiGauge)
+      const earned = await fxsTempleGauge.earned(locker.address)
+      const claim = await strategy.claim(fxsTemple.address)
+      //const gauge = await strategy.gauges(fxsTemple.address)
+      //const multiGauge = await strategy.multiGauges(gauge)
+      //console.log(multiGauge)
       //console.log(claimable)
 
     })

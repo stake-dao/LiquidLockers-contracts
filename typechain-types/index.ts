@@ -39,7 +39,6 @@ export type { TransparentUpgradeableProxy } from "./TransparentUpgradeableProxy"
 export type { AngleLiquidityGauge } from "./AngleLiquidityGauge";
 export type { AngleVaultFactory } from "./AngleVaultFactory";
 export type { FraxVaultFactory } from "./FraxVaultFactory";
-export type { IFraxLiquidityGauge } from "./IFraxLiquidityGauge";
 export type { FxsLocker } from "./FxsLocker";
 export type { BalancerFeeDistributor } from "./BalancerFeeDistributor";
 export type { IAuthorizer } from "./IAuthorizer";
@@ -135,7 +134,6 @@ export { TransparentUpgradeableProxy__factory } from "./factories/TransparentUpg
 export { AngleLiquidityGauge__factory } from "./factories/AngleLiquidityGauge__factory";
 export { AngleVaultFactory__factory } from "./factories/AngleVaultFactory__factory";
 export { FraxVaultFactory__factory } from "./factories/FraxVaultFactory__factory";
-export { IFraxLiquidityGauge__factory } from "./factories/IFraxLiquidityGauge__factory";
 export { FxsLocker__factory } from "./factories/FxsLocker__factory";
 export { BalancerFeeDistributor__factory } from "./factories/BalancerFeeDistributor__factory";
 export { IAuthorizer__factory } from "./factories/IAuthorizer__factory";
