@@ -12,6 +12,7 @@ import FxsLockerABI from "./fixtures/FXSLocker.json";
 import FxsTempleGaugeFraxABI from "./fixtures/FxsTempleGaugeFrax.json"
 import MASTERCHEFABI from "./fixtures/Masterchef.json";
 import ERC20ABI from "./fixtures/ERC20.json";
+import FXSABI from "./fixtures/FXS.json";
 import { info } from "console";
 import exp from "constants";
 import { type } from "os";
@@ -57,6 +58,7 @@ describe("FRAX Strategy", function () {
   let locker: Contract;
   let fxsTemple: Contract;
   let frax: Contract;
+  let fxs: Contract;
   let sdt: Contract;
   let VeSdtProxy: Contract;
   let masterchef: Contract;
@@ -114,6 +116,7 @@ describe("FRAX Strategy", function () {
     fxsTempleGaugeFrax = await ethers.getContractAt(FxsTempleGaugeFraxABI, FXS_TEMPLE_GAUGE);
     fxsTemple = await ethers.getContractAt(ERC20ABI, FXS_TEMPLE)
     frax = await ethers.getContractAt(ERC20ABI, FRAX);
+    fxs = await ethers.getContractAt(FXSABI, FXS)
     sdt = await ethers.getContractAt(ERC20ABI, SDT);
     masterchef = await ethers.getContractAt(MASTERCHEFABI, MASTERCHEF);
 
@@ -188,7 +191,7 @@ describe("FRAX Strategy", function () {
   });
   describe("Angle Vault tests", function () {
     const LOCKDURATION = 4 * WEEK;
-    const DEPOSITEDAMOUNT = parseUnits("1000", 18);
+    const DEPOSITEDAMOUNT = parseUnits("100", 18);
     it("Liquidity Gauge token should be set properly", async function () {
       const name = await fxsTempleMultiGauge.name();
       const symbol = await fxsTempleMultiGauge.symbol();
@@ -231,18 +234,19 @@ describe("FRAX Strategy", function () {
       expect(lockedInformationsOfDepositor["owner"]).to.be.eq(NULL)
     })
     it("Shouldn't be able to withdraw when there is no enough gauge token", async function () {
+      const TOTRANSFER = parseUnits("5", 18);
       await fxsTemple.connect(LPHolder).approve(fxsTempleVault.address, DEPOSITEDAMOUNT);
       await fxsTempleVault.connect(LPHolder).deposit(DEPOSITEDAMOUNT, LOCKDURATION);
       const kekIdOfDepositorBeforeWithdraw = await fxsTempleVault.getKekIdUser(LPHolder._address);
       const deployerStakedBeforeTransfer = await fxsTempleMultiGauge.balanceOf(deployer._address);
       //const before = await fxsTempleMultiGauge.balanceOf(LPHolder._address)
-      await fxsTempleMultiGauge.connect(LPHolder).transfer(deployer._address, parseUnits("50", 18))
+      await fxsTempleMultiGauge.connect(LPHolder).transfer(deployer._address, TOTRANSFER)
       //const after = await fxsTempleMultiGauge.balanceOf(LPHolder._address)
       const deployerStakedAfterTransfer = await fxsTempleMultiGauge.balanceOf(deployer._address);
       const tx = await fxsTempleVault.connect(LPHolder).withdraw(kekIdOfDepositorBeforeWithdraw[0]).catch((e: any) => e);
       expect(tx.message).to.have.string("Not enough staked");
       expect(deployerStakedBeforeTransfer).to.be.equal(0);
-      expect(deployerStakedAfterTransfer).to.be.equal(parseUnits("50", 18));
+      expect(deployerStakedAfterTransfer).to.be.equal(TOTRANSFER);
     })
     it("Shouldn't be able withdraw from multigauge if not vault", async function () {
       const stakedBalance = await fxsTempleMultiGauge.balanceOf(LPHolder._address);
@@ -256,5 +260,28 @@ describe("FRAX Strategy", function () {
       const tx = await strategy.setGauge(FXS_TEMPLE, FXS_TEMPLE_GAUGE).catch((e: any) => e);
       expect(tx.message).to.have.string("!governance");
     });
+    it("Should be able to claim rewards when some time pass", async function () {
+      await gc.connect(veSdtHolder).vote_for_gauge_weights(fxsTempleMultiGauge.address, 10000);
+      await fxsTemple.connect(LPHolder).approve(fxsTempleVault.address, DEPOSITEDAMOUNT);
+      await fxsTempleVault.connect(LPHolder).deposit(DEPOSITEDAMOUNT, LOCKDURATION);
+      await sdtDProxy.connect(deployer).approveGauge(fxsTempleMultiGauge.address);
+      // increase the timestamp by 1 month
+      await network.provider.send("evm_increaseTime", [LOCKDURATION]);
+      await network.provider.send("evm_mine", []);
+      //await gc.connect(veSdtHolder).checkpoint_gauge(fxsTempleMultiGauge.address);
+
+      const multiGaugeRewardRateBefore = await fxsTempleMultiGauge.reward_data(fxs.address);
+      const msFxsBalanceBefore = await fxs.balanceOf(dummyMs.address)
+      const accumulatorFxsBalanceBefore = await fxs.balanceOf(FXSACCUMULATOR)
+      const deci = await fxsTempleLiqudityGauge.decimals()
+      console.log(deci)
+      //const claimable = await fxsTempleLiqudityGauge.claimable_reward(FXSLOCKER, SDT)
+      //const claim = await strategy.claim(fxsTemple.address)
+      const gauge = await strategy.gauges(fxsTemple.address)
+      const multiGauge = await strategy.multiGauges(gauge)
+      console.log(multiGauge)
+      //console.log(claimable)
+
+    })
   })
 })

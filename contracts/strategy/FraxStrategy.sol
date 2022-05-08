@@ -38,19 +38,8 @@ contract FraxStrategy is BaseStrategy {
 	}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
-	/*
-	function deposit(address _token, uint256 _amount) public override onlyApprovedVault {
-		IERC20(_token).transferFrom(msg.sender, address(locker), _amount);
-		address gauge = gauges[_token];
-		require(gauge != address(0), "!gauge");
-		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, 0));
-		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, _amount));
 
-		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("deposit(uint256)", _amount));
-		require(success, "Deposit failed!");
-		emit Deposited(gauge, _token, _amount);
-	}*/
-		function deposit(
+	function deposit(
 		address _token,
 		uint256 _amount,
 		bytes memory _encodedDeposit
@@ -81,39 +70,45 @@ contract FraxStrategy is BaseStrategy {
 	}
 
 	function withdraw(address _token, bytes memory _encodedWithdraw) public onlyApprovedVault {
-		//uint256 _before = IERC20(_token).balanceOf(address(locker));
+		uint256 _before = IERC20(_token).balanceOf(address(locker));
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
+
 		(bool success, ) = locker.execute(gauge, 0, _encodedWithdraw);
 		require(success, "Withdraw failed!");
 		
-		// Not used because LP are directly send to FraxVault
-		// But need to be implemented for other "v1" type Frax gauge
-		//uint256 _after = IERC20(_token).balanceOf(address(locker));
-		//uint256 _net = _after - _before;
-		//(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _net));
-		//require(success, "Transfer failed!");
+		// Only if the Frax gauge cannot send LP token directly to the vault
+		uint256 _after = IERC20(_token).balanceOf(address(locker));
+		uint256 _net = _after - _before;
+		if (_net > 0) {
+			(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _net));
+			require(success, "Transfer failed!");
+		}
 		emit Withdrawn(gauge, _token, 0);
 	}
 
 	function claim(address _token) external override {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
-		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("user_checkpoint(address)", address(locker)));
-		require(success, "Checkpoint failed!");
-		(success, ) = locker.execute(
+		//(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("user_checkpoint(address)", address(locker)));
+		//require(success, "Checkpoint failed!");
+		(bool success, ) = locker.execute(
 			gauge,
 			0,
-			abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
+			abi.encodeWithSignature("getReward(address)", address(this))
 		);
 		require(success, "Claim failed!");
 		SdtDistributorV2(sdtDistributor).distribute(multiGauges[gauge]);
-		for (uint8 i = 0; i < 8; i++) {
-			address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
+		address[] memory rewardTokenList = ILiquidityGaugeFRAX(gauge).getAllRewardTokens();
+		for (uint8 i = 0; i < rewardTokenList.length; i++) {
+			address rewardToken = rewardTokenList[i];
 			if (rewardToken == address(0)) {
 				break;
 			}
+			
 			uint256 rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
+			if (rewardsBalance == 0) { continue; }
+
 			uint256 multisigFee = (rewardsBalance * perfFee[gauge]) / BASE_FEE;
 			uint256 accumulatorPart = (rewardsBalance * accumulatorFee[gauge]) / BASE_FEE;
 			uint256 veSDTPart = (rewardsBalance * veSDTFee[gauge]) / BASE_FEE;
@@ -125,7 +120,7 @@ contract FraxStrategy is BaseStrategy {
 			IERC20(rewardToken).transfer(msg.sender, claimerPart);
 			uint256 netRewards = rewardsBalance - multisigFee - accumulatorPart - veSDTPart - claimerPart;
 			IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
-			ILiquidityGauge(multiGauges[gauge]).deposit_reward_token(rewardToken, netRewards);
+			//ILiquidityGauge(multiGauges[gauge]).deposit_reward_token(rewardToken, netRewards);
 			emit Claimed(gauge, rewardToken, rewardsBalance);
 		}
 	}
