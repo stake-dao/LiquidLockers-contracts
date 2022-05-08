@@ -7,10 +7,13 @@ import "../strategy/FraxVault.sol";
 import "../strategy/FraxStrategy.sol";
 import "../interfaces/IGaugeController.sol";
 import "../interfaces/ILiquidityGaugeStrat.sol";
+import "../interfaces/ILiquidityGaugeFRAX.sol";
 
+/*
 interface IFraxLiquidityGauge {
 	function stakingToken() external view returns (address);
 }
+*/
 
 /**
  * @title Factory contract usefull for creating new angle vaults that supports LP related
@@ -49,7 +52,7 @@ contract FraxVaultFactory {
 	function cloneAndInit(address _fraxGauge) public {
 		uint256 weight = IGaugeController(gaugeController).get_gauge_weight(_fraxGauge);
 		require(weight > 0, "must have weight");
-		address vaultLpToken = IFraxLiquidityGauge(_fraxGauge).stakingToken();
+		address vaultLpToken = ILiquidityGaugeFRAX(_fraxGauge).stakingToken();
 		string memory tokenSymbol = ERC20Upgradeable(vaultLpToken).symbol();
 		string memory tokenName = ERC20Upgradeable(vaultLpToken).name();
 		address vaultImplAddress = _cloneAndInitVault(

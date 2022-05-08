@@ -9,7 +9,7 @@ import { Contract } from "@ethersproject/contracts";
 import { JsonRpcSigner } from "@ethersproject/providers";
 
 import FxsLockerABI from "./fixtures/FXSLocker.json";
-import FxsTempleGaugeFraxABI from "./fixtures/FxsTempleGaugeFrax.json"
+import FxsTempleGaugeFraxABI from "./fixtures/fxsTempleGauge.json"
 import MASTERCHEFABI from "./fixtures/Masterchef.json";
 import ERC20ABI from "./fixtures/ERC20.json";
 import FXSABI from "./fixtures/FXS.json";
@@ -70,7 +70,7 @@ describe("FRAX Strategy", function () {
   let fxsTempleVault: Contract;
   let fxsTempleMultiGauge: Contract;
   let fxsTempleLiqudityGauge: Contract;
-  let fxsTempleGaugeFrax: Contract;
+  let fxsTempleGauge: Contract;
 
   before(async function () {
 
@@ -113,7 +113,7 @@ describe("FRAX Strategy", function () {
 
     /* ==== Get Contract At ==== */
     locker = await ethers.getContractAt(FxsLockerABI, FXSLOCKER);
-    fxsTempleGaugeFrax = await ethers.getContractAt(FxsTempleGaugeFraxABI, FXS_TEMPLE_GAUGE);
+    fxsTempleGauge = await ethers.getContractAt(FxsTempleGaugeFraxABI, FXS_TEMPLE_GAUGE);
     fxsTemple = await ethers.getContractAt(ERC20ABI, FXS_TEMPLE)
     frax = await ethers.getContractAt(ERC20ABI, FRAX);
     fxs = await ethers.getContractAt(FXSABI, FXS)
@@ -169,7 +169,7 @@ describe("FRAX Strategy", function () {
     fxsTempleVault = await ethers.getContractAt("FraxVault", cloneTx.events[0].args[0]);
     // Only vault can deposit and withdraw for LiquidityGaugeV4Strat
     fxsTempleMultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", cloneTx.events[1].args[0]);
-    fxsTempleLiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", FXS_TEMPLE_GAUGE);
+    //fxsTempleLiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", FXS_TEMPLE_GAUGE);
 
     /* ==== Add gauge types ==== */
     const typesWeight = parseEther("1");
@@ -200,13 +200,13 @@ describe("FRAX Strategy", function () {
       // Name of FXS Temple LP token is UNI-V2 ... 
     })
     it("Should deposit FXS/Temple to vault and get gauge token", async function () {
-      const lockedStakesOfLockerBeforeDeposit = await fxsTempleGaugeFrax.lockedStakesOf(locker.address);
+      const lockedStakesOfLockerBeforeDeposit = await fxsTempleGauge.lockedStakesOf(locker.address);
       await fxsTemple.connect(LPHolder).approve(fxsTempleVault.address, DEPOSITEDAMOUNT);
       await fxsTempleVault.connect(LPHolder).deposit(DEPOSITEDAMOUNT, LOCKDURATION);
-      const lockedStakesOfLockerAfterDeposit = await fxsTempleGaugeFrax.lockedStakesOf(locker.address);
+      const lockedStakesOfLockerAfterDeposit = await fxsTempleGauge.lockedStakesOf(locker.address);
       const kekIdLPHolder = await fxsTempleVault.getKekIdUser(LPHolder._address);
       const lockedInformationsOfDepositor = await fxsTempleVault.getLockedInformations(kekIdLPHolder[0])
-      const lockedStakesOfLPHolder = await fxsTempleGaugeFrax.lockedStakes(locker.address, 0);
+      const lockedStakesOfLPHolder = await fxsTempleGauge.lockedStakes(locker.address, 0);
       const gaugeTokenBalanceOfDepositor = await fxsTempleMultiGauge.balanceOf(LPHolder._address);
 
       expect(lockedStakesOfLockerBeforeDeposit.length).to.be.eq(0)
@@ -273,8 +273,8 @@ describe("FRAX Strategy", function () {
       const multiGaugeRewardRateBefore = await fxsTempleMultiGauge.reward_data(fxs.address);
       const msFxsBalanceBefore = await fxs.balanceOf(dummyMs.address)
       const accumulatorFxsBalanceBefore = await fxs.balanceOf(FXSACCUMULATOR)
-      const deci = await fxsTempleLiqudityGauge.decimals()
-      console.log(deci)
+      const deci = await fxsTempleGauge.lock_time_min()
+      console.log(deci.toString())
       //const claimable = await fxsTempleLiqudityGauge.claimable_reward(FXSLOCKER, SDT)
       //const claim = await strategy.claim(fxsTemple.address)
       const gauge = await strategy.gauges(fxsTemple.address)
