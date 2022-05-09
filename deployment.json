@@ -14401,8 +14401,29 @@
       ]
     },
     "AngleVaultFactory": {
-      "address": "0x46Fa5c155901b321b5588986019C68688c374030",
+      "address": "0x66f3d3210F84fe8cC2c77A1f001a395b2Ae0B801",
       "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_gaugeImpl",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "_angleStrategy",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "_sdtDistributor",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
         {
           "anonymous": false,
           "inputs": [
@@ -14454,46 +14475,76 @@
           "type": "event"
         },
         {
+          "inputs": [],
+          "name": "ANGLE",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "SDT",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "VEBOOST",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "VESDT",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "angleStrategy",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
           "inputs": [
             {
-              "internalType": "contract ERC20Upgradeable",
-              "name": "_vaultLPToken",
-              "type": "address"
-            },
-            {
               "internalType": "address",
-              "name": "_vaultGovernance",
+              "name": "_angleGauge",
               "type": "address"
-            },
-            {
-              "internalType": "string",
-              "name": "_vaultName",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "_vaultSymbol",
-              "type": "string"
-            },
-            {
-              "internalType": "contract AngleStrategy",
-              "name": "_vaultAngleStrategy",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "_gaugeGovernance",
-              "type": "address"
-            },
-            {
-              "internalType": "string",
-              "name": "_gaugeName",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "_gaugeSymbol",
-              "type": "string"
             }
           ],
           "name": "cloneAndInit",
@@ -14503,7 +14554,33 @@
         },
         {
           "inputs": [],
+          "name": "gaugeController",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
           "name": "gaugeImpl",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "governance",
           "outputs": [
             {
               "internalType": "address",
@@ -14533,6 +14610,19 @@
             }
           ],
           "name": "predictAddress",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "sdtDistributor",
           "outputs": [
             {
               "internalType": "address",
