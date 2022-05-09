@@ -121,7 +121,7 @@ describe("veSDT voting", () => {
   let crvWhale: JsonRpcSigner;
 
   before(async function () {
-    this.enableTimeouts(false);
+    this.timeout(0);
 
     [deployer] = await ethers.getSigners();
 
@@ -327,7 +327,7 @@ describe("veSDT voting", () => {
 
   describe("Accumulators", async () => {
     it("should get the yield from new angle acc and distribute it to the LGV4", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
       await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 2]);
       await network.provider.send("evm_mine", []);
 
@@ -341,7 +341,7 @@ describe("veSDT voting", () => {
 
   describe("ClaimRewards", async () => {
     it("should claim rewards from angle LGV4", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
 
       const balanceBeforeSdt = await sdt.balanceOf(sdAngleWhaleSigner._address);
       const balanceBeforeSanLP = await sanUsdcEur.balanceOf(sdAngleWhaleSigner._address);

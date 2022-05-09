@@ -4,94 +4,108 @@ pragma solidity 0.8.7;
 
 import "./SdtDistributorEvents.sol";
 
+/// @title SdtDistributorV2
+/// @notice Earn from Masterchef SDT and distribute it to gauges
 contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeable, SdtDistributorEvents {
 	using SafeERC20 for IERC20;
 
-	uint256 public timePeriod;
+	////////////////////////////////////////////////////////////////
+	/// --- CONSTANTS
+	///////////////////////////////////////////////////////////////
 
-	/// @notice Role for governors only
+	/// @notice Accounting
+	uint256 public constant BASE_UNIT = 10_000;
+
+	/// @notice Address of the SDT token given as a reward.
+	IERC20 public constant rewardToken = IERC20(0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F);
+
+	/// @notice Address of the masterchef.
+	IMasterchef public constant masterchef = IMasterchef(0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c);
+
+	/// @notice Role for governors only.
 	bytes32 public constant GOVERNOR_ROLE = keccak256("GOVERNOR_ROLE");
 	/// @notice Role for the guardian
 	bytes32 public constant GUARDIAN_ROLE = keccak256("GUARDIAN_ROLE");
 
-	/// @notice Address of the SDT token given as a reward
-	IERC20 public rewardToken;
+	////////////////////////////////////////////////////////////////
+	/// --- STORAGE SLOTS
+	///////////////////////////////////////////////////////////////
 
-	/// @notice Address of the token that will be deposited in masterchef
+	/// @notice Time between SDT Harvest.
+	uint256 public timePeriod;
+
+	/// @notice Address of the token that will be deposited in masterchef.
 	IERC20 public masterchefToken;
 
-	/// @notice Address of the masterchef
-	IMasterchef public masterchef;
-
-	/// @notice Address of the `GaugeController` contract
+	/// @notice Address of the `GaugeController` contract.
 	IGaugeController public controller;
 
 	/// @notice Address responsible for pulling rewards of type >= 2 gauges and distributing it to the
-	/// associated contracts if there is not already an address delegated for this specific contract
+	/// associated contracts if there is not already an address delegated for this specific contract.
 	address public delegateGauge;
 
-	/// @notice Whether SDT distribution through this contract is on or no
+	/// @notice Whether SDT distribution through this contract is on or no.
 	bool public distributionsOn;
 
 	/// @notice Maps the address of a type >= 2 gauge to a delegate address responsible
-	/// for giving rewards to the actual gauge
+	/// for giving rewards to the actual gauge.
 	mapping(address => address) public delegateGauges;
 
 	/// @notice Maps the address of a gauge to whether it was killed or not
-	/// A gauge killed in this contract cannot receive any rewards
+	/// A gauge killed in this contract cannot receive any rewards.
 	mapping(address => bool) public killedGauges;
 
 	/// @notice Maps the address of a gauge delegate to whether this delegate supports the `notifyReward` interface
-	/// and is therefore built for automation
+	/// and is therefore built for automation.
 	mapping(address => bool) public isInterfaceKnown;
 
-	/// @notice masterchef pid
+	/// @notice Masterchef PID
 	uint256 public masterchefPID;
 
-	/// @notice timestamp of the last pull from masterchef
+	/// @notice Timestamp of the last pull from masterchef.
 	uint256 public lastMasterchefPull;
 
-	/// @notice Maps the timestapm of pull action to the amount of SDT that pulled
+	/// @notice Maps the timestamp of pull action to the amount of SDT that pulled.
 	mapping(uint256 => uint256) public pulls; // day => SDT amount
 
-	uint256 public startTime;
-	uint256 public claimerFee;
-	uint256 public lookPastDays;
-
-	/// @notice Maps the timestamp of last pull to the gauge addresses then keeps the data if particular gauge paid in the last pull
+	/// @notice Maps the timestamp of last pull to the gauge addresses then keeps the data if particular gauge paid in the last pull.
 	mapping(uint256 => mapping(address => bool)) public isGaugePaid;
 
+	/// @notice Incentive for caller.
+	uint256 public claimerFee;
+
+	/// @notice Number of days to go through for past distributing.
+	uint256 public lookPastDays;
+
+	////////////////////////////////////////////////////////////////
+	/// --- INITIALIZATION LOGIC
+	///////////////////////////////////////////////////////////////
+
 	/// @notice Initialize function
-	/// @param _rewardToken token address used as reward
 	/// @param _controller gauge controller to manage votes
-	/// @param _masterchef masterchef address to redeem SDT
 	/// @param _governor governor address
 	/// @param _guardian guardian address
 	/// @param _delegateGauge delegate gauge address
 	function initialize(
-		address _rewardToken,
 		address _controller,
-		address _masterchef,
 		address _governor,
 		address _guardian,
 		address _delegateGauge
 	) external initializer {
-		require(
-			_controller != address(0) && _rewardToken != address(0) && _guardian != address(0) && _governor != address(0),
-			"0"
-		);
-		rewardToken = IERC20(_rewardToken);
+		require(_controller != address(0) && _guardian != address(0) && _governor != address(0), "0");
+
 		controller = IGaugeController(_controller);
 		delegateGauge = _delegateGauge;
-		masterchef = IMasterchef(_masterchef);
+
 		masterchefToken = IERC20(address(new MasterchefMasterToken()));
 		distributionsOn = false;
-		startTime = block.timestamp;
+
 		timePeriod = 3600 * 24; // One day in seconds
 		lookPastDays = 45; // for past 45 days check
 
 		_setRoleAdmin(GOVERNOR_ROLE, GOVERNOR_ROLE);
 		_setRoleAdmin(GUARDIAN_ROLE, GOVERNOR_ROLE);
+
 		_setupRole(GUARDIAN_ROLE, _guardian);
 		_setupRole(GOVERNOR_ROLE, _governor);
 		_setupRole(GUARDIAN_ROLE, _governor);
@@ -108,87 +122,111 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 		masterchef.deposit(_pid, 1e18);
 	}
 
-	function distribute(address gaugeAddr) external {
+	////////////////////////////////////////////////////////////////
+	/// --- DISTRIBUTION LOGIC
+	///////////////////////////////////////////////////////////////
+
+	/// @notice Distribute SDT to Gauges
+	/// @param gaugeAddr Address of the gauge to distribute.
+	function distribute(address gaugeAddr) external nonReentrant {
 		_distribute(gaugeAddr);
 	}
 
-	function distributeMulti(address[] calldata gaugeAddr) public {
+	/// @notice Distribute SDT to Multiple Gauges
+	/// @param gaugeAddr Array of addresses of the gauge to distribute.
+	function distributeMulti(address[] calldata gaugeAddr) public nonReentrant {
 		uint256 length = gaugeAddr.length;
 		for (uint256 i; i < length; i++) {
 			_distribute(gaugeAddr[i]);
 		}
 	}
 
-	function _distribute(address gaugeAddr) internal nonReentrant {
-		require(distributionsOn == true, "not allowed");
+	/// @notice Internal implementation of distribute logic.
+	/// @param gaugeAddr Address of the gauge to distribute rewards to
+	function _distribute(address gaugeAddr) internal {
+		require(distributionsOn, "not allowed");
 		int128 gaugeType = controller.gauge_types(gaugeAddr);
-		require(gaugeType >= 0 && !killedGauges[gaugeAddr], "Unrecognized or killed gauge");
-		uint256 midnight = (block.timestamp / 1 days) * 1 days;
+		require(gaugeType >= 0, "Unrecognized gauge");
+
+		if (killedGauges[gaugeAddr]) {
+			return;
+		}
+
+		// Rounded to beginning of the day -> 00:00 UTC
+		uint256 roundedTimestamp = (block.timestamp / 1 days) * 1 days;
+
 		uint256 totalDistribute;
+
 		if (block.timestamp > lastMasterchefPull + timePeriod) {
 			uint256 sdtBefore = rewardToken.balanceOf(address(this));
 			_pullSDT();
-			pulls[midnight] = rewardToken.balanceOf(address(this)) - sdtBefore;
-			lastMasterchefPull = block.timestamp;
+			pulls[roundedTimestamp] = rewardToken.balanceOf(address(this)) - sdtBefore;
+			lastMasterchefPull = roundedTimestamp;
 		}
 		// check past n days
 		for (uint256 i; i < lookPastDays; i++) {
-			uint256 currentTimestamp = midnight - (i * 86400);
-			if (currentTimestamp < startTime) {
-				break;
-			}
+			uint256 currentTimestamp = roundedTimestamp - (i * 86_400);
+
 			if (pulls[currentTimestamp] > 0) {
 				bool isPaid = isGaugePaid[currentTimestamp][gaugeAddr];
 				if (isPaid) {
 					break;
 				}
+
+				// Retrieve the amount pulled from Masterchef at the given timestamp.
 				uint256 sdtBalance = pulls[currentTimestamp];
 				uint256 gaugeRelativeWeight;
+
 				if (i == 0) {
+					// Makes sure the weight is checkpointed. Also returns the weight.
 					gaugeRelativeWeight = controller.gauge_relative_weight_write(gaugeAddr, currentTimestamp);
 				} else {
 					gaugeRelativeWeight = controller.gauge_relative_weight(gaugeAddr, currentTimestamp);
 				}
+
 				uint256 sdtDistributed = (sdtBalance * gaugeRelativeWeight) / 1e18;
 				totalDistribute += sdtDistributed;
 				isGaugePaid[currentTimestamp][gaugeAddr] = true;
 			}
 		}
-		uint256 claimerReward = (totalDistribute * claimerFee) / 10000;
-		rewardToken.transfer(msg.sender, claimerReward);
-		totalDistribute -= claimerReward;
-		if (gaugeType == 1) {
-			rewardToken.safeTransfer(gaugeAddr, totalDistribute);
-			IStakingRewards(gaugeAddr).notifyRewardAmount(totalDistribute);
-		} else if (gaugeType >= 2) {
-			// If it is defined, we use the specific delegate attached to the gauge
-			address delegate = delegateGauges[gaugeAddr];
-			if (delegate == address(0)) {
-				// If not, we check if a delegate common to all gauges with type >= 2 can be used
-				delegate = delegateGauge;
-			}
-			if (delegate != address(0)) {
-				// In the case where the gauge has a delegate (specific or not), then rewards are transferred to this gauge
-				rewardToken.safeTransfer(delegate, totalDistribute);
-				// If this delegate supports a specific interface, then rewards sent are notified through this
-				// interface
-				if (isInterfaceKnown[delegate]) {
-					ISdtMiddlemanGauge(delegate).notifyReward(gaugeAddr, totalDistribute);
+		if (totalDistribute > 0) {
+			if (gaugeType == 1) {
+				rewardToken.safeTransfer(gaugeAddr, totalDistribute);
+				IStakingRewards(gaugeAddr).notifyRewardAmount(totalDistribute);
+			} else if (gaugeType >= 2) {
+				// If it is defined, we use the specific delegate attached to the gauge
+				address delegate = delegateGauges[gaugeAddr];
+				if (delegate == address(0)) {
+					// If not, we check if a delegate common to all gauges with type >= 2 can be used
+					delegate = delegateGauge;
+				}
+				if (delegate != address(0)) {
+					// In the case where the gauge has a delegate (specific or not), then rewards are transferred to this gauge
+					rewardToken.safeTransfer(delegate, totalDistribute);
+					// If this delegate supports a specific interface, then rewards sent are notified through this
+					// interface
+					if (isInterfaceKnown[delegate]) {
+						ISdtMiddlemanGauge(delegate).notifyReward(gaugeAddr, totalDistribute);
+					}
+				} else {
+					rewardToken.safeTransfer(gaugeAddr, totalDistribute);
 				}
 			} else {
-				rewardToken.safeTransfer(gaugeAddr, totalDistribute);
+				ILiquidityGauge(gaugeAddr).deposit_reward_token(address(rewardToken), totalDistribute);
 			}
-		} else {
-			ILiquidityGauge(gaugeAddr).deposit_reward_token(address(rewardToken), totalDistribute);
-		}
 
-		emit RewardDistributed(gaugeAddr, totalDistribute, lastMasterchefPull);
+			emit RewardDistributed(gaugeAddr, totalDistribute, lastMasterchefPull);
+		}
 	}
 
 	/// @notice Internal function to pull SDT from the MasterChef
 	function _pullSDT() internal {
 		masterchef.withdraw(masterchefPID, 0);
 	}
+
+	////////////////////////////////////////////////////////////////
+	/// --- RESTRICTIVE FUNCTIONS
+	///////////////////////////////////////////////////////////////
 
 	/// @notice Sets the distribution state (on/off)
 	/// @param _state new distribution state
@@ -274,10 +312,12 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 	/// @notice Set the time period to pull SDT from Masterchef
 	/// @param _timePeriod new timePeriod value in seconds
 	function setTimePeriod(uint256 _timePeriod) external onlyRole(GOVERNOR_ROLE) {
+		require(_timePeriod >= 1 days, "TOO_LOW");
 		timePeriod = _timePeriod;
 	}
 
 	function setClaimerFee(uint256 _newFee) external onlyRole(GOVERNOR_ROLE) {
+		require(_newFee <= BASE_UNIT, "TOO_HIGH");
 		claimerFee = _newFee;
 	}
 

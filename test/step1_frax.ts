@@ -58,7 +58,7 @@ describe("FXS Depositor", function () {
   let randomLocker2: Contract;
 
   before(async function () {
-    this.enableTimeouts(false);
+    this.timeout(0);
 
     [deployer] = await ethers.getSigners();
     const temp = await ethers.getSigners();
@@ -145,7 +145,7 @@ describe("FXS Depositor", function () {
 
   describe("sdFXS", function () {
     it("should change sdFXS operator via FxsDepositor", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
 
       await fxsDepositor.setSdTokenOperator(fxsHolder._address);
       const operator = await sdFXSToken.operator();
@@ -154,7 +154,7 @@ describe("FXS Depositor", function () {
     });
 
     it("should mint some sdFXS tokens", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
       const amount = parseEther("500"); // 500 sdFXS
 
       const sdFXSSuppyBefore = await sdFXSToken.totalSupply();
@@ -170,7 +170,7 @@ describe("FXS Depositor", function () {
     });
 
     it("should burn some sdFXS tokens", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
       // 500 sdFXS
       const amount = BigNumber.from("500000000000000000000");
 
@@ -192,7 +192,7 @@ describe("FXS Depositor", function () {
 
   describe("Lock Initial Action", function () {
     it("Should create a lock", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
       const lockingAmount = parseEther("1");
       const lockEnd = (await getNow()) + ONE_YEAR_IN_SECONDS * 3;
 
@@ -210,7 +210,7 @@ describe("FXS Depositor", function () {
     });
 
     it("should check if all setters work correctly", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
 
       await (await locker.setGovernance(FXS_HOLDER)).wait();
       expect(await locker.governance()).to.be.equal(FXS_HOLDER);
@@ -236,7 +236,7 @@ describe("FXS Depositor", function () {
 
   describe("FxsDepositor", function () {
     it("should check if all setters work correctly", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
 
       await fxsDepositor.setGovernance(fxsHolder._address);
       expect(await fxsDepositor.governance()).to.be.equal(fxsHolder._address);
@@ -252,7 +252,7 @@ describe("FXS Depositor", function () {
     });
 
     it("Should lock FXS", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
 
       const lockingAmount = parseEther("1");
       await (await fxs.connect(fxsHolder).transfer(locker.address, lockingAmount)).wait();
@@ -263,7 +263,7 @@ describe("FXS Depositor", function () {
     });
 
     it("Should deposit and lock FXS via FxsDepositor", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
 
       const veFXSLocked = await veFXS.locked(locker.address);
       const userFxsBalanceBefore = await fxs.balanceOf(fxsHolder._address);
@@ -288,7 +288,7 @@ describe("FXS Depositor", function () {
     });
 
     it("Should deposit but not lock directly FXS via FxsDepositor", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
 
       const veFXSLocked = await veFXS.locked(locker.address);
       const userFxsBalanceBefore = await fxs.balanceOf(fxsHolder2._address);
@@ -307,7 +307,7 @@ describe("FXS Depositor", function () {
     });
 
     it("Should depositAll and lock FXS via FxsDepositor", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
 
       const veFXSLocked = await veFXS.locked(locker.address);
       const userFxsBalanceBefore = await fxs.balanceOf(fxsHolder2._address);
@@ -332,7 +332,7 @@ describe("FXS Depositor", function () {
     });
 
     it("Should deposit and stake in gauge for caller", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
 
       const veFXSLocked = await veFXS.locked(locker.address);
       const userFxsBalanceBefore = await fxs.balanceOf(fxsHolder2._address);
@@ -353,7 +353,7 @@ describe("FXS Depositor", function () {
     });
 
     it("Should deposit and stake in gauge for caller", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
 
       const RANDOM_USER = "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8";
 
@@ -376,7 +376,7 @@ describe("FXS Depositor", function () {
     });
 
     it("Should lock FXS", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
 
       // Lock FXS already deposited into the Depositor if there is any
       const addedLockingAmount = parseEther("100");
@@ -397,7 +397,7 @@ describe("FXS Depositor", function () {
     });
 
     it("Should claim rewards", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
       await network.provider.send("evm_increaseTime", [604800]); // 1 week
       await network.provider.send("evm_mine", []);
 
@@ -409,7 +409,7 @@ describe("FXS Depositor", function () {
     });
 
     it("Should release locked FXS", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
       /* random release*/
       await network.provider.send("evm_increaseTime", [ONE_YEAR_IN_SECONDS * 1.6]);
       await network.provider.send("evm_mine", []);
@@ -426,7 +426,7 @@ describe("FXS Depositor", function () {
     });
 
     it("Should execute any function", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
       const data = "0x"; // empty
       const response = await locker.execute(fxsDepositor.address, 0, data);
     });
