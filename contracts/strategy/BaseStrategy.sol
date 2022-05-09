@@ -4,7 +4,7 @@ import "../interfaces/ILocker.sol";
 
 contract BaseStrategy {
 	/* ========== STATE VARIABLES ========== */
-	ILocker locker;
+	ILocker public locker;
 	address public governance;
 	address public rewardsReceiver;
 	address public veSDTFeeProxy;

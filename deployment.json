@@ -12708,7 +12708,7 @@
       ]
     },
     "AngleStrategy": {
-      "address": "0x84BA8E5B155637B6B86FA76C7E8239bff9A9563b",
+      "address": "0x22635427C72e8b0028FeAE1B5e1957508d9D7CAF",
       "abi": [
         {
           "inputs": [
@@ -12735,6 +12735,11 @@
             {
               "internalType": "address",
               "name": "_veSDTFeeProxy",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "_sdtDistributor",
               "type": "address"
             }
           ],
@@ -12816,6 +12821,25 @@
             {
               "indexed": false,
               "internalType": "address",
+              "name": "_gauge",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "_receiver",
+              "type": "address"
+            }
+          ],
+          "name": "RewardReceiverSet",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
               "name": "_vault",
               "type": "address"
             },
@@ -12881,7 +12905,13 @@
           "type": "function"
         },
         {
-          "inputs": [],
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
           "name": "accumulatorFee",
           "outputs": [
             {
@@ -12938,8 +12968,14 @@
           "type": "function"
         },
         {
-          "inputs": [],
-          "name": "claimerReward",
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "name": "claimerRewardFee",
           "outputs": [
             {
               "internalType": "uint256",
@@ -13035,6 +13071,19 @@
           "type": "function"
         },
         {
+          "inputs": [],
+          "name": "locker",
+          "outputs": [
+            {
+              "internalType": "contract ILocker",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
           "inputs": [
             {
               "internalType": "enum AngleStrategy.MANAGEFEE",
@@ -13098,6 +13147,19 @@
         {
           "inputs": [],
           "name": "rewardsReceiver",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "sdtDistributor",
           "outputs": [
             {
               "internalType": "address",
@@ -13187,6 +13249,32 @@
           "inputs": [
             {
               "internalType": "address",
+              "name": "_newSdtDistributor",
+              "type": "address"
+            }
+          ],
+          "name": "setSdtDistributor",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_newVaultGaugeFactory",
+              "type": "address"
+            }
+          ],
+          "name": "setVaultGaugeFactory",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
               "name": "_newVeSDTProxy",
               "type": "address"
             }
@@ -13210,6 +13298,19 @@
           "type": "function"
         },
         {
+          "inputs": [],
+          "name": "vaultGaugeFactory",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
           "inputs": [
             {
               "internalType": "address",
@@ -13229,7 +13330,13 @@
           "type": "function"
         },
         {
-          "inputs": [],
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
           "name": "veSDTFee",
           "outputs": [
             {
