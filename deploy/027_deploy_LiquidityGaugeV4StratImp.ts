@@ -6,15 +6,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const agEUR = "0x1a7e4e63778B4f12a199C062f3eFdD288afCBce8";
-
-  await deploy("AngleAccumulatorV2", {
-    contract: "AngleAccumulatorV2",
+  await deploy(`LiquidityGaugeV4Strat-implementation`, {
+    contract: "LiquidityGaugeV4Strat",
     from: deployer,
-    args: [agEUR],
+    args: [],
     log: true
   });
 };
+
 export default func;
+
 func.skip = async () => true;
-func.tags = ["AngleAccumulatorV2"];
+func.tags = ["LiquidityGaugeV4Strat"];

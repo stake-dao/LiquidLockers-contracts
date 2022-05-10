@@ -100,7 +100,7 @@ describe("veSDT voting", () => {
   let usdcWhale: JsonRpcSigner;
   let sanUsdcEurWhale: JsonRpcSigner;
   before(async function () {
-    this.enableTimeouts(false);
+    this.timeout(0);
 
     [deployer] = await ethers.getSigners();
 
@@ -454,14 +454,14 @@ describe("veSDT voting", () => {
 
   describe("Accumulator", async () => {
     it("should claim rewards from the fxs locker", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
       await fxsAccumulator.claimAndNotifyAll();
       const rewardBalance = await fxs.balanceOf(fxsPPSGaugeProxy.address);
       expect(rewardBalance).to.be.gt(0);
     });
 
     it("should claim rewards from the angle locker", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
       await angleAccumulator.claimAndNotifyAll();
       const rewardBalance = await sanUsdcEur.balanceOf(anglePPSGaugeProxy.address);
       expect(rewardBalance).to.be.gt(0);
@@ -623,7 +623,7 @@ describe("veSDT voting", () => {
     });
 
     it("Should deposit sdToken into gauges", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
       // deposit 1 sdFxs and 1 sdAngle
       var lockTime = (await getNow()) + 60 * 60 * 24 * 365 * 4;
       await sdfxs.connect(dummyUser2).approve(fxsPPSGaugeProxy.address, parseEther("1"));
@@ -635,7 +635,7 @@ describe("veSDT voting", () => {
     });
 
     it("Should claim FXS, sanUSDC_EUR and SDT rewards", async function () {
-      this.enableTimeouts(false);
+      this.timeout(0);
       //Adding FXS rewards
       await (await FXS1559_AMO_V3.connect(frax1).swapBurn(parseEther("100"), true)).wait();
       await surplusConverterSanTokens
@@ -835,7 +835,7 @@ describe("veSDT voting", () => {
     });
 
     // it("Boosted user receives more SDT compared to non-boosted", async function () {
-    //   this.enableTimeouts(false);
+    //   this.timeout(0);
 
     //   await sdfxs.connect(dummyUser2).approve(fxsPPSGaugeProxy.address, parseEther("1"));
     //   await fxsPPSGaugeProxy.connect(dummyUser2)["deposit(uint256)"](parseEther("1"));

@@ -5,11 +5,12 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./BaseStrategy.sol";
 import "../accumulator/AngleAccumulator.sol";
 import "../interfaces/ILiquidityGauge.sol";
-import "../interfaces/IMultiRewards.sol";
+import "../staking/SdtDistributorV2.sol";
 
 contract AngleStrategy is BaseStrategy {
 	using SafeERC20 for IERC20;
 	AngleAccumulator public accumulator;
+	address public sdtDistributor;
 	struct ClaimerReward {
 		address rewardToken;
 		uint256 amount;
@@ -26,12 +27,13 @@ contract AngleStrategy is BaseStrategy {
 		ILocker _locker,
 		address _governance,
 		address _receiver,
-		AngleAccumulator _accumulator
+		AngleAccumulator _accumulator,
+		address _veSDTFeeProxy,
+		address _sdtDistributor
 	) BaseStrategy(_locker, _governance, _receiver) {
-		veSDTFee = 500; // %5
-		accumulatorFee = 800; // %8
-		claimerReward = 50; //%0.5
 		accumulator = _accumulator;
+		veSDTFeeProxy = _veSDTFeeProxy;
+		sdtDistributor = _sdtDistributor;
 	}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
@@ -61,20 +63,18 @@ contract AngleStrategy is BaseStrategy {
 		emit Withdrawn(gauge, _token, _amount);
 	}
 
-	function sendToAccumulator(address _token, uint256 _amount) external onlyGovernance {
-		IERC20(_token).approve(address(accumulator), _amount);
-		accumulator.depositToken(_token, _amount);
-	}
-
 	function claim(address _token) external override {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
-		(bool success, ) = locker.execute(
+		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("user_checkpoint(address)", address(locker)));
+		require(success, "Checkpoint failed!");
+		(success, ) = locker.execute(
 			gauge,
 			0,
 			abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
 		);
 		require(success, "Claim failed!");
+		SdtDistributorV2(sdtDistributor).distribute(multiGauges[gauge]);
 		for (uint8 i = 0; i < 8; i++) {
 			address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
 			if (rewardToken == address(0)) {
@@ -82,9 +82,9 @@ contract AngleStrategy is BaseStrategy {
 			}
 			uint256 rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
 			uint256 multisigFee = (rewardsBalance * perfFee[gauge]) / BASE_FEE;
-			uint256 accumulatorPart = (rewardsBalance * accumulatorFee) / BASE_FEE;
-			uint256 veSDTPart = (rewardsBalance * veSDTFee) / BASE_FEE;
-			uint256 claimerPart = (rewardsBalance * claimerReward) / BASE_FEE;
+			uint256 accumulatorPart = (rewardsBalance * accumulatorFee[gauge]) / BASE_FEE;
+			uint256 veSDTPart = (rewardsBalance * veSDTFee[gauge]) / BASE_FEE;
+			uint256 claimerPart = (rewardsBalance * claimerRewardFee[gauge]) / BASE_FEE;
 			IERC20(rewardToken).approve(address(accumulator), accumulatorPart);
 			accumulator.depositToken(rewardToken, accumulatorPart);
 			IERC20(rewardToken).transfer(rewardsReceiver, multisigFee);
@@ -92,7 +92,7 @@ contract AngleStrategy is BaseStrategy {
 			IERC20(rewardToken).transfer(msg.sender, claimerPart);
 			uint256 netRewards = rewardsBalance - multisigFee - accumulatorPart - veSDTPart - claimerPart;
 			IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
-			IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, netRewards);
+			ILiquidityGauge(multiGauges[gauge]).deposit_reward_token(rewardToken, netRewards);
 			emit Claimed(gauge, rewardToken, rewardsBalance);
 		}
 	}
@@ -106,36 +106,24 @@ contract AngleStrategy is BaseStrategy {
 				break;
 			}
 			uint256 rewardsBalance = ILiquidityGauge(gauge).claimable_reward(address(locker), rewardToken);
-			uint256 pendingAmount = (rewardsBalance * claimerReward) / BASE_FEE;
+			uint256 pendingAmount = (rewardsBalance * claimerRewardFee[gauge]) / BASE_FEE;
 			ClaimerReward memory pendingReward = ClaimerReward(rewardToken, pendingAmount);
 			pendings[i] = pendingReward;
 		}
 		return pendings;
 	}
 
-	function boost(address _gauge) external override onlyGovernance {
-		(bool success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("user_checkpoint(address)", address(locker)));
-		require(success, "Boost failed!");
-		emit Boosted(_gauge, address(locker));
-	}
-
-	function set_rewards_receiver(address _gauge, address _receiver) external override onlyGovernance {
-		(bool success, ) = locker.execute(_gauge, 0, abi.encodeWithSignature("set_rewards_receiver(address)", _receiver));
-		require(success, "Set rewards receiver failed!");
-		emit RewardReceiverSet(_gauge, _receiver);
-	}
-
-	function toggleVault(address _vault) external override onlyGovernance {
+	function toggleVault(address _vault) external override onlyGovernanceOrFactory {
 		vaults[_vault] = !vaults[_vault];
 		emit VaultToggled(_vault, vaults[_vault]);
 	}
 
-	function setGauge(address _token, address _gauge) external override onlyGovernance {
+	function setGauge(address _token, address _gauge) external override onlyGovernanceOrFactory {
 		gauges[_token] = _gauge;
 		emit GaugeSet(_gauge, _token);
 	}
 
-	function setMultiGauge(address _gauge, address _multiGauge) external override onlyGovernance {
+	function setMultiGauge(address _gauge, address _multiGauge) external override onlyGovernanceOrFactory {
 		multiGauges[_gauge] = _multiGauge;
 	}
 
@@ -151,24 +139,42 @@ contract AngleStrategy is BaseStrategy {
 		rewardsReceiver = _newRewardsReceiver;
 	}
 
+	function setGovernance(address _newGovernance) external onlyGovernance {
+		governance = _newGovernance;
+	}
+
+	function setSdtDistributor(address _newSdtDistributor) external onlyGovernance {
+		sdtDistributor = _newSdtDistributor;
+	}
+
+	function setVaultGaugeFactory(address _newVaultGaugeFactory) external onlyGovernance {
+		require(_newVaultGaugeFactory != address(0), "zero address");
+		vaultGaugeFactory = _newVaultGaugeFactory;
+	}
+
+	/// @notice function to set new fees
+	/// @param _manageFee manageFee
+	/// @param _gauge gauge address
+	/// @param _newFee new fee to set
 	function manageFee(
 		MANAGEFEE _manageFee,
 		address _gauge,
 		uint256 _newFee
-	) external onlyGovernance {
+	) external onlyGovernanceOrFactory {
+		require(_gauge != address(0), "zero address");
+		require(_newFee <= BASE_FEE, "fee to high");
 		if (_manageFee == MANAGEFEE.PERFFEE) {
 			// 0
-			require(_gauge != address(0), "zero address");
 			perfFee[_gauge] = _newFee;
 		} else if (_manageFee == MANAGEFEE.VESDTFEE) {
 			// 1
-			veSDTFee = _newFee;
+			veSDTFee[_gauge] = _newFee;
 		} else if (_manageFee == MANAGEFEE.ACCUMULATORFEE) {
 			//2
-			accumulatorFee = _newFee;
+			accumulatorFee[_gauge] = _newFee;
 		} else if (_manageFee == MANAGEFEE.CLAIMERREWARD) {
 			// 3
-			claimerReward = _newFee;
+			claimerRewardFee[_gauge] = _newFee;
 		}
 	}
 

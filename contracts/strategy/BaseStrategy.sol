@@ -4,25 +4,24 @@ import "../interfaces/ILocker.sol";
 
 contract BaseStrategy {
 	/* ========== STATE VARIABLES ========== */
-	ILocker locker;
+	ILocker public locker;
 	address public governance;
 	address public rewardsReceiver;
-	uint256 public veSDTFee;
 	address public veSDTFeeProxy;
-	uint256 public accumulatorFee;
-	uint256 public claimerReward;
 	address public vaultGaugeFactory;
-	uint256 public constant BASE_FEE = 10000;
+	uint256 public constant BASE_FEE = 10_000;
 	mapping(address => address) public gauges;
 	mapping(address => bool) public vaults;
 	mapping(address => uint256) public perfFee;
 	mapping(address => address) public multiGauges;
+	mapping(address => uint256) public accumulatorFee; // gauge -> fee
+	mapping(address => uint256) public claimerRewardFee; // gauge -> fee
+	mapping(address => uint256) public veSDTFee; // gauge -> fee
 
 	/* ========== EVENTS ========== */
 	event Deposited(address _gauge, address _token, uint256 _amount);
 	event Withdrawn(address _gauge, address _token, uint256 _amount);
 	event Claimed(address _gauge, address _token, uint256 _amount);
-	event Boosted(address _gauge, address _user);
 	event RewardReceiverSet(address _gauge, address _receiver);
 	event VaultToggled(address _vault, bool _newState);
 	event GaugeSet(address _gauge, address _token);
@@ -56,12 +55,6 @@ contract BaseStrategy {
 	function deposit(address _token, uint256 _amount) external virtual onlyApprovedVault {}
 
 	function withdraw(address _token, uint256 _amount) external virtual onlyApprovedVault {}
-
-	function disableGauge(address _gauge) external virtual onlyGovernance {}
-
-	function boost(address _gauge) external virtual onlyGovernance {}
-
-	function set_rewards_receiver(address _gauge, address _receiver) external virtual onlyGovernance {}
 
 	function claim(address _gauge) external virtual {}
 

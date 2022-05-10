@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.7;
 
-interface ILiquidityGauge {
+interface ILiquidityGaugeStrat {
 	struct Reward {
 		address token;
 		address distributor;
@@ -26,6 +26,12 @@ interface ILiquidityGauge {
 	// solhint-disable-next-line
 	function reward_tokens(uint256 _i) external view returns (address);
 
+	function withdraw(
+		uint256 _value,
+		address _addr,
+		bool _claim_rewards
+	) external;
+
 	// solhint-disable-next-line
 	function reward_data(address _tokenReward) external view returns (Reward memory);
 
@@ -36,4 +42,17 @@ interface ILiquidityGauge {
 	function user_checkpoint(address _user) external returns (bool);
 
 	function commit_transfer_ownership(address) external;
+
+	function initialize(
+		address _staking_token,
+		address _admin,
+		address _SDT,
+		address _voting_escrow,
+		address _veBoost_proxy,
+		address _distributor,
+		address _vault,
+		string memory _symbol
+	) external;
+
+	function add_reward(address, address) external;
 }

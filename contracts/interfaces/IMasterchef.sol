@@ -20,4 +20,6 @@ interface IMasterchef {
 	function totalAllocPoint() external view returns (uint256);
 
 	function sdtPerBlock() external view returns (uint256);
+
+	function pendingSdt(uint256, address) external view returns (uint256);
 }

@@ -2,11 +2,14 @@
 pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../interfaces/ILiquidityGauge.sol";
-import "../interfaces/ILocker.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-/// @title A contract that defines the functions shared by all accumulators
+import "../interfaces/ILocker.sol";
+import "../interfaces/ILiquidityGauge.sol";
+import { ISDTDistributor } from "../interfaces/ISDTDistributor.sol";
+
+/// @title BaseAccumulator
+/// @notice A contract that defines the functions shared by all accumulators
 /// @author StakeDAO
 contract BaseAccumulator {
 	using SafeERC20 for IERC20;
@@ -15,8 +18,11 @@ contract BaseAccumulator {
 	address public locker;
 	address public tokenReward;
 	address public gauge;
+	address public sdtDistributor;
 
 	/* ========== EVENTS ========== */
+
+	event SdtDistributorUpdated(address oldDistributor, address newDistributor);
 	event GaugeSet(address oldGauge, address newGauge);
 	event RewardNotified(address gauge, address tokenReward, uint256 amount);
 	event LockerSet(address oldLocker, address newLocker);
@@ -58,10 +64,16 @@ contract BaseAccumulator {
 		uint256 balanceBefore = IERC20(_tokenReward).balanceOf(address(this));
 		require(balanceBefore >= _amount, "amount not enough");
 		if (ILiquidityGauge(gauge).reward_data(_tokenReward).distributor != address(0)) {
+			// Distribute SDT
+			ISDTDistributor(sdtDistributor).distribute(gauge);
+
 			IERC20(_tokenReward).approve(gauge, _amount);
 			ILiquidityGauge(gauge).deposit_reward_token(_tokenReward, _amount);
+
 			uint256 balanceAfter = IERC20(_tokenReward).balanceOf(address(this));
+
 			require(balanceBefore - balanceAfter == _amount, "wrong amount notified");
+
 			emit RewardNotified(gauge, _tokenReward, _amount);
 		}
 	}
@@ -83,6 +95,17 @@ contract BaseAccumulator {
 		require(_gauge != address(0), "can't be zero address");
 		emit GaugeSet(gauge, _gauge);
 		gauge = _gauge;
+	}
+
+	/// @notice Sets SdtDistributor to distribute from the Accumulator SDT Rewards to Gauge.
+	/// @dev Can be called only by the governance
+	/// @param _sdtDistributor gauge address
+	function setSdtDistributor(address _sdtDistributor) external {
+		require(msg.sender == governance, "!gov");
+		require(_sdtDistributor != address(0), "can't be zero address");
+
+		emit SdtDistributorUpdated(sdtDistributor, _sdtDistributor);
+		sdtDistributor = _sdtDistributor;
 	}
 
 	/// @notice Allows the governance to set the new governance

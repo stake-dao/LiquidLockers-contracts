@@ -24,7 +24,7 @@ describe("veSDT", () => {
   var block: any;
 
   before(async function () {
-    this.enableTimeouts(false);
+    this.timeout(0);
 
     const [owner] = await ethers.getSigners();
     baseOwner = owner;

@@ -25,8 +25,7 @@ export default {
     },
     mainnet: {
       url: process.env.MAINNET,
-      accounts: [`0x${process.env.DEPLOYER_PKEY}`],
-      gasPrice: 100000000000
+      accounts: [`0x${process.env.DEPLOYER_PKEY}`]
     }
   },
   namedAccounts: {
@@ -43,6 +42,11 @@ export default {
         runs: 200
       }
     }
+  },
+  gasReporter: {
+    enabled: true,
+    currency: "USD",
+    coinmarketcap: process.env.COINMARKETCAP_KEY
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_KEY
