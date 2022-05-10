@@ -4,59 +4,78 @@ pragma solidity 0.8.7;
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "../strategy/CurveVault.sol";
-import "../staking/GaugeMultiRewards.sol";
+import "../interfaces/IGaugeController.sol";
+import "../interfaces/ILiquidityGaugeStrat.sol";
+
+interface CurveLiquidityGauge {
+	function lp_token() external view returns (address);
+}
 
 /**
  * @title Factory contract usefull for creating new curve vaults that supports LP related
  * to the curve platform, and the gauge multi rewards attached to it.
  */
+
 contract CurveVaultFactory {
 	using ClonesUpgradeable for address;
 
 	address public vaultImpl = address(new CurveVault());
-	address public gaugeImpl = address(new GaugeMultiRewards());
-
+	address public gaugeImpl;
+	address public constant GOVERNANCE = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063;
+	address public constant GAUGE_CONTROLLER = 0x2F50D538606Fa9EDD2B11E2446BEb18C9D5846bB;
+	address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
+	address public constant VESDT = 0x0C30476f66034E11782938DF8e4384970B6c9e8a;
+	address public constant SDT = 0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F;
+	address public constant VEBOOST = 0xD67bdBefF01Fc492f1864E61756E5FBB3f173506;
+	address public curveStrategy;
+	address public sdtDistributor;
 	event VaultDeployed(address proxy, address lpToken, address impl);
 	event GaugeDeployed(address proxy, address stakeToken, address impl);
 
+	constructor(
+		address _gaugeImpl, 
+		address _curveStrategy,
+		address _sdtDistributor
+	) {
+		gaugeImpl = _gaugeImpl;
+		curveStrategy = _curveStrategy;
+		sdtDistributor = _sdtDistributor;
+	}
+
 	/**
 	@dev Function to clone Curve Vault and its gauge contracts 
-	@param _vaultLPToken curve LP token related to the vault 
-	@param _vaultGovernance vault governance address
-	@param _vaultName vault name
-	@param _vaultSymbol vault symbol
-	@param _vaultCurveStrategy curve strategy proxy
-	@param _gaugeGovernance gauge governance address
-	@param _gaugeName gauge name
-	@param _gaugeSymbol gauge symbol 
+	@param _crvGaugeAddress curve liqudity gauge address
 	 */
-	function cloneAndInit(
-		ERC20Upgradeable _vaultLPToken,
-		address _vaultGovernance,
-		string memory _vaultName,
-		string memory _vaultSymbol,
-		CurveStrategy _vaultCurveStrategy,
-		address _gaugeGovernance,
-		string memory _gaugeName,
-		string memory _gaugeSymbol
-	) public {
+	function cloneAndInit(address _crvGaugeAddress) public {
+		uint256 weight = IGaugeController(GAUGE_CONTROLLER).get_gauge_weight(_crvGaugeAddress);
+		require(weight > 0, "must have weight");
+		address vaultLpToken = CurveLiquidityGauge(_crvGaugeAddress).lp_token();
+		string memory tokenSymbol = ERC20Upgradeable(vaultLpToken).symbol();
+		string memory tokenName = ERC20Upgradeable(vaultLpToken).name();
 		address vaultImplAddress = _cloneAndInitVault(
 			vaultImpl,
-			_vaultLPToken,
-			_vaultGovernance,
-			_vaultName,
-			_vaultSymbol,
-			_vaultCurveStrategy
+			ERC20Upgradeable(vaultLpToken),
+			GOVERNANCE,
+			string(abi.encodePacked("sd", tokenName, " Vault")),
+			string(abi.encodePacked("sd", tokenSymbol, "-vault"))
 		);
 		address gaugeImplAddress = _cloneAndInitGauge(
 			gaugeImpl,
 			vaultImplAddress,
-			_gaugeGovernance,
-			_gaugeName,
-			_gaugeSymbol
+			GOVERNANCE,
+			tokenSymbol
 		);
-		CurveVault(vaultImplAddress).setGaugeMultiRewards(gaugeImplAddress);
-		CurveVault(vaultImplAddress).setGovernance(_vaultGovernance);
+		CurveVault(vaultImplAddress).setLiquidityGauge(gaugeImplAddress);
+		CurveVault(vaultImplAddress).setGovernance(GOVERNANCE);
+		CurveStrategy(curveStrategy).toggleVault(vaultImplAddress);
+		CurveStrategy(curveStrategy).setGauge(vaultLpToken, _crvGaugeAddress);
+		CurveStrategy(curveStrategy).setMultiGauge(_crvGaugeAddress, gaugeImplAddress);
+		CurveStrategy(curveStrategy).manageFee(CurveStrategy.MANAGEFEE.PERFFEE, _crvGaugeAddress, 200); //%2 default
+		CurveStrategy(curveStrategy).manageFee(CurveStrategy.MANAGEFEE.VESDTFEE, _crvGaugeAddress, 500); //%5 default
+		CurveStrategy(curveStrategy).manageFee(CurveStrategy.MANAGEFEE.ACCUMULATORFEE, _crvGaugeAddress, 800); //%8 default
+		CurveStrategy(curveStrategy).manageFee(CurveStrategy.MANAGEFEE.CLAIMERREWARD, _crvGaugeAddress, 50); //%0.5 default
+		ILiquidityGaugeStrat(gaugeImplAddress).add_reward(CRV, curveStrategy);
+		ILiquidityGaugeStrat(gaugeImplAddress).commit_transfer_ownership(GOVERNANCE);
 	}
 
 	/**
@@ -66,22 +85,20 @@ contract CurveVaultFactory {
 	@param _governance governance address 
 	@param _name vault name
 	@param _symbol vault symbol
-	@param _curveStrategy curve strategy proxy
 	 */
 	function _cloneAndInitVault(
 		address _impl,
 		ERC20Upgradeable _lpToken,
 		address _governance,
 		string memory _name,
-		string memory _symbol,
-		CurveStrategy _curveStrategy
+		string memory _symbol
 	) internal returns (address) {
 		CurveVault deployed = cloneVault(
 			_impl,
 			_lpToken,
-			keccak256(abi.encodePacked(_governance, _name, _symbol, _curveStrategy))
+			keccak256(abi.encodePacked(_governance, _name, _symbol, curveStrategy))
 		);
-		deployed.init(_lpToken, address(this), _name, _symbol, _curveStrategy);
+		deployed.init(_lpToken, address(this), _name, _symbol, CurveStrategy(curveStrategy));
 		return address(deployed);
 	}
 
@@ -90,22 +107,25 @@ contract CurveVaultFactory {
 	@param _impl address of contract to clone
 	@param _stakingToken sd LP token address 
 	@param _governance governance address 
-	@param _name gauge name
 	@param _symbol gauge symbol
 	 */
 	function _cloneAndInitGauge(
 		address _impl,
 		address _stakingToken,
 		address _governance,
-		string memory _name,
 		string memory _symbol
 	) internal returns (address) {
-		GaugeMultiRewards deployed = cloneGauge(
-			_impl,
+		ILiquidityGaugeStrat deployed = cloneGauge(_impl, _stakingToken, keccak256(abi.encodePacked(_governance, _symbol)));
+		deployed.initialize(
 			_stakingToken,
-			keccak256(abi.encodePacked(_governance, _name, _symbol))
+			address(this),
+			SDT,
+			VESDT,
+			VEBOOST,
+			sdtDistributor,
+			_stakingToken,
+			_symbol
 		);
-		deployed.init(_stakingToken, _stakingToken, _governance, _name, _symbol);
 		return address(deployed);
 	}
 
@@ -135,12 +155,12 @@ contract CurveVaultFactory {
 		address _impl,
 		address _stakingToken,
 		bytes32 _paramsHash
-	) internal returns (GaugeMultiRewards) {
+	) internal returns (ILiquidityGaugeStrat) {
 		address deployed = address(_impl).cloneDeterministic(
 			keccak256(abi.encodePacked(address(_stakingToken), _paramsHash))
 		);
 		emit GaugeDeployed(deployed, _stakingToken, _impl);
-		return GaugeMultiRewards(deployed);
+		return ILiquidityGaugeStrat(deployed);
 	}
 
 	/**

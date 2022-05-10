@@ -108,7 +108,7 @@ contract CurveVault is ERC20Upgradeable {
 
 	/// @notice function to set the gauge multi rewards
 	/// @param _multiRewardsGauge gauge address
-	function setGaugeMultiRewards(address _multiRewardsGauge) external {
+	function setLiquidityGauge(address _multiRewardsGauge) external {
 		require(msg.sender == governance, "!governance");
 		require(_multiRewardsGauge != address(0), "zero address");
 		multiRewardsGauge = _multiRewardsGauge;
