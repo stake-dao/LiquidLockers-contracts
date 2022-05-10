@@ -41,32 +41,35 @@ contract FraxStrategy is BaseStrategy {
 
 	function deposit(
 		address _token,
+		address _depositor,
 		uint256 _amount,
-		bytes memory _encodedDeposit
+		bytes memory _encodedDeposit		
 	) public onlyApprovedVault returns (bytes32) {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
 
 		IERC20(_token).transferFrom(msg.sender, address(locker), _amount);
+		
 		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, 0));
 		locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, _amount));
 
-		uint256 _lockedLiquidity = ILiquidityGaugeFRAX(gauge).lockedLiquidityOf(address(locker)); // Needed for the calculation of the kekId
+		//uint256 _lockedLiquidity = ILiquidityGaugeFRAX(gauge).lockedLiquidityOf(address(locker)); // Needed for the calculation of the kekId
 		(bool success, ) = locker.execute(gauge, 0, _encodedDeposit);
-		require(success, "Deposit failed!");
+		require(success, "Deposit failed here!");
 
+		// Not needed for Frax Gauge V2
 		// Fetching the kekid directly form the calling of the stakeLocked function
 		// with result from execute seems not working. Can be proposed : two Solutions :
 		// 1.
-		uint256 _lockedStakeLength = ILiquidityGaugeFRAX(gauge).lockedStakesOfLength(address(locker));
-		bytes32 _kekId = ILiquidityGaugeFRAX(gauge).lockedStakesOf(address(locker))[_lockedStakeLength - 1].kek_id;
+		//uint256 _lockedStakeLength = ILiquidityGaugeFRAX(gauge).lockedStakesOfLength(address(locker));
+		//bytes32 _kekId = ILiquidityGaugeFRAX(gauge).lockedStakesOf(address(locker))[_lockedStakeLength - 1].kek_id;
 		// 2.
-		bytes32 _kekIdCalculated = keccak256(abi.encodePacked(address(locker), block.timestamp, _amount, _lockedLiquidity));
-		// Idea : second seems better
+		//bytes32 _kekIdCalculated = keccak256(abi.encodePacked(address(locker), block.timestamp, _amount, _lockedLiquidity));
+		// Second seems better
+		//require(_kekId == _kekIdCalculated, "Kekid calculation failed");
+		//emit Deposited(gauge, _token, _amount);
 
-		require(_kekId == _kekIdCalculated, "Kekid calculation failed");
-		emit Deposited(gauge, _token, _amount);
-		return (_kekId);
+		return ("0x00");
 	}
 
 	function withdraw(address _token, bytes memory _encodedWithdraw) public onlyApprovedVault {
@@ -139,6 +142,13 @@ contract FraxStrategy is BaseStrategy {
 			pendings[i] = pendingReward;
 		}
 		return pendings;
+	}
+
+	function proxyToggleStaker(address _token, bytes memory _encodedToggle) external onlyApprovedVault{
+		address gauge = gauges[_token];
+		require(gauge != address(0), "!gauge");
+		(bool success, ) = locker.execute(gauge, 0, _encodedToggle);
+		require(success,"proxyToggleStaker failed");
 	}
 
 	function toggleVault(address _vault) external override onlyGovernanceOrFactory {

@@ -20,4 +20,6 @@ interface ILiquidityGaugeFRAX {
 	function lockedStakesOfLength(address account) external view returns (uint256);
 
 	function lockedLiquidityOf(address account) external view returns (uint256);
+	
+	function veFXSMultiplier(address account) external view returns (uint256 vefxs_multiplier);
 }

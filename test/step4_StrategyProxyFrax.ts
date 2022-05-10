@@ -36,6 +36,7 @@ const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 
 const FRAX = "0x853d955aCEf822Db058eb8505911ED77F175b99e";
 const FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0";
+const GOVFRAX = "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27";
 const FXS_TEMPLE = "0x6021444f1706f15465bEe85463BCc7d7cC17Fc03";
 const FXS_TEMPLE_GAUGE = "0x10460d02226d6ef7B2419aE150E6377BdbB7Ef16";
 const FXS_TEMPLE_HOLDER = "0xa5f74ae4b22a792f18c42ec49a85cf560f16559f"
@@ -54,6 +55,7 @@ describe("FRAX Strategy", function () {
   let LPHolder: JsonRpcSigner;
   let timelock: JsonRpcSigner;
   let veSdtHolder: JsonRpcSigner;
+  let govFrax: JsonRpcSigner;
 
   let locker: Contract;
   let fxsTemple: Contract;
@@ -92,10 +94,16 @@ describe("FRAX Strategy", function () {
       method: "hardhat_impersonateAccount",
       params: [VESDT_HOLDER]
     });
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [GOVFRAX]
+    });
     deployer = ethers.provider.getSigner(STDDEPLOYER);
     LPHolder = ethers.provider.getSigner(FXS_TEMPLE_HOLDER);
     timelock = ethers.provider.getSigner(TIMELOCK);
     veSdtHolder = ethers.provider.getSigner(VESDT_HOLDER);
+    govFrax = ethers.provider.getSigner(GOVFRAX);
+
     await network.provider.send("hardhat_setBalance", [STDDEPLOYER, ETH_100]);
     await network.provider.send("hardhat_setBalance", [FXS_TEMPLE_HOLDER, ETH_100]);
     await network.provider.send("hardhat_setBalance", [VESDT_HOLDER, ETH_100]);
@@ -171,6 +179,12 @@ describe("FRAX Strategy", function () {
     fxsTempleMultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", cloneTx.events[1].args[0]);
     //fxsTempleLiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", FXS_TEMPLE_GAUGE);
 
+    /* ==== Allow Liquid Locker to be a migrator on FRAX Gauge */
+    await fxsTempleGauge.connect(govFrax).toggleMigrations();
+    await fxsTempleGauge.connect(govFrax).toggleValidVeFXSProxy(locker.address)
+    await fxsTempleGauge.connect(govFrax).toggleMigrator(locker.address);
+    await fxsTempleGauge.connect(LPHolder).stakerToggleMigrator(locker.address);
+
     /* ==== Add gauge types ==== */
     const typesWeight = parseEther("1");
     await gc.connect(deployer)["add_type(string,uint256)"]("Mainnet staking", typesWeight); // 0
@@ -200,39 +214,59 @@ describe("FRAX Strategy", function () {
       // Name of FXS Temple LP token is UNI-V2 ... 
     })
     it("Should deposit FXS/Temple to vault and get gauge token", async function () {
-      const lockedStakesOfLockerBeforeDeposit = await fxsTempleGauge.lockedStakesOf(locker.address);
+      const lockedStakesOfLockerBeforeDeposit = await fxsTempleGauge.lockedStakesOf(LPHolder._address);
+      const boostBefore = await fxsTempleGauge.veFXSMultiplier(LPHolder._address)
+      const lockedStakesOfDepositorBefore = await fxsTempleGauge.lockedStakesOf(LPHolder._address);
+
       await fxsTemple.connect(LPHolder).approve(fxsTempleVault.address, DEPOSITEDAMOUNT);
       await fxsTempleVault.connect(LPHolder).deposit(DEPOSITEDAMOUNT, LOCKDURATION);
-      const lockedStakesOfLockerAfterDeposit = await fxsTempleGauge.lockedStakesOf(locker.address);
-      const kekIdLPHolder = await fxsTempleVault.getKekIdUser(LPHolder._address);
-      const lockedInformationsOfDepositor = await fxsTempleVault.getLockedInformations(kekIdLPHolder[0])
-      const lockedStakesOfLPHolder = await fxsTempleGauge.lockedStakes(locker.address, 0);
+      await fxsTempleGauge.connect(LPHolder).stakerSetVeFXSProxy(locker.address)
+
+      const boostAfter = await fxsTempleGauge.veFXSMultiplier(LPHolder._address)
+      const lockedStakesOfLockerAfterDeposit = await fxsTempleGauge.lockedStakesOf(LPHolder._address);
+      const lockedStakesOfDepositorAfter = await fxsTempleGauge.lockedStakesOf(LPHolder._address);
+      const lockedStakesOfDepositorLength = await fxsTempleGauge.lockedStakesOfLength(LPHolder._address);
       const gaugeTokenBalanceOfDepositor = await fxsTempleMultiGauge.balanceOf(LPHolder._address);
 
-      expect(lockedStakesOfLockerBeforeDeposit.length).to.be.eq(0)
-      expect(lockedStakesOfLockerAfterDeposit.length).to.be.eq(1)
-      expect(lockedStakesOfLPHolder["liquidity"]).to.be.eq(DEPOSITEDAMOUNT.toString())
-      expect(lockedStakesOfLPHolder["kek_id"]).to.be.eq(kekIdLPHolder[0]);
-      expect(gaugeTokenBalanceOfDepositor.toString()).to.be.eq(lockedInformationsOfDepositor["shares"]);
+      expect(lockedStakesOfLockerAfterDeposit.length - lockedStakesOfLockerBeforeDeposit.length).to.be.eq(1)
+      expect((boostBefore / 10 ** 18).toString()).to.be.eq("0")
+      expect((boostAfter / 10 ** 18).toString()).to.be.eq("2")
+      expect(lockedStakesOfDepositorAfter[lockedStakesOfDepositorLength - 1]["liquidity"]).to.be.eq(DEPOSITEDAMOUNT.toString())
+      expect(gaugeTokenBalanceOfDepositor).to.be.gt(0);
+
+      // Not needed for Frax Gauge V2
+      //const lockedInformationsOfDepositor = await fxsTempleVault.getLockedInformations(kekIdLPHolder[0])
+      //const lockedStakesOfLPHolder = await fxsTempleGauge.lockedStakes(locker.address, 0);
+      //expect(lockedStakesOfLPHolder["kek_id"]).to.be.eq(kekIdLPHolder[0]);
     })
+
     it("Should be able to withdraw deposited amount and gauge tokens should be burned", async function () {
       const lpTokenOfDepositorBeforeWithdraw = await fxsTemple.balanceOf(LPHolder._address)
-      const kekIdOfDepositorBeforeWithdraw = await fxsTempleVault.getKekIdUser(LPHolder._address);
+      const lockedStakesOfDepositor = await fxsTempleGauge.lockedStakesOf(LPHolder._address);
+      const lockedStakesOfDepositorLength = await fxsTempleGauge.lockedStakesOfLength(LPHolder._address);
+      const kekIdOfDepositorBeforeWithdraw = lockedStakesOfDepositor[lockedStakesOfDepositorLength - 1]["kek_id"]
+      const boostBefore = await fxsTempleGauge.veFXSMultiplier(LPHolder._address)
       // increase the timestamp by 1 month
       await network.provider.send("evm_increaseTime", [4 * WEEK]);
       await network.provider.send("evm_mine", []);
-      await fxsTempleVault.connect(LPHolder).withdraw(kekIdOfDepositorBeforeWithdraw[0])
-      const lpTokenOfDepositorAfterWithdraw = await fxsTemple.balanceOf(LPHolder._address)
-      const net = lpTokenOfDepositorAfterWithdraw - lpTokenOfDepositorBeforeWithdraw;
-      const gaugeTokenBalanceOfDepositor = await fxsTempleMultiGauge.balanceOf(LPHolder._address);
-      const kekIdOfDepositorAfterWithdraw = await fxsTempleVault.getKekIdUser(LPHolder._address);
-      const lockedInformationsOfDepositor = await fxsTempleVault.getLockedInformations(kekIdOfDepositorBeforeWithdraw[0])
+      await fxsTempleVault.connect(LPHolder).withdraw(kekIdOfDepositorBeforeWithdraw)
 
-      expect(net).to.be.gt(0)
-      expect(gaugeTokenBalanceOfDepositor).to.be.eq(0)
-      expect(kekIdOfDepositorAfterWithdraw.length).to.be.eq(0)
-      expect(lockedInformationsOfDepositor["owner"]).to.be.eq(NULL)
+      const boostAfter = await fxsTempleGauge.veFXSMultiplier(LPHolder._address)
+
+      console.log((boostBefore / 10 ** 18).toString())
+      console.log((boostAfter / 10 ** 18).toString())
+      //const lpTokenOfDepositorAfterWithdraw = await fxsTemple.balanceOf(LPHolder._address)
+      //const net = lpTokenOfDepositorAfterWithdraw - lpTokenOfDepositorBeforeWithdraw;
+      //const gaugeTokenBalanceOfDepositor = await fxsTempleMultiGauge.balanceOf(LPHolder._address);
+      //const kekIdOfDepositorAfterWithdraw = await fxsTempleVault.getKekIdUser(LPHolder._address);
+      //const lockedInformationsOfDepositor = await fxsTempleVault.getLockedInformations(kekIdOfDepositorBeforeWithdraw[0])
+      //
+      //expect(net).to.be.gt(0)
+      //expect(gaugeTokenBalanceOfDepositor).to.be.eq(0)
+      //expect(kekIdOfDepositorAfterWithdraw.length).to.be.eq(0)
+      //expect(lockedInformationsOfDepositor["owner"]).to.be.eq(NULL)
     })
+    /*
     it("Shouldn't be able to withdraw when there is no enough gauge token", async function () {
       const TOTRANSFER = parseUnits("5", 18);
       await fxsTemple.connect(LPHolder).approve(fxsTempleVault.address, DEPOSITEDAMOUNT);
@@ -274,12 +308,12 @@ describe("FRAX Strategy", function () {
       const msFxsBalanceBefore = await fxs.balanceOf(dummyMs.address)
       const accumulatorFxsBalanceBefore = await fxs.balanceOf(FXSACCUMULATOR)
       const earned = await fxsTempleGauge.earned(locker.address)
-      const claim = await strategy.claim(fxsTemple.address)
+      //const claim = await strategy.claim(fxsTemple.address)
       //const gauge = await strategy.gauges(fxsTemple.address)
       //const multiGauge = await strategy.multiGauges(gauge)
       //console.log(multiGauge)
       //console.log(claimable)
 
-    })
+    })*/
   })
 })
