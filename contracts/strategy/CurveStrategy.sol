@@ -6,6 +6,7 @@ import "./BaseStrategyV2.sol";
 import "../accumulator/CurveAccumulator.sol";
 import "../interfaces/ILiquidityGauge.sol";
 import "../interfaces/IMultiRewards.sol";
+import "../staking/SdtDistributorV2.sol";
 
 contract CurveStrategy is BaseStrategyV2 {
 	using SafeERC20 for IERC20;
@@ -110,14 +111,15 @@ contract CurveStrategy is BaseStrategyV2 {
 		);
 		require(success, "CRV transfer failed!");
 
-		// Claim extra token
-		(success, ) = locker.execute(
-			gauge,
-			0,
-			abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
-		);
-		//require(success, "Claim failed!");
-		if (success) {
+		// Distribute SDT to the related gauge
+		SdtDistributorV2(sdtDistributor).distribute(multiGauges[gauge]);
+
+		// Claim extra token (lg type 0)
+		if(lGaugeType[gauge] == 0) {
+			(success, ) = locker.execute(
+				gauge, 0, abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
+			);
+			require(success, "Claim failed!");
 			for (uint8 i = 0; i < 8; i++) {
 				address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
 				if (rewardToken == address(0)) {

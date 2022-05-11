@@ -52,12 +52,12 @@ contract CurveVaultFactory {
 		address vaultLpToken = CurveLiquidityGauge(_crvGaugeAddress).lp_token();
 		string memory tokenSymbol = ERC20Upgradeable(vaultLpToken).symbol();
 		string memory tokenName = ERC20Upgradeable(vaultLpToken).name();
-		uint256 liquidityGaugeType = 1;
+		uint256 liquidityGaugeType;
 		// view function called only to recognize the gauge type
 		bytes memory data = abi.encodeWithSignature("claimable_rewards(address,address)", address(this), CRV);
 		(bool success, ) = _crvGaugeAddress.call(data);
 		if (!success) {
-			liquidityGaugeType = 0;
+			liquidityGaugeType = 1;
 		}
 		address vaultImplAddress = _cloneAndInitVault(
 			vaultImpl,
@@ -81,7 +81,7 @@ contract CurveVaultFactory {
 		CurveStrategy(curveStrategy).manageFee(CurveStrategy.MANAGEFEE.VESDTFEE, _crvGaugeAddress, 500); //%5 default
 		CurveStrategy(curveStrategy).manageFee(CurveStrategy.MANAGEFEE.ACCUMULATORFEE, _crvGaugeAddress, 800); //%8 default
 		CurveStrategy(curveStrategy).manageFee(CurveStrategy.MANAGEFEE.CLAIMERREWARD, _crvGaugeAddress, 50); //%0.5 default
-		CurveStrategy(curveStrategy).setLGtype(vaultLpToken, liquidityGaugeType);
+		CurveStrategy(curveStrategy).setLGtype(_crvGaugeAddress, liquidityGaugeType);
 		ILiquidityGaugeStrat(gaugeImplAddress).add_reward(CRV, curveStrategy);
 		ILiquidityGaugeStrat(gaugeImplAddress).commit_transfer_ownership(GOVERNANCE);
 	}
