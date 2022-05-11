@@ -7,10 +7,6 @@ import "../accumulator/CurveAccumulator.sol";
 import "../interfaces/ILiquidityGauge.sol";
 import "../interfaces/IMultiRewards.sol";
 
-interface IVault {
-	function liquidityGaugeType() external returns(uint256);
-}
-
 contract CurveStrategy is BaseStrategyV2 {
 	using SafeERC20 for IERC20;
 
@@ -20,6 +16,7 @@ contract CurveStrategy is BaseStrategyV2 {
 	address public constant CRV3 = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
 	address public constant CRV_MINTER = 0xd061D61a4d941c39E5453435B6345Dc261C2fcE0;
 	address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
+	mapping (address => uint256) public lGaugeType;
 
 	struct ClaimerReward {
 		address rewardToken;
@@ -196,8 +193,14 @@ contract CurveStrategy is BaseStrategyV2 {
 	function toggleVault(address _vault) external override onlyGovernanceOrFactory {
 		require(_vault != address(0), "zero address");
 		vaults[_vault] = !vaults[_vault];
-		//lGaugeType[_vault] = IVault(_vault).liquidityGaugeType();
 		emit VaultToggled(_vault, vaults[_vault]);
+	}
+	
+	/// @notice function to set a gauge type
+	/// @param _gauge gauge address
+	/// @param _gaugeType type of gauge
+	function setLGtype(address _gauge, uint256 _gaugeType) external onlyGovernanceOrFactory {
+		lGaugeType[_gauge] = _gaugeType;
 	}
 
 	/// @notice function to set a new gauge

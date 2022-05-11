@@ -52,13 +52,19 @@ contract CurveVaultFactory {
 		address vaultLpToken = CurveLiquidityGauge(_crvGaugeAddress).lp_token();
 		string memory tokenSymbol = ERC20Upgradeable(vaultLpToken).symbol();
 		string memory tokenName = ERC20Upgradeable(vaultLpToken).name();
+		uint256 liquidityGaugeType = 1;
+		// view function called only to recognize the gauge type
+		bytes memory data = abi.encodeWithSignature("claimable_rewards(address,address)", address(this), CRV);
+		(bool success, ) = _crvGaugeAddress.call(data);
+		if (!success) {
+			liquidityGaugeType = 0;
+		}
 		address vaultImplAddress = _cloneAndInitVault(
 			vaultImpl,
 			ERC20Upgradeable(vaultLpToken),
 			GOVERNANCE,
 			string(abi.encodePacked("sd", tokenName, " Vault")),
-			string(abi.encodePacked("sd", tokenSymbol, "-vault")),
-			_crvGaugeAddress
+			string(abi.encodePacked("sd", tokenSymbol, "-vault"))
 		);
 		address gaugeImplAddress = _cloneAndInitGauge(
 			gaugeImpl,
@@ -75,6 +81,7 @@ contract CurveVaultFactory {
 		CurveStrategy(curveStrategy).manageFee(CurveStrategy.MANAGEFEE.VESDTFEE, _crvGaugeAddress, 500); //%5 default
 		CurveStrategy(curveStrategy).manageFee(CurveStrategy.MANAGEFEE.ACCUMULATORFEE, _crvGaugeAddress, 800); //%8 default
 		CurveStrategy(curveStrategy).manageFee(CurveStrategy.MANAGEFEE.CLAIMERREWARD, _crvGaugeAddress, 50); //%0.5 default
+		CurveStrategy(curveStrategy).setLGtype(vaultLpToken, liquidityGaugeType);
 		ILiquidityGaugeStrat(gaugeImplAddress).add_reward(CRV, curveStrategy);
 		ILiquidityGaugeStrat(gaugeImplAddress).commit_transfer_ownership(GOVERNANCE);
 	}
@@ -92,22 +99,14 @@ contract CurveVaultFactory {
 		ERC20Upgradeable _lpToken,
 		address _governance,
 		string memory _name,
-		string memory _symbol,
-		address _crvGaugeAddress
+		string memory _symbol
 	) internal returns (address) {
-		uint256 gaugeType = 1; // LG with external rewards 
-		// view call used only to recognize the LG type
-		bytes memory data = abi.encodeWithSignature("claimable_rewards(address,address)", address(this), CRV);
-		(bool success, ) = _crvGaugeAddress.call(data);
-		if (!success) {
-			gaugeType = 0;
-		}
 		CurveVault deployed = cloneVault(
 			_impl,
 			_lpToken,
 			keccak256(abi.encodePacked(_governance, _name, _symbol, curveStrategy))
 		);
-		deployed.init(_lpToken, address(this), _name, _symbol, CurveStrategy(curveStrategy), gaugeType);
+		deployed.init(_lpToken, address(this), _name, _symbol, CurveStrategy(curveStrategy));
 		return address(deployed);
 	}
 
