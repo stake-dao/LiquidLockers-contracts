@@ -221,6 +221,9 @@ describe("CURVE Strategy", function () {
     crv3Vault = await ethers.getContractAt("CurveVault", cloneTx.events[0].args[0]);
     crv3MultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", gauge);
 
+    const gaugeType = await crv3Vault.liquidityGaugeType();
+    console.log(gaugeType.toString());
+
     crv3LiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", CRV3_GAUGE);
     // sanDaiEurLiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", sanDAI_EUR_GAUGE);
     // Add gauge types
@@ -233,12 +236,12 @@ describe("CURVE Strategy", function () {
     await gc.connect(deployer_new)["add_gauge(address,int128,uint256)"](crv3MultiGauge.address, 0, 0); // gauge - type - weight
 
     /** Masterchef <> SdtDistributor setup */
-    const masterToken = await sdtDProxy.masterchefToken();
-    await masterchef.connect(timelock).add(1000, masterToken, false);
-    const poolsLength = await masterchef.poolLength();
-    const pidSdtD = poolsLength - 1;
-    await sdtDProxy.connect(deployer_new).initializeMasterchef(pidSdtD);
-    await sdtDProxy.connect(deployer_new).setDistribution(true);
+    // const masterToken = await sdtDProxy.masterchefToken();
+    // await masterchef.connect(timelock).add(1000, masterToken, false);
+    // const poolsLength = await masterchef.poolLength();
+    // const pidSdtD = poolsLength - 1;
+    // await sdtDProxy.connect(deployer_new).initializeMasterchef(pidSdtD);
+    // await sdtDProxy.connect(deployer_new).setDistribution(true);
   });
 
   describe("Curve Vault tests", function () {

@@ -7,6 +7,10 @@ import "../accumulator/CurveAccumulator.sol";
 import "../interfaces/ILiquidityGauge.sol";
 import "../interfaces/IMultiRewards.sol";
 
+interface IVault {
+	function liquidityGaugeType() external returns(uint256);
+}
+
 contract CurveStrategy is BaseStrategyV2 {
 	using SafeERC20 for IERC20;
 
@@ -192,6 +196,7 @@ contract CurveStrategy is BaseStrategyV2 {
 	function toggleVault(address _vault) external override onlyGovernanceOrFactory {
 		require(_vault != address(0), "zero address");
 		vaults[_vault] = !vaults[_vault];
+		//lGaugeType[_vault] = IVault(_vault).liquidityGaugeType();
 		emit VaultToggled(_vault, vaults[_vault]);
 	}
 

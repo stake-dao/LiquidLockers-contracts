@@ -21,6 +21,7 @@ contract CurveVault is ERC20Upgradeable {
 	CurveStrategy public curveStrategy;
 	uint256 public min;
 	uint256 public constant MAX = 10000;
+	uint256 public liquidityGaugeType;
 	event Earn(address _token, uint256 _amount);
 	event Deposit(address _depositor, uint256 _amount);
 	event Withdraw(address _depositor, uint256 _amount);
@@ -30,7 +31,8 @@ contract CurveVault is ERC20Upgradeable {
 		address _governance,
 		string memory name_,
 		string memory symbol_,
-		CurveStrategy _curveStrategy
+		CurveStrategy _curveStrategy,
+		uint256 _liquidityGaugeType
 	) public initializer {
 		__ERC20_init(name_, symbol_);
 		token = _token;
@@ -38,6 +40,7 @@ contract CurveVault is ERC20Upgradeable {
 		min = 10000;
 		keeperFee = 10; // %0.1
 		curveStrategy = _curveStrategy;
+		liquidityGaugeType = _liquidityGaugeType;
 	}
 
 	/// @notice function to deposit a new amount
