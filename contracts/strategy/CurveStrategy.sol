@@ -2,13 +2,13 @@
 pragma solidity 0.8.7;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./BaseStrategyV2.sol";
+import "./BaseStrategy.sol";
 import "../accumulator/CurveAccumulator.sol";
 import "../interfaces/ILiquidityGauge.sol";
 import "../interfaces/IMultiRewards.sol";
 import "../staking/SdtDistributorV2.sol";
 
-contract CurveStrategy is BaseStrategyV2 {
+contract CurveStrategy is BaseStrategy {
 	using SafeERC20 for IERC20;
 
 	CurveAccumulator public accumulator;
@@ -40,7 +40,7 @@ contract CurveStrategy is BaseStrategyV2 {
 		CurveAccumulator _accumulator,
 		address _veSDTFeeProxy,
 		address _sdtDistributor
-	) BaseStrategyV2(_locker, _governance, _receiver) {
+	) BaseStrategy(_locker, _governance, _receiver) {
 		accumulator = _accumulator;
 		veSDTFeeProxy = _veSDTFeeProxy;
 		sdtDistributor = _sdtDistributor;
