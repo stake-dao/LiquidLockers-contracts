@@ -114,8 +114,8 @@ contract CurveStrategy is BaseStrategyV2 {
 		// Distribute SDT to the related gauge
 		SdtDistributorV2(sdtDistributor).distribute(multiGauges[gauge]);
 
-		// Claim extra token (lg type 0)
-		if(lGaugeType[gauge] == 0) {
+		// Claim rewards only for lg type 0 and if there is at least one reward token added
+		if(lGaugeType[gauge] == 0 && ILiquidityGauge(gauge).reward_tokens(0) != address(0)) {
 			(success, ) = locker.execute(
 				gauge, 0, abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
 			);
