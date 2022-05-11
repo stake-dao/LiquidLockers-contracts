@@ -11,6 +11,7 @@ contract CurveStrategy is BaseStrategyV2 {
 	using SafeERC20 for IERC20;
 
 	CurveAccumulator public accumulator;
+	address public sdtDistributor;
 	address public constant CRV_FEE_D = 0xA464e6DCda8AC41e03616F95f4BC98a13b8922Dc;
 	address public constant CRV3 = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
 	address public constant CRV_MINTER = 0xd061D61a4d941c39E5453435B6345Dc261C2fcE0;
@@ -35,13 +36,12 @@ contract CurveStrategy is BaseStrategyV2 {
 		address _governance,
 		address _receiver,
 		CurveAccumulator _accumulator,
-		address _veSDTFeeProxy
+		address _veSDTFeeProxy,
+		address _sdtDistributor
 	) BaseStrategyV2(_locker, _governance, _receiver) {
-		//veSDTFee = 500; // %5
-		//accumulatorFee = 800; // %8
-		//claimerReward = 50; //%0.5
 		accumulator = _accumulator;
 		veSDTFeeProxy = _veSDTFeeProxy;
+		sdtDistributor = _sdtDistributor;
 	}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
@@ -97,7 +97,7 @@ contract CurveStrategy is BaseStrategyV2 {
 			CRV_MINTER,
 			0,
 			abi.encodeWithSignature("mint(address)", gauge)
-		);
+		);	
 		require(success, "CRV mint failed!");
 
 		uint256 crvMinted = IERC20(CRV).balanceOf(address(locker));
@@ -115,17 +115,19 @@ contract CurveStrategy is BaseStrategyV2 {
 			0,
 			abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
 		);
-		require(success, "Claim failed!");
-		for (uint8 i = 0; i < 8; i++) {
-			address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
-			if (rewardToken == address(0)) {
-				break;
+		//require(success, "Claim failed!");
+		if (success) {
+			for (uint8 i = 0; i < 8; i++) {
+				address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
+				if (rewardToken == address(0)) {
+					break;
+				}
+				uint256 rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
+				uint256 netRewards = sendFee(gauge, rewardToken, rewardsBalance);
+				IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
+				IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, netRewards);
+				emit Claimed(gauge, rewardToken, rewardsBalance);
 			}
-			uint256 rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
-			uint256 netRewards = sendFee(gauge, rewardToken, rewardsBalance);
-			IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
-			IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, netRewards);
-			emit Claimed(gauge, rewardToken, rewardsBalance);
 		}
 	}
 
