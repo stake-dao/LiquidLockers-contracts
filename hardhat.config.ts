@@ -20,7 +20,7 @@ export default {
     hardhat: {
       forking: {
         url: process.env.MAINNET,
-        blockNumber: 14546433
+        //blockNumber: 14546433
       }
     },
     mainnet: {
@@ -56,5 +56,8 @@ export default {
     disambiguatePaths: false,
     runOnCompile: false,
     strict: true
+  },
+  mocha: {
+    timeout: 100000000
   }
 } as HardhatUserConfig;

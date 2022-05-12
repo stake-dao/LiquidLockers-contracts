@@ -5,9 +5,11 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { JsonRpcSigner } from "@ethersproject/providers";
 import ERC20ABI from "./fixtures/ERC20.json";
+import LGV1ABI from "./fixtures/LGV1.json";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { parseEther, parseUnits } from "@ethersproject/units";
 import CrvLockerABI from "./fixtures/crvLocker.json";
+import { SDFRAX3CRV } from "./constant";
 const ONE_YEAR_IN_SECONDS = 24 * 3600 * 365;
 
 const ETH_100 = BigNumber.from(10).mul(BigNumber.from(10).pow(18)).toHexString();
@@ -23,18 +25,32 @@ const STAKEDAO_FEE_DISTRIBUTOR = "0x29f3dd38dB24d3935CF1bf841e6b2B461A3E5D92";
 
 const CRV_ACCUMULATOR = "0x54C7757199c4A04BCcD1472Ad396f768D8173757";
 const TIMELOCK = "0xD3cFc4E65a73BB6C482383EB38f5C3E1d1411616";
-const CRV3 = "0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490";
+
+// Curve LPs Gauge
+const CRV3 = "0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490"; // LP
+const CRV3_GAUGE = "0xbFcF63294aD7105dEa65aA58F8AE5BE2D9d0952A"; // LGV1
+//const SDCRV_CRV = "0xf7b55C3732aD8b2c2dA7c24f30A69f55c54FB717" // LP
+//const SDCRV_CRV_GAUGE = "0x663FC22e92f26C377Ddf3C859b560C4732ee639a"; // LGV4
+const SDT_ETH = "0x6359B6d3e327c497453d4376561eE276c6933323"; // LP
+const SDT_ETH_GAUGE = "0x60355587a8D4aa67c2E64060Ab36e566B9bCC000"; // LGV4
+
 const CRV = "0xD533a949740bb3306d119CC777fa900bA034cd52";
+const SUSHI = "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2";
+//const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 
 const CRV3_HOLDER = "0x701aEcF92edCc1DaA86c5E7EdDbAD5c311aD720C";
 
 const STDDEPLOYER = "0xb36a0671b3d49587236d7833b01e79798175875f";
-const CRV3_GAUGE = "0xbFcF63294aD7105dEa65aA58F8AE5BE2D9d0952A";
+
 const VESDT_HOLDER = "0xdceb0bb3311342e3ce9e49f57affce9deac40ba1";
 const CRV_LOCKER = "0x52f541764E6e90eeBc5c21Ff570De0e2D63766B6";
 const GC_STRATEGY = "0x3F3F0776D411eb97Cfa4E3eb25F33c01ca4e7Ca8";
 const SDT_D_STRATEGY = "0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C";
 const DEPLOYER_NEW = "0x0dE5199779b43E13B3Bec21e91117E18736BC1A8";
+const SD_CRV_LG = "0x7f50786A0b15723D741727882ee99a0BF34e3466";
+
+const SD_FRAX_3CRV = "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7";
+
 const getNow = async function () {
   let blockNum = await ethers.provider.getBlockNumber();
   let block = await ethers.provider.getBlock(blockNum);
@@ -45,7 +61,7 @@ const getNow = async function () {
 describe("CURVE Strategy", function () {
   let locker: Contract;
   let crv: Contract;
-  let crv3: Contract;
+  let frax: Contract;
   let sdt: Contract;
   let veSdt: Contract;
   let deployer: JsonRpcSigner;
@@ -53,14 +69,23 @@ describe("CURVE Strategy", function () {
   let dummyMs: SignerWithAddress;
   let VeSdtProxy: Contract;
   let crv3Holder: JsonRpcSigner;
+  //let sdCrvCrvHolder: JsonRpcSigner;
   let localDeployer: SignerWithAddress;
-
   let strategy: Contract;
-  let crv3Vault: Contract;
-  let crv3MultiGauge: Contract;
-  let crv3LiqudityGauge: Contract;
+  let crv3: Contract; // LP
+  let crv3Vault: Contract; // Vault
+  let crv3MultiGauge: Contract; // sd LGV4
+  let crv3LG: Contract; // curve LG
+  //let sdCrvCrv: Contract;
+  //let sdCrvCrvVault: Contract;
+  //let sdCrvCrvMultiGauge: Contract;
+  //let sdCrvCrvLG: Contract;
+  let sdtEth: Contract;
+  let sdtEthVault: Contract;
+  let sdtEthMultiGauge: Contract;
+  let sdtEthLG: Contract;
+  let sdCrvLG: Contract;
   let curveVaultFactoryContract: Contract;
-  let frax: Contract;
   let sdFrax3Crv: Contract;
   let sdCrvGauge: Contract;
   let crvAccumulator: Contract;
@@ -117,12 +142,14 @@ describe("CURVE Strategy", function () {
     crv = await ethers.getContractAt(ERC20ABI, CRV);
     frax = await ethers.getContractAt(ERC20ABI, FRAX);
     sdt = await ethers.getContractAt(ERC20ABI, SDT);
+    sdFrax3Crv = await ethers.getContractAt(ERC20ABI, SDFRAX3CRV);
     sdCrvGauge = await ethers.getContractAt("LiquidityGaugeV4", SDCRVGAUGE);
     crvAccumulator = await ethers.getContractAt("CurveAccumulator", CRV_ACCUMULATOR);
-    const veSdtAngleProxyFactory = await ethers.getContractFactory("veSDTFeeAngleProxy");
+    const veSdtCurveProxyFactory = await ethers.getContractFactory("VeSdtFeeCurveProxy");
     gc = await ethers.getContractAt("GaugeController", GC_STRATEGY)
     veSdt = await ethers.getContractAt("veSDT", VE_SDT);
-    VeSdtProxy = await veSdtAngleProxyFactory.deploy([CRV, WETH, FRAX]);
+    sdCrvLG = await ethers.getContractAt("LiquidityGaugeV4", SD_CRV_LG);
+    VeSdtProxy = await veSdtCurveProxyFactory.deploy([CRV, WETH, SUSHI, FRAX]);
 
     const proxyAdmin = await ProxyAdmin.deploy();
 
@@ -153,12 +180,28 @@ describe("CURVE Strategy", function () {
       sdtDProxy.address
     );
     await strategy.connect(deployer).setVaultGaugeFactory(curveVaultFactoryContract.address);
-    const cloneTx = await (await curveVaultFactoryContract.cloneAndInit(CRV3_GAUGE)).wait();
-    const gauge = cloneTx.events.filter((e: { event: string }) => e.event == "GaugeDeployed")[0].args[0];
 
-    crv3Vault = await ethers.getContractAt("CurveVault", cloneTx.events[0].args[0]);
-    crv3MultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", gauge);
-    crv3LiqudityGauge = await ethers.getContractAt("LiquidityGaugeV4", CRV3_GAUGE);
+    // Clone vaults
+    // 3crv (LGV1)
+    const cloneTx3Crv = await (await curveVaultFactoryContract.cloneAndInit(CRV3_GAUGE)).wait();
+    const gauge3Crv= cloneTx3Crv.events.filter((e: { event: string }) => e.event == "GaugeDeployed")[0].args[0];
+    crv3Vault = await ethers.getContractAt("CurveVault", cloneTx3Crv.events[0].args[0]);
+    crv3MultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", gauge3Crv);
+    crv3LG = await ethers.getContractAt(LGV1ABI, CRV3_GAUGE);
+
+    // sdCrvCrv (LGV4)
+    // const cloneTxSdCrvCrv = await (await curveVaultFactoryContract.cloneAndInit(SDCRV_CRV_GAUGE)).wait();
+    // const gaugeSdCrvCrv = cloneTxSdCrvCrv.events.filter((e: { event: string }) => e.event == "GaugeDeployed")[0].args[0];
+    // sdCrvCrvVault = await ethers.getContractAt("CurveVault", cloneTxSdCrvCrv.events[0].args[0]);
+    // sdCrvCrvMultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", gaugeSdCrvCrv);
+    // sdCrvCrvLG = await ethers.getContractAt("LiquidityGaugeV4", SDCRV_CRV_GAUGE);
+
+    // sdtEth (LGV4)
+    const cloneTxSdtEth = await (await curveVaultFactoryContract.cloneAndInit(SDT_ETH_GAUGE)).wait();
+    const gaugeSdtEth = cloneTxSdtEth.events.filter((e: { event: string }) => e.event == "GaugeDeployed")[0].args[0];
+    sdtEthVault = await ethers.getContractAt("CurveVault", cloneTxSdtEth.events[0].args[0]);
+    sdtEthMultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", gaugeSdtEth);
+    sdtEthLG = await ethers.getContractAt("LiquidityGaugeV4", SDT_ETH_GAUGE);
 
     // Add gauge types
     const typesWeight = parseEther("1");
@@ -168,6 +211,7 @@ describe("CURVE Strategy", function () {
 
     // add 3crv gauge to gaugecontroller
     await gc.connect(deployer_new)["add_gauge(address,int128,uint256)"](crv3MultiGauge.address, 0, 0); // gauge - type - weight
+    await gc.connect(deployer_new)["add_gauge(address,int128,uint256)"](sdtEthMultiGauge.address, 0, 0);
 
     /** Masterchef <> SdtDistributor setup */
     /** Already set it up */
@@ -243,12 +287,12 @@ describe("CURVE Strategy", function () {
     });
 
     it("Should be able to call earn therefore get accumulated fees as staked amount and stake the amounts to the Curve gauge", async function () {
-        const crv3GaugeStakedBefore = await crv3LiqudityGauge.balanceOf(locker.address);
+        const crv3GaugeStakedBefore = await crv3LG.balanceOf(locker.address);
         const accumulatedFees = await crv3Vault.accumulatedFee();
         const tx = await (await crv3Vault.deposit(localDeployer.address, 0, true)).wait();
         const deployerStakedAmount = await crv3MultiGauge.balanceOf(localDeployer.address);
         const vault3CrvBalanceAfterEarn = await crv3.balanceOf(crv3Vault.address);
-        const crv3GaugeStakedAfter = await crv3LiqudityGauge.balanceOf(locker.address);
+        const crv3GaugeStakedAfter = await crv3LG.balanceOf(locker.address);
         expect(crv3GaugeStakedBefore).to.be.eq(0);
         expect(crv3GaugeStakedAfter).to.be.eq(parseEther("1001"));
         expect(vault3CrvBalanceAfterEarn).to.be.equal(0);
@@ -260,7 +304,7 @@ describe("CURVE Strategy", function () {
         const sanUsdcEurBalanceBeforeWithdraw = await crv3.balanceOf(crv3Holder._address);
         const tx = await (await crv3Vault.connect(crv3Holder).withdraw(amountToWithdraw)).wait();
         const crv3BalanceAfterWithdraw = await crv3.balanceOf(crv3Holder._address);
-        const crv3GaugeStakedAfterWithdraw = await crv3LiqudityGauge.balanceOf(locker.address);
+        const crv3GaugeStakedAfterWithdraw = await crv3LG.balanceOf(locker.address);
         const fee = amountToWithdraw.mul(50).div(10000);
         // expect(crv3BalanceAfterWithdraw.sub(sanUsdcEurBalanceBeforeWithdraw)).to.be.equal(
         //     amountToWithdraw.sub(fee)
@@ -275,7 +319,7 @@ describe("CURVE Strategy", function () {
         await crv3Vault.connect(crv3Holder).deposit(crv3Holder._address, amountToDeposit, true);
         await sdtDProxy.connect(deployer_new).approveGauge(crv3MultiGauge.address);
         // increase the timestamp by 1 month
-        await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 30]);
+        await network.provider.send("evm_increaseTime", [60 * 60 * 24]); // 1 day
         await network.provider.send("evm_mine", []);
         await gc.connect(crv3Holder).checkpoint_gauge(crv3MultiGauge.address);
 
@@ -283,19 +327,19 @@ describe("CURVE Strategy", function () {
         const msCrvBalanceBefore = await crv.balanceOf(dummyMs.address);
         const accumulatorCrvBalanceBefore = await crv.balanceOf(CRV_ACCUMULATOR);
         //const claimable = await crv3LiqudityGauge.claimable_reward(locker.address, crv.address);
-        const gaugeType = await strategy.lGaugeType(crv3LiqudityGauge.address);
-        console.log(gaugeType);
+        const gaugeType = await strategy.lGaugeType(crv3LG.address);
+        //console.log(gaugeType);
         const tx = await (await strategy.claim(crv3.address)).wait();
-        const crvGRWA = await gc["gauge_relative_weight(address)"](crv3MultiGauge.address);
-        const accumulatorCrvBalanceAfter = await crv.balanceOf(CRV_ACCUMULATOR);
-        const multiGaugeRewardRateAfter = await crv3MultiGauge.reward_data(crv.address);
-        const sdtRewardsAfter = await crv3MultiGauge.reward_data(SDT);
-        const msCrvBalanceAfter = await crv.balanceOf(dummyMs.address);
-        //const perfFee = claimable.mul(BigNumber.from(200)).div(BigNumber.from(10000));
-        //const accumulatorPart = claimable.mul(BigNumber.from(800)).div(BigNumber.from(10000));
-        //const claimed = tx.events.find((e: any) => e.event === "Claimed");
-        const sdtBalance = await sdt.balanceOf(crv3MultiGauge.address);
-        const sdtBalanceOfDistributor = await sdt.balanceOf(sdtDProxy.address);
+        // const crvGRWA = await gc["gauge_relative_weight(address)"](crv3MultiGauge.address);
+        // const accumulatorCrvBalanceAfter = await crv.balanceOf(CRV_ACCUMULATOR);
+        // const multiGaugeRewardRateAfter = await crv3MultiGauge.reward_data(crv.address);
+        // const sdtRewardsAfter = await crv3MultiGauge.reward_data(SDT);
+        // const msCrvBalanceAfter = await crv.balanceOf(dummyMs.address);
+        // //const perfFee = claimable.mul(BigNumber.from(200)).div(BigNumber.from(10000));
+        // //const accumulatorPart = claimable.mul(BigNumber.from(800)).div(BigNumber.from(10000));
+        // //const claimed = tx.events.find((e: any) => e.event === "Claimed");
+        // const sdtBalance = await sdt.balanceOf(crv3MultiGauge.address);
+        // const sdtBalanceOfDistributor = await sdt.balanceOf(sdtDProxy.address);
         //expect(claimed.args[2]).to.be.equal(claimable);
         // expect(multiGaugeRewardRateBefore[3]).to.be.equal(0);
         // expect(multiGaugeRewardRateAfter[3]).to.be.gt(0);
@@ -304,25 +348,33 @@ describe("CURVE Strategy", function () {
         //expect(accumulatorPart).to.be.gt(0);
         //expect(msCrvBalanceAfter.sub(msCrvBalanceBefore)).to.be.equal(perfFee);
         //expect(accumulatorCrvBalanceAfter.sub(accumulatorCrvBalanceBefore)).to.be.equal(accumulatorPart);
-        expect(crvGRWA).to.be.eq(parseEther("1")); // 100%   
+        //expect(crvGRWA).to.be.eq(parseEther("1")); // 100%   
     }).timeout(0);
 
-    it("it should get maximum boost from angle liquidity gauge", async () => {
-      const workingBalance = await crv3LiqudityGauge.working_balances(locker.address);
-      const stakedAmount = await crv3LiqudityGauge.balanceOf(locker.address);
+    it("it should claim 3crv weekly reward", async () => {
+      // Claim weekly 3crv reward for the CRV Locker 
+      const crv3BalanceBeforeInLG = await crv3.balanceOf(SD_CRV_LG);
+      await strategy.claim3Crv(true);
+      const crv3BalanceAfterInLG = await crv3.balanceOf(SD_CRV_LG);
+      expect(crv3BalanceAfterInLG).gt(crv3BalanceBeforeInLG);
+    });
+
+    it("it should get maximum boost from curve liquidity gauge", async () => {
+      const workingBalance = await crv3LG.working_balances(locker.address);
+      const stakedAmount = await crv3LG.balanceOf(locker.address);
       const boost = workingBalance.mul(BigNumber.from(10).pow(18)).div(stakedAmount.mul(4).div(10));
       expect(boost).to.be.eq(parseEther("2.5"));
     });
 
-    // it("it should be able swap crv and transfer to feeDistributor from veSDTFeeAngleProxy", async () => {
-    //   const fraxBalanceOfClaimer = await frax.balanceOf(localDeployer.address);
-    //   const sd3CrvBalanceOfFeeD = await sdFrax3Crv.balanceOf(STAKEDAO_FEE_DISTRIBUTOR);
-    //   await VeSdtProxy.sendRewards();
-    //   const fraxBalanceOfClaimerAfterClaim = await frax.balanceOf(localDeployer.address);
-    //   const sd3CrvBalanceOfFeeDAfterRewards = await sdFrax3Crv.balanceOf(STAKEDAO_FEE_DISTRIBUTOR);
-    //   expect(fraxBalanceOfClaimerAfterClaim.sub(fraxBalanceOfClaimer)).to.be.gt(0);
-    //   expect(sd3CrvBalanceOfFeeDAfterRewards.sub(sd3CrvBalanceOfFeeD)).to.be.gt(0);
-    // });
+    it("it should be able swap crv and transfer to feeDistributor from veSDTFeeCrvProxy", async () => {
+      const fraxBalanceOfClaimer = await frax.balanceOf(localDeployer.address);
+      const sd3CrvBalanceOfFeeD = await sdFrax3Crv.balanceOf(STAKEDAO_FEE_DISTRIBUTOR);
+      const crvProxyBalanceBefore = await crv.balanceOf(VeSdtProxy.address);
+      expect(crvProxyBalanceBefore).gt(0);
+      await VeSdtProxy.sendRewards();
+      const crvProxyBalanceAfter = await crv.balanceOf(VeSdtProxy.address);
+      expect(crvProxyBalanceAfter).eq(0);
+    });
     
     // it("it should accumulated angle rewards to sdAngle liquidity gauge from AngleAccumulator", async () => {
     //   const gaugeAngleBalanceBefore = await angle.balanceOf(sdAngleGauge.address);

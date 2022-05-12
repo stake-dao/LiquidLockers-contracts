@@ -103,13 +103,21 @@ contract CurveStrategy is BaseStrategy {
 		require(success, "CRV mint failed!");
 
 		uint256 crvMinted = IERC20(CRV).balanceOf(address(locker));
-		// Send CRV to here
+		require(crvMinted > 0, "Claimed 0 CRV");
+		
+		// Send CRV here
 		(success, ) = locker.execute(
 			CRV,
 			0,
 			abi.encodeWithSignature("transfer(address,uint256)", address(this), crvMinted)
 		);
 		require(success, "CRV transfer failed!");
+
+		// Distribute CRV
+		uint256 crvNetRewards = sendFee(gauge, CRV, crvMinted);
+		IERC20(CRV).approve(multiGauges[gauge], crvNetRewards);
+		ILiquidityGauge(multiGauges[gauge]).deposit_reward_token(CRV, crvNetRewards);
+		emit Claimed(gauge, CRV, crvMinted);
 
 		// Distribute SDT to the related gauge
 		SdtDistributorV2(sdtDistributor).distribute(multiGauges[gauge]);
@@ -128,7 +136,7 @@ contract CurveStrategy is BaseStrategy {
 				uint256 rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
 				uint256 netRewards = sendFee(gauge, rewardToken, rewardsBalance);
 				IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
-				IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, netRewards);
+				ILiquidityGauge(multiGauges[gauge]).deposit_reward_token(rewardToken, netRewards);
 				emit Claimed(gauge, rewardToken, rewardsBalance);
 			}
 		}
