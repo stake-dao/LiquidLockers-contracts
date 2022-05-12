@@ -29,8 +29,8 @@ const TIMELOCK = "0xD3cFc4E65a73BB6C482383EB38f5C3E1d1411616";
 // Curve LPs Gauge
 const CRV3 = "0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490"; // LP
 const CRV3_GAUGE = "0xbFcF63294aD7105dEa65aA58F8AE5BE2D9d0952A"; // LGV1
-//const SDCRV_CRV = "0xf7b55C3732aD8b2c2dA7c24f30A69f55c54FB717" // LP
-//const SDCRV_CRV_GAUGE = "0x663FC22e92f26C377Ddf3C859b560C4732ee639a"; // LGV4
+const EUR3 = "0xb9446c4Ef5EBE66268dA6700D26f96273DE3d571" // LP
+const EUR3_GAUGE = "0x1E212e054d74ed136256fc5a5DDdB4867c6E003F"; // LGV4
 const SDT_ETH = "0x6359B6d3e327c497453d4376561eE276c6933323"; // LP
 const SDT_ETH_GAUGE = "0x60355587a8D4aa67c2E64060Ab36e566B9bCC000"; // LGV4
 
@@ -39,6 +39,7 @@ const SUSHI = "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2";
 //const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 
 const CRV3_HOLDER = "0x701aEcF92edCc1DaA86c5E7EdDbAD5c311aD720C";
+const EUR3_HOLDER = "0xb9446c4Ef5EBE66268dA6700D26f96273DE3d571";
 
 const STDDEPLOYER = "0xb36a0671b3d49587236d7833b01e79798175875f";
 
@@ -69,17 +70,16 @@ describe("CURVE Strategy", function () {
   let dummyMs: SignerWithAddress;
   let VeSdtProxy: Contract;
   let crv3Holder: JsonRpcSigner;
-  //let sdCrvCrvHolder: JsonRpcSigner;
   let localDeployer: SignerWithAddress;
   let strategy: Contract;
   let crv3: Contract; // LP
   let crv3Vault: Contract; // Vault
   let crv3MultiGauge: Contract; // sd LGV4
   let crv3LG: Contract; // curve LG
-  //let sdCrvCrv: Contract;
-  //let sdCrvCrvVault: Contract;
-  //let sdCrvCrvMultiGauge: Contract;
-  //let sdCrvCrvLG: Contract;
+  let eur3: Contract;
+  let eur3Vault: Contract;
+  let eur3MultiGauge: Contract;
+  let eur3LG: Contract;
   let sdtEth: Contract;
   let sdtEthVault: Contract;
   let sdtEthMultiGauge: Contract;
@@ -95,6 +95,7 @@ describe("CURVE Strategy", function () {
   let timelock: JsonRpcSigner;
   let veSdtHolder: JsonRpcSigner;
   let sdtHolder: JsonRpcSigner;
+  let eur3HolderNew: JsonRpcSigner;
   before(async function () {
     [localDeployer, dummyMs] = await ethers.getSigners();
     await network.provider.request({
@@ -121,6 +122,10 @@ describe("CURVE Strategy", function () {
       method: "hardhat_impersonateAccount",
       params: [SDT_HOLDER]
     });
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [EUR3_HOLDER]
+    });
 
     const CurveStrategy = await ethers.getContractFactory("CurveStrategy");
     const ProxyAdmin = await ethers.getContractFactory("ProxyAdmin");
@@ -130,18 +135,21 @@ describe("CURVE Strategy", function () {
     timelock = await ethers.provider.getSigner(TIMELOCK);
     veSdtHolder = await ethers.provider.getSigner(VESDT_HOLDER);
     sdtHolder = await ethers.provider.getSigner(SDT_HOLDER);
+    eur3HolderNew = await ethers.provider.getSigner(EUR3_HOLDER);
     await network.provider.send("hardhat_setBalance", [CRV3_HOLDER, ETH_100]);
     await network.provider.send("hardhat_setBalance", [VESDT_HOLDER, ETH_100]);
     await network.provider.send("hardhat_setBalance", [DEPLOYER_NEW, ETH_100]);
     await network.provider.send("hardhat_setBalance", [STDDEPLOYER, ETH_100]);
     await network.provider.send("hardhat_setBalance", [SDT_HOLDER, ETH_100]);
-    await network.provider.send("hardhat_setBalance", [timelock._address, parseEther("10").toHexString()]);
+    await network.provider.send("hardhat_setBalance", [EUR3_HOLDER, ETH_100]);
+    await network.provider.send("hardhat_setBalance", [timelock._address, ETH_100]);
 
     locker = await ethers.getContractAt(CrvLockerABI, CRV_LOCKER);
     crv3 = await ethers.getContractAt(ERC20ABI, CRV3);
     crv = await ethers.getContractAt(ERC20ABI, CRV);
     frax = await ethers.getContractAt(ERC20ABI, FRAX);
     sdt = await ethers.getContractAt(ERC20ABI, SDT);
+    eur3 = await ethers.getContractAt(ERC20ABI, EUR3);
     sdFrax3Crv = await ethers.getContractAt(ERC20ABI, SDFRAX3CRV);
     sdCrvGauge = await ethers.getContractAt("LiquidityGaugeV4", SDCRVGAUGE);
     crvAccumulator = await ethers.getContractAt("CurveAccumulator", CRV_ACCUMULATOR);
@@ -154,7 +162,7 @@ describe("CURVE Strategy", function () {
     const proxyAdmin = await ProxyAdmin.deploy();
 
     sdtDProxy = await ethers.getContractAt("SdtDistributorV2", SDT_D_STRATEGY);
-    strategy = await CurveStrategy.deploy(
+    strategy = await CurveStrategy.connect(deployer_new).deploy(
       locker.address,
       deployer._address,
       dummyMs.address,
@@ -189,12 +197,8 @@ describe("CURVE Strategy", function () {
     crv3MultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", gauge3Crv);
     crv3LG = await ethers.getContractAt(LGV1ABI, CRV3_GAUGE);
 
-    // sdCrvCrv (LGV4)
-    // const cloneTxSdCrvCrv = await (await curveVaultFactoryContract.cloneAndInit(SDCRV_CRV_GAUGE)).wait();
-    // const gaugeSdCrvCrv = cloneTxSdCrvCrv.events.filter((e: { event: string }) => e.event == "GaugeDeployed")[0].args[0];
-    // sdCrvCrvVault = await ethers.getContractAt("CurveVault", cloneTxSdCrvCrv.events[0].args[0]);
-    // sdCrvCrvMultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", gaugeSdCrvCrv);
-    // sdCrvCrvLG = await ethers.getContractAt("LiquidityGaugeV4", SDCRV_CRV_GAUGE);
+    // 3Eur curve LGV4
+    eur3LG = await ethers.getContractAt("LiquidityGaugeV4", EUR3_GAUGE);
 
     // sdtEth (LGV4)
     const cloneTxSdtEth = await (await curveVaultFactoryContract.cloneAndInit(SDT_ETH_GAUGE)).wait();
@@ -376,80 +380,47 @@ describe("CURVE Strategy", function () {
       expect(crvProxyBalanceAfter).eq(0);
     });
     
-    // it("it should accumulated angle rewards to sdAngle liquidity gauge from AngleAccumulator", async () => {
-    //   const gaugeAngleBalanceBefore = await angle.balanceOf(sdAngleGauge.address);
-    //   await sdAngleGauge.connect(deployer).add_reward(angle.address, angleAccumulator.address);
-    //   await angleAccumulator.connect(deployer).notifyAllExtraReward(angle.address);
-    //   const gaugeAngleBalanceAfter = await angle.balanceOf(sdAngleGauge.address);
-    //   const angleAccumulatorBalance = await angle.balanceOf(angleAccumulator.address);
-    //   expect(gaugeAngleBalanceAfter.sub(gaugeAngleBalanceBefore)).to.be.gt(0);
-    //   expect(angleAccumulatorBalance).to.be.equal(0);
-    // });
-    // it("it should create new vault and multigauge rewards for different Angle LP token", async () => {
-    //   const cloneTx = await (await angleVaultFactoryContract.cloneAndInit(sanDAI_EUR_GAUGE)).wait();
-    //   sanDaiEurVault = await ethers.getContractAt("AngleVault", cloneTx.events[0].args[0]);
-
-    //   const gauge = cloneTx.events.filter((e: { event: string }) => e.event == "GaugeDeployed")[0].args[0];
-
-    //   sanDaiEurMultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", gauge);
-    //   const tokenOfVault = await sanDaiEurVault.token();
-    //   // add sanDaiEur gauge to gaugecontroller
-    //   await gc.connect(deployer)["add_gauge(address,int128,uint256)"](sanDaiEurMultiGauge.address, 0, 0); // gauge - type - weight
-    //   await sdtDProxy.connect(deployer).approveGauge(sanDaiEurMultiGauge.address);
-    //   expect(tokenOfVault.toLowerCase()).to.be.equal(SAN_DAI_EUR.toLowerCase());
-    // });
-    // it("it should be able to deposit sanDAIEur to new vault", async () => {
-    //   const gaugeTokenBalanceBeforeDeposit = await sanDaiEurMultiGauge.balanceOf(sanDAILPHolder._address);
-    //   await sanDaiEur.connect(sanDAILPHolder).approve(sanDaiEurVault.address, ethers.constants.MaxUint256);
-    //   await sanDaiEurVault.connect(sanDAILPHolder).deposit(sanDAILPHolder._address, parseEther("10000"), false);
-    //   const gaugeTokenBalanceAfterDeposit = await sanDaiEurMultiGauge.balanceOf(sanDAILPHolder._address);
-    //   expect(gaugeTokenBalanceBeforeDeposit).to.be.equal(0);
-    //   expect(gaugeTokenBalanceAfterDeposit.sub(gaugeTokenBalanceBeforeDeposit)).to.be.equal(parseEther("9990"));
-    // });
-    // it("it should send tokens to angle gauge after call earn for new vault", async () => {
-    //   const sanDaiEurAngleGaugeStakedBefore = await sanDaiEurLiqudityGauge.balanceOf(locker.address);
-    //   await (await sanDaiEurVault.deposit(localDeployer.address, 0, true)).wait();
-    //   const sanUsdcEurAngleGaugeStakedAfter = await sanDaiEurLiqudityGauge.balanceOf(locker.address);
-    //   expect(sanDaiEurAngleGaugeStakedBefore).to.be.equal(0);
-    //   expect(sanUsdcEurAngleGaugeStakedAfter).to.be.equal(parseEther("10000"));
-    // });
-    // it("it should transfer governance of locker by execute function through angleStrategy", async () => {
-    //   let setGovernanceFunction = ["function setGovernance(address _governance)"];
-    //   let iSetGovernance = new ethers.utils.Interface(setGovernanceFunction);
-    //   const data = iSetGovernance.encodeFunctionData("setGovernance", [dummyMs.address]);
-    //   await strategy.connect(deployer).execute(locker.address, 0, data);
-    //   const newGovernance = await locker.governance();
-    //   expect(newGovernance).to.be.equal(dummyMs.address);
-    // });
-//     it("It should distribute for one gauge for during 44 days then it should distribute other gauge rewards at once for 44days ", async () => {
-//       await gc.connect(veSdtHolder).vote_for_gauge_weights(sanUSDCEurMultiGauge.address, 5000);
-//       await gc.connect(veSdtHolder).vote_for_gauge_weights(sanDaiEurMultiGauge.address, 5000);
-//       // increase the timestamp by 1 week
-//       await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]);
-//       await network.provider.send("evm_mine", []);
-//       await sanDaiEurLiqudityGauge
-//         .connect(angleDistributor)
-//         .deposit_reward_token(ANGLE, ethers.utils.parseEther("10000"));
-//       await strategy.claim(sanDaiEur.address);
-
-//       for (let i = 0; i < 44; i++) {
-//         await network.provider.send("evm_increaseTime", [60 * 60 * 24]);
-//         await network.provider.send("evm_mine", []);
-//         await strategy.claim(sanDaiEur.address);
-//         if (i % 7 == 0) {
-//           await sanDaiEurLiqudityGauge
-//             .connect(angleDistributor)
-//             .deposit_reward_token(ANGLE, ethers.utils.parseEther("10000"));
-//           await sanUsdcEurLiqudityGauge
-//             .connect(angleDistributor)
-//             .deposit_reward_token(ANGLE, ethers.utils.parseEther("10000"));
-//         }
-//       }
-//       await strategy.claim(sanUsdcEur.address);
-//       const sdtBalanceOfDistributor = await sdt.balanceOf(sdtDProxy.address);
-//       expect(sdtBalanceOfDistributor).to.be.equal(0);
-//     });
-
-//     it("should distribute to gauge", async () => {});
+    it("it should accumulated angle rewards to sdAngle liquidity gauge from AngleAccumulator", async () => {
+      const gaugeAngleBalanceBefore = await crv.balanceOf(sdCrvGauge.address);
+      await sdCrvGauge.connect(deployer).add_reward(crv.address, crvAccumulator.address);
+      await crvAccumulator.connect(deployer).notifyAllExtraReward(crv.address);
+      const gaugeCrvBalanceAfter = await crv.balanceOf(sdCrvGauge.address);
+      const curveAccumulatorBalance = await crv.balanceOf(crvAccumulator.address);
+      expect(gaugeCrvBalanceAfter.sub(gaugeAngleBalanceBefore)).to.be.gt(0);
+      expect(curveAccumulatorBalance).to.be.equal(0);
     });
+
+    it("it should create new vault and multigauge rewards for different Curve LP token", async () => {
+      const cloneTx = await (await curveVaultFactoryContract.cloneAndInit(EUR3_GAUGE)).wait();
+      eur3Vault = await ethers.getContractAt("AngleVault", cloneTx.events[0].args[0]);
+
+      const gauge = cloneTx.events.filter((e: { event: string }) => e.event == "GaugeDeployed")[0].args[0];
+
+      eur3MultiGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", gauge);
+      const tokenOfVault = await eur3Vault.token();
+      // add 3Eur gauge to gaugecontroller
+      await gc.connect(deployer_new)["add_gauge(address,int128,uint256)"](eur3MultiGauge.address, 0, 0); // gauge - type - weight
+      await sdtDProxy.connect(deployer_new).approveGauge(eur3MultiGauge.address);
+      expect(tokenOfVault.toLowerCase()).to.be.equal(EUR3.toLowerCase());
+    });
+
+    it("it should be able to deposit 3Eur LPs to new vault", async () => {
+      const amountToDeposit = parseEther("100");
+      const gaugeTokenBalanceBeforeDeposit = await eur3MultiGauge.balanceOf(eur3HolderNew._address);
+      await eur3.connect(eur3HolderNew).approve(eur3Vault.address, ethers.constants.MaxUint256);
+      // await eur3Vault.connect(eur3Holder).deposit(eur3Holder._address, amountToDeposit, false);
+      // const gaugeTokenBalanceAfterDeposit = await eur3MultiGauge.balanceOf(eur3Holder._address);
+      // expect(gaugeTokenBalanceBeforeDeposit).to.be.equal(0);
+      // expect(gaugeTokenBalanceAfterDeposit.sub(gaugeTokenBalanceBeforeDeposit)).to.be.equal(parseEther("9990"));
+    });
+
+    // it("it should send tokens to curve gauge after call earn for new vault", async () => {
+    //   const amountStaked = parseEther("100");
+    //   const eur3CurveGaugeStakedBefore = await eur3LG.balanceOf(locker.address);
+    //   await (await eur3Vault.deposit(localDeployer.address, 0, true)).wait();
+    //   const eur3CurveGaugeStakedAfter = await eur3LG.balanceOf(locker.address);
+    //   expect(eur3CurveGaugeStakedBefore).to.be.equal(0);
+    //   expect(eur3CurveGaugeStakedAfter).to.be.equal(amountStaked);
+    // });
+  });
 });
