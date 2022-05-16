@@ -318,7 +318,6 @@ contract CurveStrategy is BaseStrategy {
 		uint256 _newFee
 	) external onlyGovernanceOrFactory {
 		require(_gauge != address(0), "zero address");
-		require(_newFee <= BASE_FEE, "fee to high");
 		if (_manageFee == MANAGEFEE.PERFFEE) {
 			// 0
 			perfFee[_gauge] = _newFee;
@@ -332,6 +331,13 @@ contract CurveStrategy is BaseStrategy {
 			// 3
 			claimerRewardFee[_gauge] = _newFee;
 		}
+		require(
+			perfFee[_gauge] + 
+			veSDTFee[_gauge] + 
+			accumulatorFee[_gauge] + 
+			claimerRewardFee[_gauge] 
+			<= BASE_FEE, "fee to high"
+		);
 	}
 
 	/// @notice execute a function
