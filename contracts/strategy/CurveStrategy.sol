@@ -162,15 +162,24 @@ contract CurveStrategy is BaseStrategy {
 	function claimerPendingRewards(address _token) external view returns (ClaimerReward[] memory) {
 		ClaimerReward[] memory pendings = new ClaimerReward[](8);
 		address gauge = gauges[_token];
-		for (uint8 i = 0; i < 8; i++) {
-			address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
-			if (rewardToken == address(0)) {
-				break;
+
+		// check CRV claimable
+		uint256 crvClaimable = ILiquidityGauge(gauge).claimable_tokens(address(locker));
+		ClaimerReward memory pendingCrv = ClaimerReward(CRV, crvClaimable);
+		pendings[0] = pendingCrv;
+
+		// if the gauge type supports extra rewards tokens  
+		if (lGaugeType[gauge] == 0) {
+			for (uint8 i = 0; i < 8; i++) {
+				address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
+				if (rewardToken == address(0)) {
+					break;
+				}
+				uint256 rewardsBalance = ILiquidityGauge(gauge).claimable_reward(address(locker), rewardToken);
+				uint256 pendingAmount = (rewardsBalance * claimerRewardFee[gauge]) / BASE_FEE;
+				ClaimerReward memory pendingReward = ClaimerReward(rewardToken, pendingAmount);
+				pendings[i + 1] = pendingReward;
 			}
-			uint256 rewardsBalance = ILiquidityGauge(gauge).claimable_reward(address(locker), rewardToken);
-			uint256 pendingAmount = (rewardsBalance * claimerRewardFee[gauge]) / BASE_FEE;
-			ClaimerReward memory pendingReward = ClaimerReward(rewardToken, pendingAmount);
-			pendings[i] = pendingReward;
 		}
 		return pendings;
 	}
