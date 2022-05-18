@@ -93,6 +93,10 @@ contract CurveStrategy is BaseStrategy {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
 
+		// Check if there is any CRV to mint for the gauge
+		uint256 crvMinted = ILiquidityGauge(gauge).claimable_tokens(address(locker));
+		require(crvMinted > 0, "No CRV to mint");
+
 		// Claim CRV
 		// within the mint() it calls the user checkpoint
 		(bool success, ) = locker.execute(
@@ -101,9 +105,6 @@ contract CurveStrategy is BaseStrategy {
 			abi.encodeWithSignature("mint(address)", gauge)
 		);	
 		require(success, "CRV mint failed!");
-
-		uint256 crvMinted = IERC20(CRV).balanceOf(address(locker));
-		require(crvMinted > 0, "Claimed 0 CRV");
 		
 		// Send CRV here
 		(success, ) = locker.execute(
@@ -157,16 +158,11 @@ contract CurveStrategy is BaseStrategy {
 		return _rewardsBalance - multisigFee - accumulatorPart - veSDTPart - claimerPart;
 	}
 
-	/// @notice view function to fetch the pending rewards claimable
+	/// @notice view function to fetch the pending rewards claimable (but not the CRV reward)
 	/// @param _token token address
 	function claimerPendingRewards(address _token) external view returns (ClaimerReward[] memory) {
 		ClaimerReward[] memory pendings = new ClaimerReward[](8);
 		address gauge = gauges[_token];
-
-		// check CRV claimable
-		uint256 crvClaimable = ILiquidityGauge(gauge).claimable_tokens(address(locker));
-		ClaimerReward memory pendingCrv = ClaimerReward(CRV, crvClaimable);
-		pendings[0] = pendingCrv;
 
 		// if the gauge type supports extra rewards tokens  
 		if (lGaugeType[gauge] == 0) {

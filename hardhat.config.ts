@@ -21,7 +21,8 @@ export default {
       forking: {
         url: process.env.MAINNET,
         //blockNumber: 14546433
-      }
+      },
+      initialBaseFeePerGas: 1000000000
     },
     mainnet: {
       url: process.env.MAINNET,
