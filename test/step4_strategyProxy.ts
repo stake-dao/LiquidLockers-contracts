@@ -53,6 +53,8 @@ const sanUSDC_EUR_GAUGE = "0x51fE22abAF4a26631b2913E417c0560D547797a7";
 const sanDAI_EUR_GAUGE = "0x8E2c0CbDa6bA7B65dbcA333798A3949B07638026";
 const VESDT_HOLDER = "0xdceb0bb3311342e3ce9e49f57affce9deac40ba1";
 const ANGLE_DISTRIBUTOR = "0x4f91F01cE8ec07c9B1f6a82c18811848254917Ab";
+const GUNI_AGEUR_WETH_LP = "0x857E0B2eD0E82D5cDEB015E77ebB873C47F99575";
+
 const getNow = async function () {
   let blockNum = await ethers.provider.getBlockNumber();
   let block = await ethers.provider.getBlock(blockNum);
@@ -93,6 +95,8 @@ describe("ANGLE Strategy", function () {
   let timelock: JsonRpcSigner;
   let veSdtHolder: JsonRpcSigner;
   let angleDistributor: JsonRpcSigner;
+  let angleGUniVault: Contract;
+  let angleGuniGauge: Contract;
   before(async function () {
     [localDeployer, dummyMs] = await ethers.getSigners();
     await network.provider.request({
@@ -218,6 +222,35 @@ describe("ANGLE Strategy", function () {
     const pidSdtD = poolsLength - 1;
     await sdtDProxy.connect(deployer).initializeMasterchef(pidSdtD);
     await sdtDProxy.connect(deployer).setDistribution(true);
+
+    const angleGUniVaultFactory = await ethers.getContractFactory("AngleVaultGUni");
+
+    angleGUniVault = await angleGUniVaultFactory.deploy(
+      GUNI_AGEUR_WETH_LP,
+      deployer._address,
+      "Stake DAO GUniAgeur/ETH Vault",
+      "sdGUniAgeur/ETH-vault",
+      strategy.address
+    );
+
+    const ABI = [
+      "function initialize(address _staking_token,address _admin,address _SDT,address _voting_escrow,address _veBoost_proxy,address _distributor,address _vault,string memory _symbol)"
+    ];
+
+    const ifaceTwo = new ethers.utils.Interface(ABI);
+    const liquidityGaugeImp = await liquidityGaugeFactory.deploy();
+    const data = ifaceTwo.encodeFunctionData("initialize", [
+      angleGUniVault.address,
+      deployer._address,
+      SDT,
+      VE_SDT,
+      VESDTBOOST,
+      strategy.address,
+      angleGUniVault.address,
+      "agEur/ETH"
+    ]);
+
+    angleGuniGauge = await Proxy.connect(deployer).deploy(liquidityGaugeImp.address, proxyAdmin.address, data);
   });
 
   describe("Angle Vault tests", function () {
@@ -422,7 +455,5 @@ describe("ANGLE Strategy", function () {
       const sdtBalanceOfDistributor = await sdt.balanceOf(sdtDProxy.address);
       expect(sdtBalanceOfDistributor).to.be.equal(0);
     });
-
-    it("should distribute to gauge", async () => {});
   });
 });
