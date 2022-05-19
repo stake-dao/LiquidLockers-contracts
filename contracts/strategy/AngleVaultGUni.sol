@@ -31,13 +31,15 @@ contract AngleVaultGUni is ERC20 {
 		address _governance,
 		string memory name_,
 		string memory symbol_,
-		AngleStrategy _angleStrategy
+		AngleStrategy _angleStrategy,
+		uint256 _scalingFactor
 	) ERC20(name_, symbol_) {
 		token = _token;
 		governance = _governance;
 		min = 10000;
 		keeperFee = 10; // %0.1
 		angleStrategy = _angleStrategy;
+		scalingFactor = _scalingFactor;
 	}
 
 	function deposit(
@@ -72,9 +74,7 @@ contract AngleVaultGUni is ERC20 {
 		uint256 tokenBalance = token.balanceOf(address(this)) - accumulatedFee;
 		uint256 withdrawFee;
 		if (_shares > tokenBalance) {
-			uint256 scaledDownShare = (_shares * scalingFactor) / 1e18;
-			uint256 scaledDownTokenBalance = (tokenBalance * scalingFactor) / 1e18;
-			uint256 amountToWithdraw = scaledDownShare - scaledDownTokenBalance;
+			uint256 amountToWithdraw = ((_shares - tokenBalance) * scalingFactor) / 1e18;
 			angleStrategy.withdraw(address(token), amountToWithdraw);
 			uint256 scaledUpAmountToWithdraw = (amountToWithdraw * 1e18) / scalingFactor;
 			withdrawFee = (scaledUpAmountToWithdraw * withdrawalFee) / 10000;
