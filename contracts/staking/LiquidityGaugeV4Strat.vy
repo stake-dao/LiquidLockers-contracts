@@ -149,7 +149,7 @@ def initialize(_staking_token: address, _admin: address, _SDT: address, _voting_
 
     self.admin = _admin
     self.staking_token = _staking_token
-    #self.decimal_staking_token = ERC20Extended(_staking_token).decimals()
+    self.decimal_staking_token = ERC20Extended(_staking_token).decimals()
 
     self.name = concat("Stake DAO ", symbol, " Gauge")
     self.symbol = concat("sd",symbol, "-gauge")

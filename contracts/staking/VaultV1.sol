@@ -5,7 +5,7 @@
 // File: contracts\interfaces\IProxyVault.sol
 
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity >=0.8.0;
 
 interface IProxyVault {
 
@@ -24,11 +24,6 @@ interface IProxyVault {
     function earned() external view returns (address[] memory token_addresses, uint256[] memory total_earned);
 }
 
-// File: contracts\interfaces\IFeeRegistry.sol
-
-
-pragma solidity ^0.8.7;
-
 interface IFeeRegistry{
     function cvxfxsIncentive() external view returns(uint256);
     function cvxIncentive() external view returns(uint256);
@@ -38,11 +33,6 @@ interface IFeeRegistry{
     function feeDeposit() external view returns(address);
     function getFeeDepositor(address _from) external view returns(address);
 }
-
-// File: contracts\interfaces\IFraxFarmBase.sol
-
-
-pragma solidity >=0.8.0;
 
 interface IFraxFarmBase{
 
@@ -55,11 +45,6 @@ interface IFraxFarmBase{
     function getReward(address destination_address) external returns (uint256[] memory);
 
 }
-
-// File: contracts\interfaces\IRewards.sol
-
-
-pragma solidity ^0.8.7;
 
 interface IRewards{
     struct EarnedData {
@@ -84,12 +69,6 @@ interface IRewards{
     function rewardTokenLength() external view returns(uint256);
     function active() external view returns(bool);
 }
-
-// File: @openzeppelin\contracts\token\ERC20\IERC20.sol
-
-
-
-pragma solidity ^0.8.0;
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
@@ -168,12 +147,6 @@ interface IERC20 {
      */
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
-
-// File: @openzeppelin\contracts\utils\Address.sol
-
-
-
-pragma solidity ^0.8.0;
 
 /**
  * @dev Collection of functions related to the address type
@@ -388,13 +361,6 @@ library Address {
     }
 }
 
-// File: @openzeppelin\contracts\token\ERC20\utils\SafeERC20.sol
-
-
-
-pragma solidity ^0.8.0;
-
-
 /**
  * @title SafeERC20
  * @dev Wrappers around ERC20 operations that throw on failure (when the token
@@ -487,18 +453,8 @@ library SafeERC20 {
     }
 }
 
-// File: contracts\StakingProxyBase.sol
-
-
-pragma solidity ^0.8.7;
-contract StakingProxyBase {
+contract StakingProxyBase is IProxyVault{
     using SafeERC20 for IERC20;
-
-    enum VaultType{
-        Erc20Baic,
-        UniV3,
-        Convex
-    }
 
     address public constant fxs = address(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
     address public constant vefxsProxy = address(0x59CFCD384746ec3035299D90782Be065e466800B);
@@ -507,8 +463,8 @@ contract StakingProxyBase {
     address public owner; //owner of the vault
     address public stakingAddress; //farming contract
     address public stakingToken; //farming token
-    address public rewards; //extra rewards on convex
-    address public usingProxy; //address of proxy being used
+    address public override rewards; //extra rewards on convex
+    address public override usingProxy; //address of proxy being used
 
     uint256 public constant FEE_DENOMINATOR = 10000;
 
@@ -534,7 +490,7 @@ contract StakingProxyBase {
     }
 
     //initialize vault
-    function initialize(address _owner, address _stakingAddress, address _stakingToken, address _rewardsAddress) external virtual{
+    function initialize(address _owner, address _stakingAddress, address _stakingToken, address _rewardsAddress) external override virtual{
 
     }
 
@@ -574,10 +530,10 @@ contract StakingProxyBase {
     }
 
 
-    function getReward() external virtual{}
-    function getReward(bool _claim) external virtual{}
-    function getReward(bool _claim, address[] calldata _rewardTokenList) external virtual{}
-    function earned() external view virtual returns (address[] memory token_addresses, uint256[] memory total_earned){}
+    function getReward() external override virtual {}
+    function getReward(bool _claim) external override virtual{}
+    function getReward(bool _claim, address[] calldata _rewardTokenList) external override  virtual{}
+    function earned() external view override virtual returns (address[] memory token_addresses, uint256[] memory total_earned){}
 
 
     //checkpoint and add/remove weight to convex rewards contract
@@ -647,11 +603,6 @@ contract StakingProxyBase {
     }
 }
 
-// File: contracts\interfaces\IFraxFarmERC20.sol
-
-
-pragma solidity >=0.8.0;
-
 interface IFraxFarmERC20 {
     
     struct LockedStake {
@@ -707,12 +658,6 @@ interface IFraxFarmERC20 {
 
     function sync() external;
 }
-
-// File: @openzeppelin\contracts\security\ReentrancyGuard.sol
-
-
-
-pragma solidity ^0.8.0;
 
 /**
  * @dev Contract module that helps prevent reentrant calls to a function.
@@ -817,7 +762,7 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard{
         }
         
         //checkpoint rewards
-        //_checkpointRewards();
+        _checkpointRewards();
     }
 
     //add to a current lock

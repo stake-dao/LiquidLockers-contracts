@@ -6,6 +6,29 @@ import "../interfaces/ILiquidityGaugeStrat.sol";
 interface IProxyFactory{
     function clone(address) external returns(address);
 }
+interface IRewards{
+    struct EarnedData {
+        address token;
+        uint256 amount;
+    }
+    
+    function initialize(uint256 _pid, bool _startActive) external;
+    function addReward(address _rewardsToken, address _distributor) external;
+    function approveRewardDistributor(
+        address _rewardsToken,
+        address _distributor,
+        bool _approved
+    ) external;
+    function deposit(address _owner, uint256 _amount) external;
+    function withdraw(address _owner, uint256 _amount) external;
+    function getReward(address _forward) external;
+    function notifyRewardAmount(address _rewardsToken, uint256 _reward) external;
+    function balanceOf(address account) external view returns (uint256);
+    function claimableRewards(address _account) external view returns(EarnedData[] memory userRewards);
+    function rewardTokens(uint256 _rid) external view returns (address);
+    function rewardTokenLength() external view returns(uint256);
+    function active() external view returns(bool);
+}
 
 contract PoolRegistry {
 
@@ -91,7 +114,8 @@ contract PoolRegistry {
         address rewards;
         if(rewardImplementation != address(0)){
            rewards = IProxyFactory(proxyFactory).clone(rewardImplementation);
-           ILiquidityGaugeStrat(rewards).initialize(_stakingAddress, owner, SDT, veSDT, VEBOOST, sdtDistributor,SDT,"Test gauge");
+           IRewards(rewards).initialize(poolInfo.length, rewardsStartActive);
+           //ILiquidityGaugeStrat(rewards).initialize(_stakingAddress, owner, SDT, veSDT, VEBOOST, sdtDistributor,SDT,"Test gauge");
         }
 
         poolInfo.push(

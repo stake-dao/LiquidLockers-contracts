@@ -33,6 +33,7 @@ const VESDT_HOLDER = "0xdceb0bb3311342e3ce9e49f57affce9deac40ba1";
 const MASTERCHEF = "0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c";
 
 const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+const TEMPLE = "0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7";
 
 const FRAX = "0x853d955aCEf822Db058eb8505911ED77F175b99e";
 const FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0";
@@ -47,7 +48,7 @@ const FXSLOCKER = "0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f";
 
 const ETH_100 = BigNumber.from(10).mul(BigNumber.from(10).pow(18)).toHexString();
 
-describe("FRAX Strategy", function () {
+describe("FRAX <> StakeDAO", function () {
     let localDeployer: SignerWithAddress;
     let dummyMs: SignerWithAddress;
 
@@ -77,6 +78,7 @@ describe("FRAX Strategy", function () {
     let fxsTempleGauge: Contract;
     let vaultV1Template: Contract;
     let personalVault1: Contract;
+    let mutliRewards: Contract
 
     before(async function () {
 
@@ -124,6 +126,7 @@ describe("FRAX Strategy", function () {
         const poolRegistry = await ethers.getContractFactory("PoolRegistry");
         const boosterContract = await ethers.getContractFactory("Booster");
         const VaultV1Contract = await ethers.getContractFactory("VaultV1");
+        const MultiRewardContract = await ethers.getContractFactory("MultiRewards")
 
         /* ==== Get Contract At ==== */
         locker = await ethers.getContractAt(FxsLockerABI, FXSLOCKER);
@@ -181,46 +184,57 @@ describe("FRAX Strategy", function () {
 
 
 
-
         /* ==== Deploy Pool Registry ==== */
         poolRegistryContract = await poolRegistry.connect(deployer).deploy(sdtDistributor.address);
+
+        /* ==== Deploy MutliReward ==== */
+        mutliRewards = await MultiRewardContract.connect(deployer).deploy(poolRegistryContract.address)
 
         /* ==== Deploy VaultV1 ==== */
         vaultV1Template = await VaultV1Contract.connect(deployer).deploy();
 
-        /* ==== Deploy Booster ==== */
+        ///* ==== Deploy Booster ==== */
         booster = await boosterContract.connect(deployer).deploy(locker.address, poolRegistryContract.address, SDT)
-        // Set Booster as Operator for Pool registry
+        //// Set Booster as Operator for Pool registry
         await poolRegistryContract.connect(deployer).setOperator(booster.address)
-        // Set LGStratImp as a pool reference
-        await booster.connect(deployer).setPoolRewardImplementation(liquidityGaugeStratImp.address)
-        // LL give governance right to the Booster
+        //// Set LGStratImp as a pool reference
+        await booster.connect(deployer).setPoolRewardImplementation(mutliRewards.address)
+        //// LL give governance right to the Booster
         await locker.connect(deployer).setGovernance(booster.address);
 
-        /* ==== Create a new pool ==== */
+        ///* ==== Create a new pool ==== */
         await booster.addPool(vaultV1Template.address, FXS_TEMPLE_GAUGE, FXS_TEMPLE)
-        // Set LL as a valide veFXS Proxy
+        //// Set LL as a valide veFXS Proxy
         await fxsTempleGauge.connect(govFrax).toggleValidVeFXSProxy(locker.address)
-
-        /* ==== Create a Personal Vault ==== */
+        //
+        ///* ==== Create a Personal Vault ==== */
         await booster.connect(LPHolder).createVault(0)
-        // Get address of created vault
+        //// Get address of created vault
         const vaultAddress = await poolRegistryContract.vaultMap(0, LPHolder._address)
-        // Get contract of created vault 
+        //// Get contract of created vault 
         personalVault1 = await VaultV1Contract.attach(vaultAddress);
 
 
 
     });
-    describe("Angle Vault tests", function () {
+    describe("Frax Strategy tests", function () {
         const LOCKDURATION = 4 * WEEK;
         const DEPOSITEDAMOUNT = parseUnits("100", 18);
-        it("Create a Pool", async function () {
-            const vaultAddress = await poolRegistryContract.vaultMap(0, LPHolder._address)
-            //await fxsTemple.connect(LPHolder).approve(vaultAddress, DEPOSITEDAMOUNT)
-            //await vaultV1Template.connect(LPHolder).stakeLocked(DEPOSITEDAMOUNT, LOCKDURATION)
-            const owner = await personalVault1.owner()
-            console.log(owner)
+        it("Create a deposit LP into Frax Gauge", async function () {
+            await fxsTemple.connect(LPHolder).approve(personalVault1.address, DEPOSITEDAMOUNT)
+            await personalVault1.connect(LPHolder).stakeLocked(DEPOSITEDAMOUNT, LOCKDURATION)
+        })
+        it("Should withdraw after time increase", async function () {
+            await network.provider.send("evm_increaseTime", [LOCKDURATION]);
+            await network.provider.send("evm_mine", []);
+            const lockedStakesOf = await fxsTempleGauge.lockedStakesOf(personalVault1.address)
+            const kekId = lockedStakesOf[0]["kek_id"]
+            const earned = await personalVault1.earned()
+            await personalVault1.connect(LPHolder).withdrawLocked(kekId)
+            console.log(earned)
+        })
+        it("Should see the reward", async function () {
+            const VV = await personalVault1.getReward()
         })
     })
 })
