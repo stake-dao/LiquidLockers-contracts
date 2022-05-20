@@ -54,3 +54,8 @@ export async function writeBalance(tokenAddress: string, amount: string, recipie
   }
   throw 'Balances slot not found!';
 }
+
+export async function skip(seconds: number) {
+  await network.provider.send("evm_increaseTime", [seconds]);
+  await network.provider.send("evm_mine", []);
+}
