@@ -14,7 +14,7 @@ interface IProxyVault {
         UniV3,
         Convex
     }
-
+    function test() external virtual;
     function initialize(address _owner, address _stakingAddress, address _stakingToken, address _rewardsAddress) external;
     function usingProxy() external returns(address);
     function rewards() external returns(address);
@@ -529,7 +529,7 @@ contract StakingProxyBase is IProxyVault{
         usingProxy = _proxyAddress;
     }
 
-
+    function test() external override virtual {}
     function getReward() external override virtual {}
     function getReward(bool _claim) external override virtual{}
     function getReward(bool _claim, address[] calldata _rewardTokenList) external override  virtual{}
@@ -827,6 +827,9 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard{
         getReward(true);
     }
 
+    function test() external override {
+        revert("test");
+    }
     //get reward with claim option.
     //_claim bool is for the off chance that rewardCollectionPause is true so getReward() fails but
     //there are tokens on this vault for cases such as withdraw() also calling claim.

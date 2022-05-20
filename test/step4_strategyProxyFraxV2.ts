@@ -206,13 +206,14 @@ describe("FRAX <> StakeDAO", function () {
         await booster.addPool(vaultV1Template.address, FXS_TEMPLE_GAUGE, FXS_TEMPLE)
         //// Set LL as a valide veFXS Proxy
         await fxsTempleGauge.connect(govFrax).toggleValidVeFXSProxy(locker.address)
-        //
+
         ///* ==== Create a Personal Vault ==== */
         await booster.connect(LPHolder).createVault(0)
         //// Get address of created vault
         const vaultAddress = await poolRegistryContract.vaultMap(0, LPHolder._address)
         //// Get contract of created vault 
-        personalVault1 = await VaultV1Contract.attach(vaultAddress);
+        personalVault1 = VaultV1Contract.attach(vaultAddress);
+        console.log("vaultAddress: ", vaultAddress)
 
 
 
@@ -230,11 +231,17 @@ describe("FRAX <> StakeDAO", function () {
             const lockedStakesOf = await fxsTempleGauge.lockedStakesOf(personalVault1.address)
             const kekId = lockedStakesOf[0]["kek_id"]
             const earned = await personalVault1.earned()
+            const VV = await personalVault1.connect(LPHolder).getReward(true)
+            //await personalVault1.test();
             await personalVault1.connect(LPHolder).withdrawLocked(kekId)
+            const lockedStakesOfAfter = await fxsTempleGauge.lockedStakesOf(personalVault1.address)
+            console.log(lockedStakesOfAfter)
+
             console.log(earned)
+            console.log("vaultAddress: ", personalVault1.address)
         })
         it("Should see the reward", async function () {
-            const VV = await personalVault1.getReward()
+            //const VV = await personalVault1.connect(LPHolder).getReward()
         })
     })
 })
