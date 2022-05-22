@@ -5,13 +5,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const token = "0x857E0B2eD0E82D5cDEB015E77ebB873C47F99575";
+  const token = "0xEDECB43233549c51CC3268b5dE840239787AD56c";
   const governance = "0x0dE5199779b43E13B3Bec21e91117E18736BC1A8";
-  const name = "Stake DAO GUniAgeur/ETH Vault";
-  const symbol = "sdGUniAgeur/ETH-vault";
+  const name = "Stake DAO GUniAgeur/USDC Vault";
+  const symbol = "sdGUniAgeur/USDC-vault";
   const angleStrategy = "0x22635427C72e8b0028FeAE1B5e1957508d9D7CAF";
-  const scalingFactor = "966923637982619002";
-  await deploy("AngleVaultGUNI-ageur/weth", {
+  const scalingFactor = "991386710024824636";
+  await deploy("AngleVaultGUNI", {
     contract: "AngleVaultGUni",
     from: deployer,
     args: [token, governance, name, symbol, angleStrategy, scalingFactor],

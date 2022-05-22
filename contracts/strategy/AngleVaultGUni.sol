@@ -72,16 +72,18 @@ contract AngleVaultGUni is ERC20 {
 		ILiquidityGaugeStrat(liquidityGauge).withdraw(_shares, msg.sender, true);
 		_burn(address(this), _shares);
 		uint256 tokenBalance = token.balanceOf(address(this)) - accumulatedFee;
-		uint256 withdrawFee;
+
 		if (_shares > tokenBalance) {
 			uint256 amountToWithdraw = ((_shares - tokenBalance) * scalingFactor) / 1e18;
 			angleStrategy.withdraw(address(token), amountToWithdraw);
 			uint256 scaledUpAmountToWithdraw = (amountToWithdraw * 1e18) / scalingFactor;
-			withdrawFee = (scaledUpAmountToWithdraw * withdrawalFee) / 10000;
+			uint256 withdrawFee = (scaledUpAmountToWithdraw * withdrawalFee) / 10000;
 			token.safeTransfer(governance, withdrawFee);
+			_shares = token.balanceOf(address(this)) - accumulatedFee;
 		}
-		token.safeTransfer(msg.sender, _shares - withdrawFee);
-		emit Withdraw(msg.sender, _shares - withdrawFee);
+
+		token.safeTransfer(msg.sender, _shares);
+		emit Withdraw(msg.sender, _shares);
 	}
 
 	function withdrawAll() external {
