@@ -145,12 +145,13 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 	/// @param gaugeAddr Address of the gauge to distribute rewards to
 	function _distribute(address gaugeAddr) internal {
 		require(distributionsOn, "not allowed");
-		int128 gaugeType = controller.gauge_types(gaugeAddr);
-		require(gaugeType >= 0, "Unrecognized gauge");
-
-		if (killedGauges[gaugeAddr]) {
+		(bool success, bytes memory result) = address(controller).call(
+			abi.encodeWithSignature("gauge_types(address)", gaugeAddr)
+		);
+		if (!success || killedGauges[gaugeAddr]) {
 			return;
 		}
+		int128 gaugeType = abi.decode(result, (int128));
 
 		// Rounded to beginning of the day -> 00:00 UTC
 		uint256 roundedTimestamp = (block.timestamp / 1 days) * 1 days;
