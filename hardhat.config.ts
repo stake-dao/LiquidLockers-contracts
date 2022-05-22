@@ -56,5 +56,8 @@ export default {
     disambiguatePaths: false,
     runOnCompile: false,
     strict: true
+  },
+  mocha: {
+    timeout: 100000000
   }
 } as HardhatUserConfig;

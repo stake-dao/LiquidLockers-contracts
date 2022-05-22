@@ -33,6 +33,8 @@ interface ILiquidityGauge {
 
 	function claimable_reward(address _user, address _reward_token) external view returns (uint256);
 
+	function claimable_tokens(address _user) external returns (uint256);
+
 	function user_checkpoint(address _user) external returns (bool);
 
 	function commit_transfer_ownership(address) external;

@@ -2,19 +2,22 @@
 pragma solidity 0.8.7;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./BaseStrategyV2.sol";
+import "./BaseStrategy.sol";
 import "../accumulator/CurveAccumulator.sol";
 import "../interfaces/ILiquidityGauge.sol";
 import "../interfaces/IMultiRewards.sol";
+import "../staking/SdtDistributorV2.sol";
 
-contract CurveStrategy is BaseStrategyV2 {
+contract CurveStrategy is BaseStrategy {
 	using SafeERC20 for IERC20;
 
 	CurveAccumulator public accumulator;
+	address public sdtDistributor;
 	address public constant CRV_FEE_D = 0xA464e6DCda8AC41e03616F95f4BC98a13b8922Dc;
 	address public constant CRV3 = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
 	address public constant CRV_MINTER = 0xd061D61a4d941c39E5453435B6345Dc261C2fcE0;
 	address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
+	mapping (address => uint256) public lGaugeType;
 
 	struct ClaimerReward {
 		address rewardToken;
@@ -35,13 +38,12 @@ contract CurveStrategy is BaseStrategyV2 {
 		address _governance,
 		address _receiver,
 		CurveAccumulator _accumulator,
-		address _veSDTFeeProxy
-	) BaseStrategyV2(_locker, _governance, _receiver) {
-		//veSDTFee = 500; // %5
-		//accumulatorFee = 800; // %8
-		//claimerReward = 50; //%0.5
+		address _veSDTFeeProxy,
+		address _sdtDistributor
+	) BaseStrategy(_locker, _governance, _receiver) {
 		accumulator = _accumulator;
 		veSDTFeeProxy = _veSDTFeeProxy;
+		sdtDistributor = _sdtDistributor;
 	}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
@@ -91,17 +93,20 @@ contract CurveStrategy is BaseStrategyV2 {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
 
+		// Check if there is any CRV to mint for the gauge
+		uint256 crvMinted = ILiquidityGauge(gauge).claimable_tokens(address(locker));
+		require(crvMinted > 0, "No CRV to mint");
+
 		// Claim CRV
 		// within the mint() it calls the user checkpoint
 		(bool success, ) = locker.execute(
 			CRV_MINTER,
 			0,
 			abi.encodeWithSignature("mint(address)", gauge)
-		);
+		);	
 		require(success, "CRV mint failed!");
-
-		uint256 crvMinted = IERC20(CRV).balanceOf(address(locker));
-		// Send CRV to here
+		
+		// Send CRV here
 		(success, ) = locker.execute(
 			CRV,
 			0,
@@ -109,23 +114,32 @@ contract CurveStrategy is BaseStrategyV2 {
 		);
 		require(success, "CRV transfer failed!");
 
-		// Claim extra token
-		(success, ) = locker.execute(
-			gauge,
-			0,
-			abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
-		);
-		require(success, "Claim failed!");
-		for (uint8 i = 0; i < 8; i++) {
-			address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
-			if (rewardToken == address(0)) {
-				break;
+		// Distribute CRV
+		uint256 crvNetRewards = sendFee(gauge, CRV, crvMinted);
+		IERC20(CRV).approve(multiGauges[gauge], crvNetRewards);
+		ILiquidityGauge(multiGauges[gauge]).deposit_reward_token(CRV, crvNetRewards);
+		emit Claimed(gauge, CRV, crvMinted);
+
+		// Distribute SDT to the related gauge
+		SdtDistributorV2(sdtDistributor).distribute(multiGauges[gauge]);
+
+		// Claim rewards only for lg type 0 and if there is at least one reward token added
+		if(lGaugeType[gauge] == 0 && ILiquidityGauge(gauge).reward_tokens(0) != address(0)) {
+			(success, ) = locker.execute(
+				gauge, 0, abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
+			);
+			require(success, "Claim failed!");
+			for (uint8 i = 0; i < 8; i++) {
+				address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
+				if (rewardToken == address(0)) {
+					break;
+				}
+				uint256 rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
+				uint256 netRewards = sendFee(gauge, rewardToken, rewardsBalance);
+				IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
+				ILiquidityGauge(multiGauges[gauge]).deposit_reward_token(rewardToken, netRewards);
+				emit Claimed(gauge, rewardToken, rewardsBalance);
 			}
-			uint256 rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
-			uint256 netRewards = sendFee(gauge, rewardToken, rewardsBalance);
-			IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
-			IMultiRewards(multiGauges[gauge]).notifyRewardAmount(rewardToken, netRewards);
-			emit Claimed(gauge, rewardToken, rewardsBalance);
 		}
 	}
 
@@ -144,20 +158,24 @@ contract CurveStrategy is BaseStrategyV2 {
 		return _rewardsBalance - multisigFee - accumulatorPart - veSDTPart - claimerPart;
 	}
 
-	/// @notice view function to fetch the pending rewards claimable
+	/// @notice view function to fetch the pending rewards claimable (but not the CRV reward)
 	/// @param _token token address
 	function claimerPendingRewards(address _token) external view returns (ClaimerReward[] memory) {
 		ClaimerReward[] memory pendings = new ClaimerReward[](8);
 		address gauge = gauges[_token];
-		for (uint8 i = 0; i < 8; i++) {
-			address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
-			if (rewardToken == address(0)) {
-				break;
+
+		// if the gauge type supports extra rewards tokens  
+		if (lGaugeType[gauge] == 0) {
+			for (uint8 i = 0; i < 8; i++) {
+				address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
+				if (rewardToken == address(0)) {
+					break;
+				}
+				uint256 rewardsBalance = ILiquidityGauge(gauge).claimable_reward(address(locker), rewardToken);
+				uint256 pendingAmount = (rewardsBalance * claimerRewardFee[gauge]) / BASE_FEE;
+				ClaimerReward memory pendingReward = ClaimerReward(rewardToken, pendingAmount);
+				pendings[i + 1] = pendingReward;
 			}
-			uint256 rewardsBalance = ILiquidityGauge(gauge).claimable_reward(address(locker), rewardToken);
-			uint256 pendingAmount = (rewardsBalance * claimerRewardFee[gauge]) / BASE_FEE;
-			ClaimerReward memory pendingReward = ClaimerReward(rewardToken, pendingAmount);
-			pendings[i] = pendingReward;
 		}
 		return pendings;
 	}
@@ -191,6 +209,13 @@ contract CurveStrategy is BaseStrategyV2 {
 		require(_vault != address(0), "zero address");
 		vaults[_vault] = !vaults[_vault];
 		emit VaultToggled(_vault, vaults[_vault]);
+	}
+	
+	/// @notice function to set a gauge type
+	/// @param _gauge gauge address
+	/// @param _gaugeType type of gauge
+	function setLGtype(address _gauge, uint256 _gaugeType) external onlyGovernanceOrFactory {
+		lGaugeType[_gauge] = _gaugeType;
 	}
 
 	/// @notice function to set a new gauge
@@ -298,7 +323,6 @@ contract CurveStrategy is BaseStrategyV2 {
 		uint256 _newFee
 	) external onlyGovernanceOrFactory {
 		require(_gauge != address(0), "zero address");
-		require(_newFee <= BASE_FEE, "fee to high");
 		if (_manageFee == MANAGEFEE.PERFFEE) {
 			// 0
 			perfFee[_gauge] = _newFee;
@@ -312,6 +336,13 @@ contract CurveStrategy is BaseStrategyV2 {
 			// 3
 			claimerRewardFee[_gauge] = _newFee;
 		}
+		require(
+			perfFee[_gauge] + 
+			veSDTFee[_gauge] + 
+			accumulatorFee[_gauge] + 
+			claimerRewardFee[_gauge] 
+			<= BASE_FEE, "fee to high"
+		);
 	}
 
 	/// @notice execute a function
