@@ -145,7 +145,7 @@ contract SdtDistributorV2New is ReentrancyGuardUpgradeable, AccessControlUpgrade
 	/// @param gaugeAddr Address of the gauge to distribute rewards to
 	function _distribute(address gaugeAddr) internal {
 		require(distributionsOn, "not allowed");
-		(bool success, bytes memory result) = address(controller).call(abi.encode("gauge_types(address)", gaugeAddr));
+		(bool success, bytes memory result) = address(controller).call(abi.encodeWithSignature("gauge_types(address)", gaugeAddr));
 		if (!success || killedGauges[gaugeAddr]) {
 			return;
 		}
