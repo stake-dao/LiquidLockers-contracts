@@ -20,9 +20,8 @@ export default {
     hardhat: {
       forking: {
         url: process.env.MAINNET,
-        //blockNumber: 14546433
-      },
-      initialBaseFeePerGas: 1000000000
+        blockNumber: 14616105
+      }
     },
     mainnet: {
       url: process.env.MAINNET,

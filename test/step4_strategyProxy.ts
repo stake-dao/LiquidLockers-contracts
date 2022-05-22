@@ -12,6 +12,7 @@ import FEEDABI from "./fixtures/FeeD.json";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { parseEther, parseUnits } from "@ethersproject/units";
 import AngleLockerABI from "./fixtures/AngleLocker.json";
+import { writeBalance } from "./utils";
 const ONE_YEAR_IN_SECONDS = 24 * 3600 * 365;
 
 const ETH_100 = BigNumber.from(10).mul(BigNumber.from(10).pow(18)).toHexString();
@@ -53,6 +54,9 @@ const sanUSDC_EUR_GAUGE = "0x51fE22abAF4a26631b2913E417c0560D547797a7";
 const sanDAI_EUR_GAUGE = "0x8E2c0CbDa6bA7B65dbcA333798A3949B07638026";
 const VESDT_HOLDER = "0xdceb0bb3311342e3ce9e49f57affce9deac40ba1";
 const ANGLE_DISTRIBUTOR = "0x4f91F01cE8ec07c9B1f6a82c18811848254917Ab";
+const GUNI_AGEUR_WETH_LP = "0x857E0B2eD0E82D5cDEB015E77ebB873C47F99575";
+const GUNI_AGEUR_WETH_ANGLE_GAUGE = "0x3785Ce82be62a342052b9E5431e9D3a839cfB581";
+
 const getNow = async function () {
   let blockNum = await ethers.provider.getBlockNumber();
   let block = await ethers.provider.getBlock(blockNum);
@@ -93,6 +97,10 @@ describe("ANGLE Strategy", function () {
   let timelock: JsonRpcSigner;
   let veSdtHolder: JsonRpcSigner;
   let angleDistributor: JsonRpcSigner;
+  let angleGUniVault: Contract;
+  let angleGuniGauge: Contract;
+  let gUniAgeurEth: Contract;
+  let gUniAgeurEthAngleGauge: Contract;
   before(async function () {
     [localDeployer, dummyMs] = await ethers.getSigners();
     await network.provider.request({
@@ -136,15 +144,19 @@ describe("ANGLE Strategy", function () {
     await network.provider.send("hardhat_setBalance", [VESDT_HOLDER, ETH_100]);
     await network.provider.send("hardhat_setBalance", [ANGLE_DISTRIBUTOR, ETH_100]);
     await network.provider.send("hardhat_setBalance", [timelock._address, parseEther("10").toHexString()]);
-
+    await writeBalance(SAN_USDC_EUR, "50000000000", SAN_USDC_EUR_HOLDER);
+    await writeBalance(SAN_DAI_EUR, "50000000000", SAN_DAI_EUR_HOLDER);
+    await writeBalance(GUNI_AGEUR_WETH_LP, "50000000000", localDeployer.address);
     locker = await ethers.getContractAt(AngleLockerABI, "0xd13f8c25cced32cdfa79eb5ed654ce3e484dcaf5");
     sanUsdcEur = await ethers.getContractAt(ERC20ABI, SAN_USDC_EUR);
     sanDaiEur = await ethers.getContractAt(ERC20ABI, SAN_DAI_EUR);
     angle = await ethers.getContractAt(ERC20ABI, ANGLE);
     frax = await ethers.getContractAt(ERC20ABI, FRAX);
     sdt = await ethers.getContractAt(ERC20ABI, SDT);
+    gUniAgeurEth = await ethers.getContractAt(ERC20ABI, GUNI_AGEUR_WETH_LP);
     sdFrax3Crv = await ethers.getContractAt(ERC20ABI, SDFRAX3CRV);
     sdAngleGauge = await ethers.getContractAt("LiquidityGaugeV4", SDANGLEGAUGE);
+    gUniAgeurEthAngleGauge = await ethers.getContractAt("LiquidityGaugeV4", GUNI_AGEUR_WETH_ANGLE_GAUGE);
     angleAccumulator = await ethers.getContractAt("AngleAccumulatorV2", ANGLEACCUMULATOR);
     const veSdtAngleProxyFactory = await ethers.getContractFactory("veSDTFeeAngleProxy");
     VeSdtProxy = await veSdtAngleProxyFactory.deploy([ANGLE, WETH, FRAX]);
@@ -218,6 +230,41 @@ describe("ANGLE Strategy", function () {
     const pidSdtD = poolsLength - 1;
     await sdtDProxy.connect(deployer).initializeMasterchef(pidSdtD);
     await sdtDProxy.connect(deployer).setDistribution(true);
+
+    const angleGUniVaultFactory = await ethers.getContractFactory("AngleVaultGUni");
+
+    angleGUniVault = await angleGUniVaultFactory.deploy(
+      GUNI_AGEUR_WETH_LP,
+      deployer._address,
+      "Stake DAO GUniAgeur/ETH Vault",
+      "sdGUniAgeur/ETH-vault",
+      strategy.address,
+      "966923637982619002"
+    );
+
+    const ABI = [
+      "function initialize(address _staking_token,address _admin,address _SDT,address _voting_escrow,address _veBoost_proxy,address _distributor,address _vault,string memory _symbol)"
+    ];
+
+    const ifaceTwo = new ethers.utils.Interface(ABI);
+    const liquidityGaugeImp = await liquidityGaugeFactory.deploy();
+    const data = ifaceTwo.encodeFunctionData("initialize", [
+      angleGUniVault.address,
+      deployer._address,
+      SDT,
+      VE_SDT,
+      VESDTBOOST,
+      strategy.address,
+      angleGUniVault.address,
+      "agEur/ETH"
+    ]);
+
+    angleGuniGauge = await Proxy.connect(deployer).deploy(liquidityGaugeImp.address, proxyAdmin.address, data);
+    angleGuniGauge = await ethers.getContractAt("LiquidityGaugeV4Strat", angleGuniGauge.address);
+    await angleGUniVault.connect(deployer).setLiquidityGauge(angleGuniGauge.address);
+    await strategy.connect(deployer).toggleVault(angleGUniVault.address);
+    await strategy.connect(deployer).setGauge(GUNI_AGEUR_WETH_LP, GUNI_AGEUR_WETH_ANGLE_GAUGE);
+    await strategy.connect(deployer).setMultiGauge(GUNI_AGEUR_WETH_ANGLE_GAUGE, angleGuniGauge.address);
   });
 
   describe("Angle Vault tests", function () {
@@ -422,7 +469,41 @@ describe("ANGLE Strategy", function () {
       const sdtBalanceOfDistributor = await sdt.balanceOf(sdtDProxy.address);
       expect(sdtBalanceOfDistributor).to.be.equal(0);
     });
-
-    it("should distribute to gauge", async () => {});
+    it("it should stake guni token to angle gauge and should be scaled down", async () => {
+      const beforeStaked = await gUniAgeurEthAngleGauge.balanceOf(locker.address);
+      await gUniAgeurEth.approve(angleGUniVault.address, ethers.constants.MaxUint256);
+      await angleGUniVault.deposit(localDeployer.address, ethers.utils.parseEther("10000000.42445213512"), true);
+      const afterStaked = await gUniAgeurEthAngleGauge.balanceOf(locker.address);
+      const scalingFactor = await angleGUniVault.scalingFactor();
+      const scaledDown = ethers.utils
+        .parseEther("10000000.42445213512")
+        .mul(scalingFactor)
+        .div(BigNumber.from(10).pow(18));
+      expect(beforeStaked).to.be.equal(0);
+      expect(afterStaked).to.be.eq(scaledDown);
+    });
+    it("it should be able to withdraw whole amount without any leftover token", async () => {
+      const balanceBefore = await angleGuniGauge.balanceOf(localDeployer.address);
+      console.log(`balanceBefore ${balanceBefore}`);
+      await angleGUniVault.withdraw(balanceBefore);
+      const balanceAfter = await angleGuniGauge.balanceOf(localDeployer.address);
+      expect(balanceBefore).to.be.gt(0);
+      expect(balanceAfter).to.be.lt(10);
+    });
+    it("it should withdraw partially from vault partially from strat properly", async () => {
+      await angleGUniVault.deposit(localDeployer.address, ethers.utils.parseEther("20"), true);
+      await angleGUniVault.deposit(localDeployer.address, ethers.utils.parseEther("20"), false);
+      const beforeWithdrawStakedOnAngleGauge = await gUniAgeurEthAngleGauge.balanceOf(locker.address);
+      const balanceBefore = await angleGuniGauge.balanceOf(localDeployer.address);
+      await angleGUniVault.withdraw(balanceBefore);
+      const balanceAfter = await angleGuniGauge.balanceOf(localDeployer.address);
+      const afterWithdrawStakedOnAngleGauge = await gUniAgeurEthAngleGauge.balanceOf(locker.address);
+      const scalingFactor = await angleGUniVault.scalingFactor();
+      const scaledDown = ethers.utils.parseEther("20").mul(scalingFactor).div(BigNumber.from(10).pow(18));
+      expect(balanceBefore).to.be.gt(0);
+      expect(balanceAfter).to.be.lt(10);
+      expect(afterWithdrawStakedOnAngleGauge).to.be.eq(0);
+      expect(beforeWithdrawStakedOnAngleGauge).to.be.equal(scaledDown);
+    });
   });
 });
