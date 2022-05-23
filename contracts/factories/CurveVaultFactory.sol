@@ -51,7 +51,6 @@ contract CurveVaultFactory {
 		require(weight > 0, "must have weight");
 		address vaultLpToken = CurveLiquidityGauge(_crvGaugeAddress).lp_token();
 		string memory tokenSymbol = ERC20Upgradeable(vaultLpToken).symbol();
-		string memory tokenName = ERC20Upgradeable(vaultLpToken).name();
 		uint256 liquidityGaugeType;
 		// view function called only to recognize the gauge type
 		bytes memory data = abi.encodeWithSignature("claimable_rewards(address,address)", address(this), CRV);
@@ -63,7 +62,7 @@ contract CurveVaultFactory {
 			vaultImpl,
 			ERC20Upgradeable(vaultLpToken),
 			GOVERNANCE,
-			string(abi.encodePacked("sd", tokenName, " Vault")),
+			string(abi.encodePacked("sd", tokenSymbol, " Vault")),
 			string(abi.encodePacked("sd", tokenSymbol, "-vault"))
 		);
 		address gaugeImplAddress = _cloneAndInitGauge(

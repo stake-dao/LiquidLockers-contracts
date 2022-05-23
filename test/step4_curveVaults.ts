@@ -53,6 +53,7 @@ const SD_FRAX_3CRV = "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7";
 const LGV4_STRAT_IMPL = "0x3dc56d46f0bd13655efb29594a2e44534c453bf9";
 const CRV_ACCUMULATOR = "0x54C7757199c4A04BCcD1472Ad396f768D8173757";
 const STAKEDAO_FEE_DISTRIBUTOR = "0x29f3dd38dB24d3935CF1bf841e6b2B461A3E5D92";
+const CRV_FEE_D = "0xA464e6DCda8AC41e03616F95f4BC98a13b8922Dc";
 
 const getNow = async function () {
   let blockNum = await ethers.provider.getBlockNumber();
@@ -90,7 +91,6 @@ describe("CURVE Strategy", function () {
   let sdtEthVault: Contract;
   let sdtEthMultiGauge: Contract;
   let sdtEthLG: Contract;
-  let sdCrvLG: Contract;
   let curveVaultFactoryContract: Contract;
   let sdFrax3Crv: Contract;
   let sdCrvGauge: Contract;
@@ -199,11 +199,11 @@ describe("CURVE Strategy", function () {
       sdtDProxy.address
     );
 
-    // change crvLocker's strategy address to the curve strategy address 
+    // change crvLocker's governance address to the curve strategy address 
     // NB we have to set it using the multisig on mainnet
     await network.provider.send("hardhat_setStorageAt", [
         locker.address,
-        "0x1",
+        "0x0",
         "0x000000000000000000000000" + strategy.address.substring(2),
     ]);
 
@@ -245,6 +245,9 @@ describe("CURVE Strategy", function () {
     const amountToTransfer = parseEther("10");
     await crv3.connect(crv3Holder).transfer(steCrvHolder._address, parseEther("1000"));
     await eur3.connect(eur3Holder).transfer(sdtEthHolder._address, parseEther("10"));
+
+    // Send CRV to the CrvFeeDistributor
+    await crv3.connect(crv3Holder).transfer(CRV_FEE_D, parseEther("1000"));
   });
 
   describe("Curve Vault tests", function () {
@@ -257,7 +260,7 @@ describe("CURVE Strategy", function () {
         const strategy3CrvVault = await crv3Vault.curveStrategy();
         expect(name3CrvMG).to.be.equal("Stake DAO 3Crv Gauge");
         expect(symbol3CrvMG).to.be.equal("sd3Crv-gauge");
-        expect(name3CrvVault).eq("sdCurve.fi DAI/USDC/USDT Vault");
+        expect(name3CrvVault).eq("sd3Crv Vault");
         expect(symbol3CrvVault).eq("sd3Crv-vault");
         expect(token3CrvVault).eq(CRV3);
         expect(strategy3CrvVault).eq(strategy.address)
@@ -269,7 +272,7 @@ describe("CURVE Strategy", function () {
         const strategySdtEthVault = await sdtEthVault.curveStrategy();
         expect(nameSdtEthMG).to.be.equal("Stake DAO SDTETH-f Gauge");
         expect(symbolSdtEthMG).to.be.equal("sdSDTETH-f-gauge");
-        expect(nameSdtEthVault).eq("sdCurve.fi Factory Crypto Pool: SDT/ETH Vault");
+        expect(nameSdtEthVault).eq("sdSDTETH-f Vault");
         expect(symbolSdtEthVault).eq("sdSDTETH-f-vault");
         expect(tokenSdtEthVault).eq(SDT_ETH);
         expect(strategySdtEthVault).eq(strategy.address) 
@@ -312,14 +315,18 @@ describe("CURVE Strategy", function () {
         expect(vault3CrvBalanceAfterDeposit5).eq(amountToDeposit);
     });
 
-    it("Should claim CRV reward after some times", async function () {
+    it("Should claim CRV reward after some times without SDT", async function () {
       await network.provider.send("evm_increaseTime", [60 * 60 * 24]); // 1 day
       await network.provider.send("evm_mine", []);
       const crvBefore = await crv.balanceOf(crv3MultiGauge.address)
+      const sdtBefore = await sdt.balanceOf(crv3MultiGauge.address)
       expect(crvBefore).eq(0);
+      expect(sdtBefore).eq(0);
       await strategy.claim(crv3.address);
       const crvClaimed = await crv.balanceOf(crv3MultiGauge.address)
+      const sdtClaimed = await sdt.balanceOf(crv3MultiGauge.address)
       expect(crvClaimed).gt(0);
+      expect(sdtClaimed).eq(0);
     });
 
     it("Should be able to withdraw deposited amount and gauge tokens should be burned", async function () {
@@ -362,6 +369,35 @@ describe("CURVE Strategy", function () {
         await crv3Vault.connect(deployer_new).withdraw(gauge3CrvBalance.div(2));
     });
 
+    it("should be able to claim rewards when some time pass with SDT included", async () => {
+      await gc.connect(crv3Holder).vote_for_gauge_weights(crv3MultiGauge.address, 10000);
+      await sdtDProxy.connect(deployer_new).approveGauge(crv3MultiGauge.address);
+
+      // Increse time until the next thursday 
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 3]); // 3 days
+      await network.provider.send("evm_mine", []);
+
+      const crvBefore = await crv.balanceOf(crv3MultiGauge.address)
+      const sdtBefore = await sdt.balanceOf(crv3MultiGauge.address)
+      await strategy.claim(crv3.address);
+      const crvAfter = await crv.balanceOf(crv3MultiGauge.address)
+      const sdtAfter = await sdt.balanceOf(crv3MultiGauge.address)
+      expect(crvAfter.sub(crvBefore)).gt(0);
+      expect(sdtAfter.sub(sdtBefore)).gt(0);
+    }).timeout(0);
+
+    it("it should be able to claim CRV from multigauge", async () => {
+      const crv3HolderBalance = await crv3MultiGauge.balanceOf(crv3Holder._address);
+      expect(crv3HolderBalance).eq(0);
+      const crvBefore = await crv.balanceOf(crv3Holder._address);
+      const sdtBefore = await sdt.balanceOf(crv3Holder._address);
+      await crv3MultiGauge["claim_rewards(address)"](crv3Holder._address);
+      const crvAfter = await crv.balanceOf(crv3Holder._address);
+      const sdtAfter = await sdt.balanceOf(crv3Holder._address);
+      expect(crvAfter.sub(crvBefore)).gt(0);
+      expect(sdtAfter.sub(sdtBefore)).eq(0);
+    });
+
     it("it should not be able to withdraw from multigauge if not vault", async () => {
         const stakedBalance = await crv3MultiGauge.balanceOf(deployer_new._address);
         await expect(
@@ -397,7 +433,7 @@ describe("CURVE Strategy", function () {
     it("Should pay withdraw fee if withdraw from Curve gauge", async function () {
         const amountToWithdraw = parseEther("10");
         const vault3CrvBalanceAfter = await crv3.balanceOf(crv3Vault.address);
-        console.log(vault3CrvBalanceAfter.toString());
+        //console.log(vault3CrvBalanceAfter.toString());
         const crv3BalanceBeforeWithdraw = await crv3.balanceOf(deployer_new._address);
         const crv3GaugeStakedBeforeWithdraw = await crv3LG.balanceOf(locker.address);
         await crv3Vault.connect(deployer_new).withdraw(amountToWithdraw);
@@ -411,53 +447,13 @@ describe("CURVE Strategy", function () {
         expect(crv3GaugeStakedBeforeWithdraw.sub(crv3GaugeStakedAfterWithdraw)).eq(amountToWithdraw);
     });
 
-    it("should be able to claim rewards when some time pass", async () => {
-        const amountToDeposit = parseEther("1000")
-        await gc.connect(crv3Holder).vote_for_gauge_weights(crv3MultiGauge.address, 10000);
-        //await crv3.connect(crv3Holder).approve(crv3Vault.address, amountToDeposit);
-        //await crv3Vault.connect(crv3Holder).deposit(crv3Holder._address, amountToDeposit, true);
-        await sdtDProxy.connect(deployer_new).approveGauge(crv3MultiGauge.address);
-        // increase the timestamp by 1 month
-        //await network.provider.send("evm_increaseTime", [60 * 60 * 24]); // 1 day
-        //await network.provider.send("evm_mine", []);
-        //await gc.connect(crv3Holder).checkpoint_gauge(crv3MultiGauge.address);
-
-        const multiGaugeRewardRateBefore = await crv3MultiGauge.reward_data(crv.address);
-        console.log(multiGaugeRewardRateBefore)
-        // const msCrvBalanceBefore = await crv.balanceOf(dummyMs.address);
-        // const accumulatorCrvBalanceBefore = await crv.balanceOf(CRV_ACCUMULATOR);
-        // //const claimable = await crv3LiqudityGauge.claimable_reward(locker.address, crv.address);
-        // const gaugeType = await strategy.lGaugeType(crv3LG.address);
-        // //console.log(gaugeType);
-        // const tx = await (await strategy.claim(crv3.address)).wait();
-        // const crvGRWA = await gc["gauge_relative_weight(address)"](crv3MultiGauge.address);
-        // const accumulatorCrvBalanceAfter = await crv.balanceOf(CRV_ACCUMULATOR);
-        // const multiGaugeRewardRateAfter = await crv3MultiGauge.reward_data(crv.address);
-        // const sdtRewardsAfter = await crv3MultiGauge.reward_data(SDT);
-        // const msCrvBalanceAfter = await crv.balanceOf(dummyMs.address);
-        // //const perfFee = claimable.mul(BigNumber.from(200)).div(BigNumber.from(10000));
-        // //const accumulatorPart = claimable.mul(BigNumber.from(800)).div(BigNumber.from(10000));
-        // //const claimed = tx.events.find((e: any) => e.event === "Claimed");
-        // const sdtBalance = await sdt.balanceOf(crv3MultiGauge.address);
-        // const sdtBalanceOfDistributor = await sdt.balanceOf(sdtDProxy.address);
-        //expect(claimed.args[2]).to.be.equal(claimable);
-        // expect(multiGaugeRewardRateBefore[3]).to.be.equal(0);
-        // expect(multiGaugeRewardRateAfter[3]).to.be.gt(0);
-        // expect(sdtRewardsAfter[3]).to.be.gt(0);
-        //expect(perfFee).to.be.gt(0);
-        //expect(accumulatorPart).to.be.gt(0);
-        //expect(msCrvBalanceAfter.sub(msCrvBalanceBefore)).to.be.equal(perfFee);
-        //expect(accumulatorCrvBalanceAfter.sub(accumulatorCrvBalanceBefore)).to.be.equal(accumulatorPart);
-        //expect(crvGRWA).to.be.eq(parseEther("1")); // 100%   
-    }).timeout(0);
-
-    // it("it should claim 3crv weekly reward", async () => {
-    //   // Claim weekly 3crv reward for the CRV Locker 
-    //   const crv3BalanceBeforeInLG = await crv3.balanceOf(SD_CRV_LG);
-    //   await strategy.claim3Crv(true);
-    //   const crv3BalanceAfterInLG = await crv3.balanceOf(SD_CRV_LG);
-    //   expect(crv3BalanceAfterInLG).gt(crv3BalanceBeforeInLG);
-    // });
+    it("it should claim 3crv weekly reward", async () => {
+      // Claim weekly 3crv reward for the CRV Locker 
+      const crv3BalanceBeforeInLG = await crv3.balanceOf(sdCrvGauge.address);
+      await strategy.claim3Crv(true);
+      const crv3BalanceAfterInLG = await crv3.balanceOf(sdCrvGauge.address);
+      expect(crv3BalanceAfterInLG).gt(crv3BalanceBeforeInLG);
+    });
 
     it("it should get maximum boost from curve liquidity gauge", async () => {
       const workingBalance = await crv3LG.working_balances(locker.address);
