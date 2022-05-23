@@ -81,6 +81,7 @@ describe("FRAX <> StakeDAO", function () {
     let personalVault1: Contract;
     let mutliRewards: Contract;
     let rewardsPID0: Contract;
+    let feeRegistry: Contract;
 
     let VaultV1Contract: any;
     let MultiRewardContract: any;
@@ -128,6 +129,7 @@ describe("FRAX <> StakeDAO", function () {
         const veSdtAngleProxyFactory = await ethers.getContractFactory("veSDTFeeFraxProxy");
         const poolRegistryContract = await ethers.getContractFactory("PoolRegistry");
         const boosterContract = await ethers.getContractFactory("Booster");
+        const feeRegistryContract = await ethers.getContractFactory("FeeRegistry")
         VaultV1Contract = await ethers.getContractFactory("VaultV1");
         MultiRewardContract = await ethers.getContractFactory("MultiRewards")
 
@@ -185,6 +187,9 @@ describe("FRAX <> StakeDAO", function () {
         /* ==== set LL as a valid veFXS Proxy ==== */
         await fxsTempleGauge.connect(govFrax).toggleValidVeFXSProxy(locker.address)
 
+        /* ==== Deploy Fee Registry ==== */
+        feeRegistry = await feeRegistryContract.connect(deployer).deploy()
+
         /* ==== Deploy Pool Registry ==== */
         poolRegistry = await poolRegistryContract.connect(deployer).deploy();
 
@@ -193,6 +198,7 @@ describe("FRAX <> StakeDAO", function () {
 
         /* ==== Deploy VaultV1 ==== */
         vaultV1Template = await VaultV1Contract.connect(deployer).deploy();
+        //await vaultV1Template.connect(deployer).setFeeRegistry(feeRegistry.address)
 
         /* ==== Deploy Booster ==== */
         booster = await boosterContract.connect(deployer).deploy(locker.address, poolRegistry.address, CVXFEEREGISTRY)
@@ -249,6 +255,7 @@ describe("FRAX <> StakeDAO", function () {
                 await booster.connect(LPHolder).createVault(0)
                 const vaultAddress = await poolRegistry.vaultMap(0, LPHolder._address)
                 personalVault1 = VaultV1Contract.attach(vaultAddress);
+                await personalVault1.connect(deployer).setFeeRegistry(feeRegistry.address)
             })
 
             it("Create a deposit LP into Frax Gauge", async function () {
@@ -268,33 +275,34 @@ describe("FRAX <> StakeDAO", function () {
                 const afterBalanceLP = await fxsTemple.balanceOf(LPHolder._address)
                 const afterBalanceFxs = await fxs.balanceOf(LPHolder._address)
                 const afterBalanceTemple = await temple.balanceOf(LPHolder._address)
-                /*
-                console.log("LP : ", (beforeBalanceLP/10**18).toString())
-                console.log("Fxs: ", (beforeBalanceFxs/10**18).toString())
-                console.log("Temple: ", (beforeBalanceTemple/10**18).toString())
-                console.log("LP : ", (afterBalanceLP/10**18).toString())
-                console.log("Fxs: ", (afterBalanceFxs/10**18).toString())
-                console.log("Temple: ", (afterBalanceTemple/10**18).toString())
-                */
+                
+                //console.log("LP : ", (beforeBalanceLP/10**18).toString())
+                //console.log("Fxs: ", (beforeBalanceFxs/10**18).toString())
+                //console.log("Temple: ", (beforeBalanceTemple/10**18).toString())
+                //console.log("LP : ", (afterBalanceLP/10**18).toString())
+                //console.log("Fxs: ", (afterBalanceFxs/10**18).toString())
+                //console.log("Temple: ", (afterBalanceTemple/10**18).toString())
+                
                 expect(afterBalanceLP).gt(beforeBalanceLP)
                 expect(afterBalanceFxs).gt(beforeBalanceFxs)
                 expect(afterBalanceTemple).gt(beforeBalanceTemple)
 
             })
-
+            
             it("Should send the reward to the user", async function () {
                 const beforeBalanceSdt = await sdt.balanceOf(LPHolder._address)
                 const earned = await personalVault1.earned()
                 await personalVault1.connect(LPHolder)["getReward()"]()
                 const afterBalanceSdt = await sdt.balanceOf(LPHolder._address)
-                /*
-                console.log("earned: ",earned)
-                console.log("Sdt: ",(beforeBalanceSdt/10**18).toString())
-                console.log("Sdt: ",(afterBalanceSdt/10**18).toString())
-                */
+                
+                //console.log("earned: ",earned)
+                //console.log("Sdt: ",(beforeBalanceSdt/10**18).toString())
+                //console.log("Sdt: ",(afterBalanceSdt/10**18).toString())
+                
                 expect(afterBalanceSdt).gt(beforeBalanceSdt)
 
             })
+            
 
         })
 

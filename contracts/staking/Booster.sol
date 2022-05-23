@@ -3,6 +3,8 @@ pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "../interfaces/ILocker.sol";
+
 interface IStaker{
     function createLock(uint256, uint256) external returns (bool);
     function increaseAmount(uint256) external returns (bool);
@@ -58,8 +60,8 @@ contract Booster{
     address public poolManager;
     address public rewardManager;
     address public feeclaimer;
-    bool public isShutdown;
     address public feeQueue;
+    bool public isShutdown;
 
     mapping(address=>mapping(address=>bool)) public feeClaimMap;
 
@@ -144,6 +146,7 @@ contract Booster{
     }
 
     //claim operator roles for certain systems for direct access
+    /*
     function claimOperatorRoles() external onlyOwner{
         require(!isShutdown,"shutdown");
 
@@ -151,13 +154,14 @@ contract Booster{
         bytes memory data = abi.encodeWithSelector(bytes4(keccak256("setOperator(address)")), address(this));
         IStaker(proxy).execute(poolRegistry,uint256(0),data);
     }
+    */
 
     //set fees on user vaults
     function setPoolFees(uint256 _cvxfxs, uint256 _cvx, uint256 _platform) external onlyOwner{
         require(!isShutdown,"shutdown");
 
         bytes memory data = abi.encodeWithSelector(bytes4(keccak256("setFees(uint256,uint256,uint256)")), _cvxfxs, _cvx, _platform);
-        IStaker(proxy).execute(feeRegistry,uint256(0),data);
+        ILocker(proxy).execute(feeRegistry,uint256(0),data);
     }
 
     //set fee deposit address for all user vaults
@@ -165,7 +169,7 @@ contract Booster{
         require(!isShutdown,"shutdown");
 
         bytes memory data = abi.encodeWithSelector(bytes4(keccak256("setDepositAddress(address)")), _deposit);
-        IStaker(proxy).execute(feeRegistry,uint256(0),data);
+        ILocker(proxy).execute(feeRegistry,uint256(0),data);
     }
 
     //add pool on registry
@@ -189,17 +193,21 @@ contract Booster{
     }
 
     //vote for gauge weights
+    /*
     function voteGaugeWeight(address _controller, address _gauge, uint256 _weight) external onlyOwner{
-        bytes memory data = abi.encodeWithSelector(bytes4(keccak256("vote_for_gauge_weights(address,uint256)")), _gauge, _weight);
+        bytes memory data = abi.encodeWithSelector(bytes4(keccak256("voteGaugeWeight(address,uint256)")), _gauge, _weight);
         IStaker(proxy).execute(_controller,uint256(0),data);
     }
+    */ 
 
     //set voting delegate
+    /*
     function setDelegate(address _delegateContract, address _delegate, bytes32 _space) external onlyOwner{
         bytes memory data = abi.encodeWithSelector(bytes4(keccak256("setDelegate(bytes32,address)")), _space, _delegate);
         IStaker(proxy).execute(_delegateContract,uint256(0),data);
         emit DelegateSet(_delegate);
     }
+    */
 
     //recover tokens on this contract
     function recoverERC20(address _tokenAddress, uint256 _tokenAmount, address _withdrawTo) external onlyOwner{
@@ -207,15 +215,69 @@ contract Booster{
         emit Recovered(_tokenAddress, _tokenAmount);
     }
 
+    
+    // ==== Liquid Locker Management ==== */
+    function createLock(uint256 _value, uint256 _unlockTime) external onlyOwner {
+        ILocker(proxy).createLock(_value, _unlockTime);
+    }
+
+    function increaseAmount(uint256 _value) external onlyOwner{
+        ILocker(proxy).increaseAmount(_value);
+    }
+
+    function increaseUnlockTime(uint256 _unlockTime) external onlyOwner{
+        ILocker(proxy).increaseUnlockTime(_unlockTime);
+    }
+
+    function claimFXSRewards(address _recipient) external onlyOwner {
+        ILocker(proxy).claimFXSRewards(_recipient);
+    }
+
+    function release(address _recipient) external onlyOwner {
+        ILocker(proxy).release(_recipient);
+    }
+
+    function voteGaugeWeight(address _gauge, uint256 _weight) external onlyOwner {
+        ILocker(proxy).voteGaugeWeight(_gauge, _weight);
+    }
+
+    function setGovernance(address _governance) external onlyOwner {
+        ILocker(proxy).setGovernance(_governance);
+    }
+
+    function setFxsDepositor(address _fxsDepositor) external onlyOwner {
+        ILocker(proxy).setFxsDepositor(_fxsDepositor);
+    }
+
+    function setYieldDistributor(address _newYD) external onlyOwner {
+        ILocker(proxy).setYieldDistributor(_newYD);
+    }
+
+	function setGaugeController(address _gaugeController) external onlyOwner {
+        ILocker(proxy).setGaugeController(_gaugeController);
+    }
+
+	function setAccumulator(address _accumulator) external onlyOwner {
+        ILocker(proxy).setAccumulator(_accumulator);
+    }
+
+    function execute(
+		address to,
+		uint256 value,
+		bytes calldata data
+	) external onlyOwner returns (bool, bytes memory) {
+        ILocker(proxy).execute(to, value, data);
+    }
+
     //recover tokens on the proxy
     function recoverERC20FromProxy(address _tokenAddress, uint256 _tokenAmount, address _withdrawTo) external onlyOwner{
 
         bytes memory data = abi.encodeWithSelector(bytes4(keccak256("transfer(address,uint256)")), _withdrawTo, _tokenAmount);
-        IStaker(proxy).execute(_tokenAddress,uint256(0),data);
+        ILocker(proxy).execute(_tokenAddress,uint256(0),data);
 
         emit Recovered(_tokenAddress, _tokenAmount);
     }
-
+    
     //////// End Owner Section ///////////
 
 
@@ -225,17 +287,18 @@ contract Booster{
 
     	//make voterProxy call proxyToggleStaker(vault) on the pool's stakingAddress to set it as a proxied child
         bytes memory data = abi.encodeWithSelector(bytes4(keccak256("proxyToggleStaker(address)")), vault);
-        IStaker(proxy).execute(stakeAddress,uint256(0),data);
+        ILocker(proxy).execute(stakeAddress,uint256(0),data);
 
     	//call proxy initialize
         IProxyVault(vault).initialize(msg.sender, stakeAddress, stakeToken, rewards);
 
         //set vault vefxs proxy
         data = abi.encodeWithSelector(bytes4(keccak256("setVeFXSProxy(address)")), proxy);
-        IStaker(proxy).execute(vault,uint256(0),data);
+        ILocker(proxy).execute(vault,uint256(0),data);
     }
 
-
+    // This will surely be removed, because StakeDAO handles fees differently 
+    /*
     //claim fees - if set, move to a fee queue that rewards can pull from
     function claimFees(address _distroContract, address _token) external {
         require(feeclaimer == address(0) || feeclaimer == msg.sender, "!auth");
@@ -256,6 +319,7 @@ contract Booster{
 
         IStaker(proxy).checkpointFeeRewards(_distroContract);
     }
+    */
 
     
     /* ========== EVENTS ========== */

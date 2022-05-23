@@ -10,7 +10,7 @@ interface ILocker {
 
 	function increaseUnlockTime(uint256) external;
 
-	function release() external;
+	function release(address) external;
 
 	function claimRewards(address,address) external;
 
@@ -29,4 +29,10 @@ interface ILocker {
 	function setAngleDepositor(address) external;
 
 	function setFxsDepositor(address) external;
+
+	function setYieldDistributor(address) external;
+
+	function setGaugeController(address) external;
+
+	function setAccumulator(address _accumulator) external;
 }

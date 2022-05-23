@@ -24,13 +24,19 @@ interface IProxyVault {
 }
 
 interface IFeeRegistry{
-    function cvxfxsIncentive() external view returns(uint256);
-    function cvxIncentive() external view returns(uint256);
-    function platformIncentive() external view returns(uint256);
+    //function cvxfxsIncentive() external view returns(uint256);
+    //function cvxIncentive() external view returns(uint256);
+    //function platformIncentive() external view returns(uint256);
     function totalFees() external view returns(uint256);
     function maxFees() external view returns(uint256);
     function feeDeposit() external view returns(address);
     function getFeeDepositor(address _from) external view returns(address);
+    function multisigPart() external view returns(uint256);
+    function accumulatorPart() external view returns(uint256);
+    function veSDTPart() external view returns(uint256);
+    function multisig() external view returns(address);
+    function accumulator() external view returns(address);
+    function veSDTFeeProxy() external view returns(address);
 }
 
 interface IFraxFarmBase{
@@ -457,7 +463,7 @@ contract StakingProxyBase is IProxyVault{
 
     address public constant fxs = address(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
     address public constant vefxsProxy = address(0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f);
-    address public constant feeRegistry = address(0xC9aCB83ADa68413a6Aa57007BC720EE2E2b3C46D); //fee registry
+    address public feeRegistry;// = address(0xC9aCB83ADa68413a6Aa57007BC720EE2E2b3C46D); //fee registry
 
     address public owner; //owner of the vault
     address public stakingAddress; //farming contract
@@ -490,7 +496,6 @@ contract StakingProxyBase is IProxyVault{
 
     //initialize vault
     function initialize(address _owner, address _stakingAddress, address _stakingToken, address _rewardsAddress) external override virtual{
-
     }
 
     function changeRewards(address _rewardsAddress) external onlyAdmin{
@@ -517,7 +522,7 @@ contract StakingProxyBase is IProxyVault{
         IFraxFarmBase(stakingAddress).getReward(address(this));
     }
 
-    function setVeFXSProxy(address _proxy) external onlyAdmin{
+    function setVeFXSProxy(address _proxy) external onlyOwner{
         //set the vefxs proxy
         _setVeFXSProxy(_proxy);
     }
@@ -526,6 +531,11 @@ contract StakingProxyBase is IProxyVault{
         //set proxy address on staking contract
         IFraxFarmBase(stakingAddress).stakerSetVeFXSProxy(_proxyAddress);
         usingProxy = _proxyAddress;
+    }
+
+    // Alternative solution until the feeRegistry is really deployed
+    function setFeeRegistry(address _feeRegistry) external {
+        feeRegistry = _feeRegistry;
     }
     function getReward() external override virtual {}
     function getReward(bool _claim) external override virtual{}
@@ -553,20 +563,33 @@ contract StakingProxyBase is IProxyVault{
 
     //apply fees to fxs and send remaining to owner
     function _processFxs() internal{
-
+        
         //get fee rate from booster
-        uint256 totalFees = IFeeRegistry(feeRegistry).totalFees();
+        //uint256 totalFees = IFeeRegistry(feeRegistry).totalFees();
+        uint256 multisigFee = IFeeRegistry(feeRegistry).multisigPart();
+        uint256 accumulatorFee = IFeeRegistry(feeRegistry).accumulatorPart();
+        uint256 veSDTFee = IFeeRegistry(feeRegistry).veSDTPart(); 
 
         //send fxs fees to fee deposit
         uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
-        uint256 sendAmount = fxsBalance * totalFees / FEE_DENOMINATOR;
-        if(sendAmount > 0){
+        uint256 sendMulti = fxsBalance * multisigFee / FEE_DENOMINATOR;
+        uint256 sendAccum = fxsBalance * accumulatorFee / FEE_DENOMINATOR;
+        uint256 sendveSDT = fxsBalance * veSDTFee / FEE_DENOMINATOR;
+        if(sendMulti > 0){
             // Implement a different logic for stakeDAO
-            IERC20(fxs).transfer(IFeeRegistry(feeRegistry).getFeeDepositor(usingProxy), sendAmount);
+            //IERC20(fxs).transfer(IFeeRegistry(feeRegistry).getFeeDepositor(usingProxy), sendAmount);
+            IERC20(fxs).transfer(IFeeRegistry(feeRegistry).multisig(),sendMulti);
+        }
+        if(sendAccum > 0){
+            IERC20(fxs).transfer(IFeeRegistry(feeRegistry).accumulator(),sendAccum);
+        }
+        if(sendveSDT > 0){
+            IERC20(fxs).transfer(IFeeRegistry(feeRegistry).veSDTFeeProxy(),sendveSDT);
         }
 
+
         //transfer remaining fxs to owner
-        sendAmount = IERC20(fxs).balanceOf(address(this));
+        uint256 sendAmount = IERC20(fxs).balanceOf(address(this));
         if(sendAmount > 0){
             IERC20(fxs).transfer(owner, sendAmount);
         }
