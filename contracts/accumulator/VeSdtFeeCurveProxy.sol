@@ -8,7 +8,7 @@ import "../interfaces/IUniswapRouter.sol";
 import "../interfaces/ISdFraxVault.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract VeSdtFeeCurveProxy is Ownable {
+contract veSDTFeeCurveProxy is Ownable {
 	using SafeERC20 for IERC20;
 	address public constant SD_FRAX_3CRV = 0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7;
 	address public constant FRAX_3CRV = 0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B;

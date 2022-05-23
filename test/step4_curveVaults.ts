@@ -144,7 +144,7 @@ describe("CURVE Strategy", function () {
     });
 
     const CurveStrategy = await ethers.getContractFactory("CurveStrategy");
-    const veSdtCurveProxyFactory = await ethers.getContractFactory("VeSdtFeeCurveProxy");
+    const veSdtCurveProxyFactory = await ethers.getContractFactory("veSDTFeeCurveProxy");
     const curveVaultFactory = await ethers.getContractFactory("CurveVaultFactory");
 
     deployer = ethers.provider.getSigner(STDDEPLOYER);
