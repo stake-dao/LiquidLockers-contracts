@@ -14,7 +14,6 @@ interface IProxyVault {
         UniV3,
         Convex
     }
-    function test() external virtual;
     function initialize(address _owner, address _stakingAddress, address _stakingToken, address _rewardsAddress) external;
     function usingProxy() external returns(address);
     function rewards() external returns(address);
@@ -457,7 +456,7 @@ contract StakingProxyBase is IProxyVault{
     using SafeERC20 for IERC20;
 
     address public constant fxs = address(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
-    address public constant vefxsProxy = address(0x59CFCD384746ec3035299D90782Be065e466800B);
+    address public constant vefxsProxy = address(0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f);
     address public constant feeRegistry = address(0xC9aCB83ADa68413a6Aa57007BC720EE2E2b3C46D); //fee registry
 
     address public owner; //owner of the vault
@@ -528,8 +527,6 @@ contract StakingProxyBase is IProxyVault{
         IFraxFarmBase(stakingAddress).stakerSetVeFXSProxy(_proxyAddress);
         usingProxy = _proxyAddress;
     }
-
-    function test() external override virtual {}
     function getReward() external override virtual {}
     function getReward(bool _claim) external override virtual{}
     function getReward(bool _claim, address[] calldata _rewardTokenList) external override  virtual{}
@@ -564,6 +561,7 @@ contract StakingProxyBase is IProxyVault{
         uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
         uint256 sendAmount = fxsBalance * totalFees / FEE_DENOMINATOR;
         if(sendAmount > 0){
+            // Implement a different logic for stakeDAO
             IERC20(fxs).transfer(IFeeRegistry(feeRegistry).getFeeDepositor(usingProxy), sendAmount);
         }
 
@@ -577,6 +575,7 @@ contract StakingProxyBase is IProxyVault{
     //get extra rewards
     function _processExtraRewards() internal{
         if(IRewards(rewards).active()){
+        
             //check if there is a balance because the reward contract could have be activated later
             //dont use _checkpointRewards since difference of 0 will still call deposit() and cost gas
             uint256 bal = IRewards(rewards).balanceOf(address(this));
@@ -586,6 +585,8 @@ contract StakingProxyBase is IProxyVault{
                 IRewards(rewards).deposit(owner,userLiq);
             }
             IRewards(rewards).getReward(owner);
+        }
+        else {
         }
     }
 
@@ -739,7 +740,6 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard{
     //initialize vault
     function initialize(address _owner, address _stakingAddress, address _stakingToken, address _rewardsAddress) external override{
         require(owner == address(0),"already init");
-
         //set variables
         owner = _owner;
         stakingAddress = _stakingAddress;
@@ -827,20 +827,16 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard{
         getReward(true);
     }
 
-    function test() external override {
-        revert("test");
-    }
     //get reward with claim option.
     //_claim bool is for the off chance that rewardCollectionPause is true so getReward() fails but
     //there are tokens on this vault for cases such as withdraw() also calling claim.
     //can also be used to rescue tokens on the vault
     function getReward(bool _claim) public override{
-
         //claim
         if(_claim){
             IFraxFarmERC20(stakingAddress).getReward(address(this));
         }
-
+        
         //process fxs fees
         _processFxs();
 

@@ -157,4 +157,8 @@ contract FxsLocker {
 		(bool success, bytes memory result) = to.call{ value: value }(data);
 		return (success, result);
 	}
+
+	function gov() public view returns(address){
+		return(governance);
+	}
 }

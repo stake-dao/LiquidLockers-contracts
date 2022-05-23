@@ -40,7 +40,6 @@ contract PoolRegistry {
 
     address public operator;
     address public rewardImplementation;
-    address public sdtDistributor;
     bool public rewardsStartActive;
     PoolInfo[] public poolInfo;
     mapping(uint256 => mapping(address => address)) public vaultMap; //pool -> user -> vault
@@ -61,9 +60,8 @@ contract PoolRegistry {
     event RewardImplementationChanged(address indexed implementation);
     event RewardActiveOnCreationChanged(bool value);
 
-    constructor(address _sdtDistributor) {
+    constructor() {
         owner = msg.sender;
-        sdtDistributor = _sdtDistributor;
     }
 
     modifier onlyOwner() {
@@ -115,7 +113,6 @@ contract PoolRegistry {
         if(rewardImplementation != address(0)){
            rewards = IProxyFactory(proxyFactory).clone(rewardImplementation);
            IRewards(rewards).initialize(poolInfo.length, rewardsStartActive);
-           //ILiquidityGaugeStrat(rewards).initialize(_stakingAddress, owner, SDT, veSDT, VEBOOST, sdtDistributor,SDT,"Test gauge");
         }
 
         poolInfo.push(
@@ -137,10 +134,10 @@ contract PoolRegistry {
 
         //spawn new clone
         address rewards = IProxyFactory(proxyFactory).clone(rewardImplementation);
-        //IRewards(rewards).initialize(_pid, rewardsStartActive);
+        IRewards(rewards).initialize(_pid, rewardsStartActive);
 
         //change address
-        //poolInfo[_pid].rewardsAddress = rewards;
+        poolInfo[_pid].rewardsAddress = rewards;
     }
     //deactivates pool so that new vaults can not be made.
     //can not force shutdown/withdraw user funds

@@ -37,6 +37,8 @@ pragma solidity ^0.8.7;
 
 interface IVoterProxy{
     function operator() external view returns(address);
+    function gov() external view returns(address);
+    function governance() external view returns(address);
 }
 
 // File: contracts\interfaces\IPoolRegistry.sol
@@ -510,7 +512,7 @@ contract MultiRewards is IRewards{
         uint256 rewardPerTokenStored;
     }
 
-    address public constant vefxsProxy = address(0x59CFCD384746ec3035299D90782Be065e466800B);
+    address public constant vefxsProxy = address(0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f);
 
     //allow an address to be call at certain events so that
     //reward emissions etc can be automated
@@ -744,7 +746,7 @@ contract MultiRewards is IRewards{
     /* ========== MODIFIERS ========== */
 
     modifier onlyOwner() {
-        require(IBooster(IVoterProxy(vefxsProxy).operator()).rewardManager() == msg.sender, "!owner");
+        require(IBooster(IVoterProxy(vefxsProxy).governance()).rewardManager() == msg.sender, "!owner");
         _;
     }
 
