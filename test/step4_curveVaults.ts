@@ -41,7 +41,7 @@ const SDT_ETH_HOLDER = "0xB86662739e1aCC01d9Ca9c3C3dcFb34ae3f0332e";
 const STECRV_HOLDER = "0x56c915758Ad3f76Fd287FFF7563ee313142Fb663";
 const VESDT_HOLDER = "0xdceb0bb3311342e3ce9e49f57affce9deac40ba1";
 const TIMELOCK = "0xD3cFc4E65a73BB6C482383EB38f5C3E1d1411616";
-const STDDEPLOYER = "0xb36a0671b3d49587236d7833b01e79798175875f";
+const STDDEPLOYER = "0xb36a0671B3D49587236d7833B01E79798175875f";
 const DEPLOYER_NEW = "0x0dE5199779b43E13B3Bec21e91117E18736BC1A8";
 
 // StakeDAO contracts
@@ -49,7 +49,6 @@ const CRV_LOCKER = "0x52f541764E6e90eeBc5c21Ff570De0e2D63766B6";
 const GC_STRATEGY = "0x3F3F0776D411eb97Cfa4E3eb25F33c01ca4e7Ca8";
 const SDT_D_STRATEGY = "0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C";
 const SDCRVGAUGE = "0x7f50786A0b15723D741727882ee99a0BF34e3466";
-const SD_FRAX_3CRV = "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7";
 const LGV4_STRAT_IMPL = "0x3dc56d46f0bd13655efb29594a2e44534c453bf9";
 const CRV_ACCUMULATOR = "0x54C7757199c4A04BCcD1472Ad396f768D8173757";
 const STAKEDAO_FEE_DISTRIBUTOR = "0x29f3dd38dB24d3935CF1bf841e6b2B461A3E5D92";
@@ -175,6 +174,7 @@ describe("CURVE Strategy", function () {
     frax = await ethers.getContractAt(ERC20ABI, FRAX);
     sdt = await ethers.getContractAt(ERC20ABI, SDT);
     eur3 = await ethers.getContractAt(ERC20ABI, EUR3);
+    steCrv = await ethers.getContractAt(ERC20ABI, STECRV);
     sdFrax3Crv = await ethers.getContractAt(ERC20ABI, SDFRAX3CRV);
     sdCrvGauge = await ethers.getContractAt("LiquidityGaugeV4", SDCRVGAUGE);
     crvAccumulator = await ethers.getContractAt("CurveAccumulator", CRV_ACCUMULATOR);
@@ -244,7 +244,7 @@ describe("CURVE Strategy", function () {
     // Transfer LPs to test the different boosting
     const amountToTransfer = parseEther("10");
     await crv3.connect(crv3Holder).transfer(steCrvHolder._address, parseEther("1000"));
-    await eur3.connect(eur3Holder).transfer(sdtEthHolder._address, parseEther("10"));
+    //await eur3.connect(eur3Holder).transfer(sdtEthHolder._address, parseEther("10"));
 
     // Send CRV to the CrvFeeDistributor
     await crv3.connect(crv3Holder).transfer(CRV_FEE_D, parseEther("1000"));
@@ -463,13 +463,15 @@ describe("CURVE Strategy", function () {
     });
 
     it("it should be able swap crv and transfer to feeDistributor from veSDTFeeCrvProxy", async () => {
-      const fraxBalanceOfClaimer = await frax.balanceOf(localDeployer.address);
-      const sd3CrvBalanceOfFeeD = await sdFrax3Crv.balanceOf(STAKEDAO_FEE_DISTRIBUTOR);
+      // Default SWAP PATH CRV <-> WETH <-> SUSHI <-> FRAX
+      const sdFrax3CrvBalanceOfFeeDBefore = await sdFrax3Crv.balanceOf(STAKEDAO_FEE_DISTRIBUTOR);
       const crvProxyBalanceBefore = await crv.balanceOf(VeSdtProxy.address);
       expect(crvProxyBalanceBefore).gt(0);
       await VeSdtProxy.sendRewards();
       const crvProxyBalanceAfter = await crv.balanceOf(VeSdtProxy.address);
       expect(crvProxyBalanceAfter).eq(0);
+      const sdFrax3CrvBalanceOfFeeDAfter = await sdFrax3Crv.balanceOf(STAKEDAO_FEE_DISTRIBUTOR);
+      expect(sdFrax3CrvBalanceOfFeeDAfter.sub(sdFrax3CrvBalanceOfFeeDBefore)).gt(0);
     });
     
     it("it should accumulated crv rewards to sdCrv liquidity gauge from CrvAccumulator", async () => {
@@ -520,12 +522,33 @@ describe("CURVE Strategy", function () {
       await sdtDProxy.connect(deployer_new).approveGauge(steCrvMultiGauge.address);
 
       expect(tokenOfVault.toLowerCase()).to.be.equal(STECRV.toLowerCase());
+
+      // Deposit to vault with extra rewards (L)
+      const amountToDeposit = parseEther("1")
+      await steCrv.connect(steCrvHolder).approve(steCrvVault.address, amountToDeposit);
+      await steCrvVault.connect(steCrvHolder).deposit(steCrvHolder._address, parseEther("1"), true);
+    });
+
+    it("it should claim CRV and extra rewards from the steCrv LP token after some time", async () => {
+      await network.provider.send("evm_increaseTime", [60 * 60 * 24]); // 1 day
+      await network.provider.send("evm_mine", []);
+      // add LDO as reward token
+      // await strategy.claim(STECRV)
     });
 
     it("it should act a soft migration", async () => {
     });
 
     it("it should act an hard migration", async () => {
+    });
+
+    it("it should set back the locker's governance address", async () => {
+      let setGovernanceFunction = ["function setGovernance(address _governance)"];
+      let iSetGovernance = new ethers.utils.Interface(setGovernanceFunction);
+      const data = iSetGovernance.encodeFunctionData("setGovernance", [STDDEPLOYER]);
+      await strategy.connect(deployer).execute(locker.address, 0, data);
+      const newGovernance = await locker.governance();
+      expect(newGovernance).to.be.equal(STDDEPLOYER);
     });
   });
 });

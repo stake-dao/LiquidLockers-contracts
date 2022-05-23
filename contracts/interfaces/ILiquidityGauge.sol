@@ -38,4 +38,6 @@ interface ILiquidityGauge {
 	function user_checkpoint(address _user) external returns (bool);
 
 	function commit_transfer_ownership(address) external;
+
+	function claim_rewards(address) external;
 }

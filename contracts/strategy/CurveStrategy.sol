@@ -128,18 +128,30 @@ contract CurveStrategy is BaseStrategy {
 			(success, ) = locker.execute(
 				gauge, 0, abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
 			);
-			require(success, "Claim failed!");
+			if (!success) {
+				// Claim to locker
+				ILiquidityGauge(gauge).claim_rewards(address(locker));
+			}
+			address rewardToken;
+			uint256 rewardsBalance;
 			for (uint8 i = 0; i < 8; i++) {
-				address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
+				rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
 				if (rewardToken == address(0)) {
 					break;
 				}
-				uint256 rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
-				uint256 netRewards = sendFee(gauge, rewardToken, rewardsBalance);
-				IERC20(rewardToken).approve(multiGauges[gauge], netRewards);
-				ILiquidityGauge(multiGauges[gauge]).deposit_reward_token(rewardToken, netRewards);
+				if (success) {
+					rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
+				} else {
+					rewardsBalance = IERC20(rewardToken).balanceOf(address(locker));
+					(success, ) = locker.execute(
+					rewardToken, 0, abi.encodeWithSignature("transfer(address,uint256)", address(this), rewardsBalance)
+					);
+					require(success, "Transfer failed");
+				}
+				IERC20(rewardToken).approve(multiGauges[gauge], rewardsBalance);
+				ILiquidityGauge(multiGauges[gauge]).deposit_reward_token(rewardToken, rewardsBalance);
 				emit Claimed(gauge, rewardToken, rewardsBalance);
-			}
+			}	
 		}
 	}
 

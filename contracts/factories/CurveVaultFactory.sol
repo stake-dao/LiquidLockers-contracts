@@ -53,10 +53,10 @@ contract CurveVaultFactory {
 		string memory tokenSymbol = ERC20Upgradeable(vaultLpToken).symbol();
 		uint256 liquidityGaugeType;
 		// view function called only to recognize the gauge type
-		bytes memory data = abi.encodeWithSignature("claimable_rewards(address,address)", address(this), CRV);
+		bytes memory data = abi.encodeWithSignature("reward_tokens(uint256)", 0);
 		(bool success, ) = _crvGaugeAddress.call(data);
 		if (!success) {
-			liquidityGaugeType = 1;
+			liquidityGaugeType = 1; // no extra reward
 		}
 		address vaultImplAddress = _cloneAndInitVault(
 			vaultImpl,
