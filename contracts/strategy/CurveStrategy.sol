@@ -93,7 +93,7 @@ contract CurveStrategy is BaseStrategy {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
 
-		// Check if there is any CRV to mint for the gauge
+		// Claim CRV for the gauge
 		uint256 crvMinted = ILiquidityGauge(gauge).claimable_tokens(address(locker));
 		require(crvMinted > 0, "No CRV to mint");
 
@@ -129,7 +129,7 @@ contract CurveStrategy is BaseStrategy {
 				gauge, 0, abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
 			);
 			if (!success) {
-				// Claim to locker
+				// Claim on behalf of locker
 				ILiquidityGauge(gauge).claim_rewards(address(locker));
 			}
 			address rewardToken;
@@ -168,28 +168,6 @@ contract CurveStrategy is BaseStrategy {
 		IERC20(_rewardToken).transfer(veSDTFeeProxy, veSDTPart);
 		IERC20(_rewardToken).transfer(msg.sender, claimerPart);
 		return _rewardsBalance - multisigFee - accumulatorPart - veSDTPart - claimerPart;
-	}
-
-	/// @notice view function to fetch the pending rewards claimable (but not the CRV reward)
-	/// @param _token token address
-	function claimerPendingRewards(address _token) external view returns (ClaimerReward[] memory) {
-		ClaimerReward[] memory pendings = new ClaimerReward[](8);
-		address gauge = gauges[_token];
-
-		// if the gauge type supports extra rewards tokens  
-		if (lGaugeType[gauge] == 0) {
-			for (uint8 i = 0; i < 8; i++) {
-				address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
-				if (rewardToken == address(0)) {
-					break;
-				}
-				uint256 rewardsBalance = ILiquidityGauge(gauge).claimable_reward(address(locker), rewardToken);
-				uint256 pendingAmount = (rewardsBalance * claimerRewardFee[gauge]) / BASE_FEE;
-				ClaimerReward memory pendingReward = ClaimerReward(rewardToken, pendingAmount);
-				pendings[i + 1] = pendingReward;
-			}
-		}
-		return pendings;
 	}
 
 	/// @notice function to claim 3crv every week from the curve Fee Distributor
