@@ -222,10 +222,9 @@ contract CurveStrategy is BaseStrategy {
 
 	/// @notice function to migrate any LP to another strategy contract (hard migration)
 	/// @param _token token address
-	/// @param _recipient recipient to send LPs
-	function migrateLP(address _token, address _recipient) external onlyApprovedVault {
+	function migrateLP(address _token) external onlyApprovedVault {
 		require(gauges[_token] != address(0), "not existent gauge");
-		migrate(_token, _recipient);
+		migrate(_token);
 	}
 
 	/// @notice function to migrate any LP, it sends them to the vault
