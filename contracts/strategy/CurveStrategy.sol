@@ -96,9 +96,18 @@ contract CurveStrategy is BaseStrategy {
 		// Claim CRV for the gauge
 		uint256 crvMinted = ILiquidityGauge(gauge).claimable_tokens(address(locker));
 		require(crvMinted > 0, "No CRV to mint");
+
+		// Claim CRV
+		// within the mint() it calls the user checkpoint
+		(bool success, ) = locker.execute(
+			CRV_MINTER,
+			0,
+			abi.encodeWithSignature("mint(address)", gauge)
+		);	
+		require(success, "CRV mint failed!");
 		
 		// Send CRV here
-		(bool success, ) = locker.execute(
+		(success, ) = locker.execute(
 			CRV,
 			0,
 			abi.encodeWithSignature("transfer(address,uint256)", address(this), crvMinted)
