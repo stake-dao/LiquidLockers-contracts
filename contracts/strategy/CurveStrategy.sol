@@ -228,18 +228,17 @@ contract CurveStrategy is BaseStrategy {
 		migrate(_token, _recipient);
 	}
 
-	/// @notice function to migrate any LP, soft and hard migration supported
+	/// @notice function to migrate any LP, it sends them to the vault
 	/// @param _token token address
-	/// @param _recipient recipient to send LPs
-	function migrate(address _token, address _recipient) internal {
+	function migrate(address _token) internal {
 		address gauge = gauges[_token];
 		uint256 amount = IERC20(gauge).balanceOf(address(locker));
 		// Withdraw LPs from the old gauge
 		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("withdraw(uint256)", amount));
 		require(success, "Withdraw failed!");
 
-		// Transfer LPs
-		(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", _recipient, amount));
+		// Transfer LPs to the approved vault
+		(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, amount));
 		require(success, "Transfer failed!");
 	}
 
