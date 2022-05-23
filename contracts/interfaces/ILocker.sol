@@ -4,6 +4,8 @@ pragma solidity 0.8.7;
 interface ILocker {
 	function createLock(uint256, uint256) external;
 
+	function claimAllRewards(address[] calldata _tokens, address _recipient) external;
+
 	function increaseAmount(uint256) external;
 
 	function increaseUnlockTime(uint256) external;
