@@ -11,6 +11,7 @@ contract AngleAccumulatorV2 is BaseAccumulator {
 	address public constant POOL_MANAGER = 0xe9f183FC656656f1F17af1F2b0dF79b8fF9ad8eD;
 	address public constant SAN_USDC_EUR = 0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad;
 	address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+	address public constant ANGLE = 0x31429d1856aD1377A8A0079410B297e1a9e214c2;
 
 	/* ========== CONSTRUCTOR ========== */
 	constructor(address _tokenReward) BaseAccumulator(_tokenReward) {}
@@ -31,7 +32,9 @@ contract AngleAccumulatorV2 is BaseAccumulator {
 		ILocker(locker).claimRewards(SAN_USDC_EUR, address(this));
 		_zap();
 		uint256 amount = IERC20(tokenReward).balanceOf(address(this));
+		uint256 angleAmount = IERC20(ANGLE).balanceOf(address(this));
 		_notifyReward(tokenReward, amount, true);
+		_notifyReward(ANGLE, angleAmount, false);
 	}
 
 	/// @notice utility function for minting agEUR from the feedistributor token reward

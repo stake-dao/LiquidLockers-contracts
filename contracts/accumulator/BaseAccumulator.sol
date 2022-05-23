@@ -19,6 +19,7 @@ contract BaseAccumulator {
 	address public tokenReward;
 	address public gauge;
 	address public sdtDistributor;
+	uint256 public claimerFee;
 
 	/* ========== EVENTS ========== */
 
@@ -44,7 +45,7 @@ contract BaseAccumulator {
 	/// @param _amount amount to notify
 	function notifyExtraReward(address _tokenReward, uint256 _amount) external {
 		require(msg.sender == governance, "!gov");
-		_notifyReward(_tokenReward, _amount);
+		_notifyReward(_tokenReward, _amount, true);
 	}
 
 	/// @notice Notify the reward using all balance of extra token
@@ -52,21 +53,29 @@ contract BaseAccumulator {
 	function notifyAllExtraReward(address _tokenReward) external {
 		require(msg.sender == governance, "!gov");
 		uint256 amount = IERC20(_tokenReward).balanceOf(address(this));
-		_notifyReward(_tokenReward, amount);
+		_notifyReward(_tokenReward, amount, true);
 	}
 
 	/// @notice Notify the new reward to the LGV4
 	/// @param _tokenReward token to notify
 	/// @param _amount amount to notify
-	function _notifyReward(address _tokenReward, uint256 _amount) internal {
+	function _notifyReward(
+		address _tokenReward,
+		uint256 _amount,
+		bool _distributeSDT
+	) internal {
 		require(gauge != address(0), "gauge not set");
 		require(_amount > 0, "set an amount > 0");
 		uint256 balanceBefore = IERC20(_tokenReward).balanceOf(address(this));
 		require(balanceBefore >= _amount, "amount not enough");
 		if (ILiquidityGauge(gauge).reward_data(_tokenReward).distributor != address(0)) {
-			// Distribute SDT
-			ISDTDistributor(sdtDistributor).distribute(gauge);
-
+			if (_distributeSDT) {
+				// Distribute SDT
+				ISDTDistributor(sdtDistributor).distribute(gauge);
+			}
+			uint256 claimerReward = (_amount * claimerFee) / 10000;
+			IERC20(_tokenReward).transfer(msg.sender, claimerReward);
+			_amount -= claimerReward;
 			IERC20(_tokenReward).approve(gauge, _amount);
 			ILiquidityGauge(gauge).deposit_reward_token(_tokenReward, _amount);
 
@@ -136,6 +145,11 @@ contract BaseAccumulator {
 		require(_tokenReward != address(0), "can't be zero address");
 		emit TokenRewardSet(tokenReward, _tokenReward);
 		tokenReward = _tokenReward;
+	}
+
+	function setClaimerFee(uint256 _claimerFee) external {
+		require(msg.sender == governance, "!gov");
+		claimerFee = _claimerFee;
 	}
 
 	/// @notice A function that rescue any ERC20 token
