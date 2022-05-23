@@ -93,9 +93,7 @@ contract CurveStrategy is BaseStrategy {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
 
-		// Claim CRV for the gauge
-		uint256 crvMinted = ILiquidityGauge(gauge).claimable_tokens(address(locker));
-		require(crvMinted > 0, "No CRV to mint");
+		uint256 crvBeforeClaim = IERC20(CRV).balanceOf(address(locker));
 
 		// Claim CRV
 		// within the mint() it calls the user checkpoint
@@ -105,6 +103,8 @@ contract CurveStrategy is BaseStrategy {
 			abi.encodeWithSignature("mint(address)", gauge)
 		);	
 		require(success, "CRV mint failed!");
+
+		uint256 crvMinted = IERC20(CRV).balanceOf(address(locker)) - crvBeforeClaim;
 		
 		// Send CRV here
 		(success, ) = locker.execute(
@@ -209,13 +209,12 @@ contract CurveStrategy is BaseStrategy {
 	}
 
 	/// @notice function to set a new gauge
-	/// It permits to use address(0) to set a gauge for disabling it
+	/// It permits to set it as  address(0), for disabling it
 	/// in case of migration
 	/// @param _token token address
 	/// @param _gauge gauge address
 	function setGauge(address _token, address _gauge) external override onlyGovernanceOrFactory {
 		require(_token != address(0), "zero address");
-		// We permit to set an address 0 to disa
 		// Set new gauge
 		gauges[_token] = _gauge;
 		emit GaugeSet(_gauge, _token);
@@ -236,8 +235,7 @@ contract CurveStrategy is BaseStrategy {
 		address gauge = gauges[_token];
 		uint256 amount = IERC20(gauge).balanceOf(address(locker));
 		// Withdraw LPs from the old gauge
-		bool success;
-		(success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("withdraw(uint256)", amount));
+		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("withdraw(uint256)", amount));
 		require(success, "Withdraw failed!");
 
 		// Transfer LPs

@@ -21,6 +21,8 @@ contract veSDTFeeCurveProxy is Ownable {
 	uint256 public maxSlippage = 100;
 	address[] public crvToFraxPath;
 
+	event RewardSent(uint256 claimerAmount, uint256 feeDAmount);
+
 	constructor(address[] memory _crvToFraxPath) {
 		crvToFraxPath = _crvToFraxPath;
 		IERC20(CRV).safeApprove(SUSHI_ROUTER, type(uint256).max);
@@ -43,6 +45,11 @@ contract veSDTFeeCurveProxy is Ownable {
 		IERC20(FRAX_3CRV).approve(SD_FRAX_3CRV, fraxBalance - claimerPart);
         // Deposit FRAX3CRV LP to StakeDAO
 		ISdFraxVault(SD_FRAX_3CRV).deposit(frax3CrvBalance);
+
+		// emit the event before the sdFrax3Crv transfer
+		// claimerPart in FRAX, feeDistributor part in sdFrax3Crv
+		emit RewardSent(claimerPart, IERC20(SD_FRAX_3CRV).balanceOf(address(this)));
+
         // Transfer SDFRAX3CRV to the veSDT Fee Distributor
 		IERC20(SD_FRAX_3CRV).transfer(FEE_D, IERC20(SD_FRAX_3CRV).balanceOf(address(this)));
 	}
