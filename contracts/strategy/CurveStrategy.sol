@@ -89,25 +89,16 @@ contract CurveStrategy is BaseStrategy {
 
 	/// @notice function to claim the reward
 	/// @param _token token address
-	function claim(address _token) public override {
+	function claim(address _token) external override {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
 
 		// Claim CRV for the gauge
 		uint256 crvMinted = ILiquidityGauge(gauge).claimable_tokens(address(locker));
 		require(crvMinted > 0, "No CRV to mint");
-
-		// Claim CRV
-		// within the mint() it calls the user checkpoint
-		(bool success, ) = locker.execute(
-			CRV_MINTER,
-			0,
-			abi.encodeWithSignature("mint(address)", gauge)
-		);	
-		require(success, "CRV mint failed!");
 		
 		// Send CRV here
-		(success, ) = locker.execute(
+		(bool success, ) = locker.execute(
 			CRV,
 			0,
 			abi.encodeWithSignature("transfer(address,uint256)", address(this), crvMinted)
@@ -209,16 +200,13 @@ contract CurveStrategy is BaseStrategy {
 	}
 
 	/// @notice function to set a new gauge
-	/// if the gauge exists, it manages the migration as well
+	/// It permits to use address(0) to set a gauge for disabling it
+	/// in case of migration
 	/// @param _token token address
 	/// @param _gauge gauge address
 	function setGauge(address _token, address _gauge) external override onlyGovernanceOrFactory {
 		require(_token != address(0), "zero address");
-		require(_gauge != address(0), "zero address");
-		if (gauges[_token] != address(0)) {
-			// soft migration
-			migrate(_token, address(this));
-		}
+		// We permit to set an address 0 to disa
 		// Set new gauge
 		gauges[_token] = _gauge;
 		emit GaugeSet(_gauge, _token);
@@ -230,7 +218,6 @@ contract CurveStrategy is BaseStrategy {
 	function migrateLP(address _token, address _recipient) external onlyApprovedVault {
 		require(gauges[_token] != address(0), "not existent gauge");
 		migrate(_token, _recipient);
-		gauges[_token] = address(0);
 	}
 
 	/// @notice function to migrate any LP, soft and hard migration supported
@@ -247,18 +234,6 @@ contract CurveStrategy is BaseStrategy {
 		// Transfer LPs
 		(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", _recipient, amount));
 		require(success, "Transfer failed!");
-
-		// claim before changing the gauge address
-		claim(_token);
-
-		// soft migration 
-		if(_recipient == address(this)) {
-			// Deposit LPs to the new gauge
-			locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, 0));
-			locker.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, amount));
-			(success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("deposit(uint256)", amount));
-			require(success, "Deposit failed!");
-		}
 	}
 
 	/// @notice function to set a multi gauge
