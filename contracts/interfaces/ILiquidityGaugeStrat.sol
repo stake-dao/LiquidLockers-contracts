@@ -55,4 +55,6 @@ interface ILiquidityGaugeStrat {
 	) external;
 
 	function add_reward(address, address) external;
+
+	function set_claimer(address) external;
 }

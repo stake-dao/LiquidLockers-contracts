@@ -27,6 +27,7 @@ contract CurveVaultFactory {
 	address public constant VESDT = 0x0C30476f66034E11782938DF8e4384970B6c9e8a;
 	address public constant SDT = 0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F;
 	address public constant VEBOOST = 0xD67bdBefF01Fc492f1864E61756E5FBB3f173506;
+	address public constant CLAIM_REWARDS = 0xf30f23B7FB233172A41b32f82D263c33a0c9F8c2;
 	address public curveStrategy;
 	address public sdtDistributor;
 	event VaultDeployed(address proxy, address lpToken, address impl);
@@ -82,6 +83,7 @@ contract CurveVaultFactory {
 		CurveStrategy(curveStrategy).manageFee(CurveStrategy.MANAGEFEE.CLAIMERREWARD, _crvGaugeAddress, 50); //%0.5 default
 		CurveStrategy(curveStrategy).setLGtype(_crvGaugeAddress, liquidityGaugeType);
 		ILiquidityGaugeStrat(gaugeImplAddress).add_reward(CRV, curveStrategy);
+		ILiquidityGaugeStrat(gaugeImplAddress).set_claimer(CLAIM_REWARDS);
 		ILiquidityGaugeStrat(gaugeImplAddress).commit_transfer_ownership(GOVERNANCE);
 	}
 
