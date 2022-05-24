@@ -69,7 +69,7 @@ describe("FRAX <> StakeDAO", function () {
     let fxs: Contract;
     let sdt: Contract;
     let temple: Contract;
-    let VeSdtProxy: Contract;
+    let veSDTProxy: Contract;
     let masterchef: Contract;
     let sdtDistributor: Contract;
     let gc: Contract;
@@ -126,7 +126,7 @@ describe("FRAX <> StakeDAO", function () {
         const GaugeController = await ethers.getContractFactory("GaugeController");
         const Proxy = await ethers.getContractFactory("TransparentUpgradeableProxy");
         const ProxyAdmin = await ethers.getContractFactory("ProxyAdmin");
-        const veSdtAngleProxyFactory = await ethers.getContractFactory("veSDTFeeFraxProxy");
+        const veSdtFxsProxyFactory = await ethers.getContractFactory("veSDTFeeFraxProxy");
         const poolRegistryContract = await ethers.getContractFactory("PoolRegistry");
         const boosterContract = await ethers.getContractFactory("Booster");
         const feeRegistryContract = await ethers.getContractFactory("FeeRegistry")
@@ -144,7 +144,7 @@ describe("FRAX <> StakeDAO", function () {
         masterchef = await ethers.getContractAt(MASTERCHEFABI, MASTERCHEF);
 
         /* ==== Deploy ==== */
-        VeSdtProxy = await veSdtAngleProxyFactory.deploy([FXS, WETH, FRAX]);
+        veSDTProxy = await veSdtFxsProxyFactory.deploy([FXS, WETH, FRAX]);
         const proxyAdmin = await ProxyAdmin.deploy();
         sdtDistributor = await SdtDistributor.deploy();
 
@@ -188,7 +188,7 @@ describe("FRAX <> StakeDAO", function () {
         await fxsTempleGauge.connect(govFrax).toggleValidVeFXSProxy(locker.address)
 
         /* ==== Deploy Fee Registry ==== */
-        feeRegistry = await feeRegistryContract.connect(deployer).deploy()
+        feeRegistry = await feeRegistryContract.connect(deployer).deploy(veSDTProxy.address)
 
         /* ==== Deploy Pool Registry ==== */
         poolRegistry = await poolRegistryContract.connect(deployer).deploy();
