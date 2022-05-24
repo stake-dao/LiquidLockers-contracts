@@ -54,7 +54,8 @@ describe("Balancer Depositor", function () {
     let locker: Contract;
     let sdBalToken: Contract;
     let balancerDepositor: Contract;
-    let liquidityGauge: Contract;
+    let liquidityGaugeProxy: Contract;
+    let liquidityGaugeImpl: Contract;
     let accumulator: Contract;
     // Balancer Contract
     let veBAL: Contract;
@@ -123,13 +124,36 @@ describe("Balancer Depositor", function () {
         const balancerDepositorContract = await ethers.getContractFactory("BalancerDepositor");
         const liquidityGaugeContract = await ethers.getContractFactory("LiquidityGaugeV4");
         const accumulatorContract = await ethers.getContractFactory("BalancerAccumulator");
+        const Proxy = await ethers.getContractFactory("TransparentUpgradeableProxy");
+        const ProxyAdmin = await ethers.getContractFactory("ProxyAdmin");
 
         // Deployment
         sdBalToken = await sdBalTokenContract.deploy("Stake DAO Balancer", "sdBAL");
         locker = await balancerLockerContract.deploy(STAKE_DAO_MULTISIG);
         balancerDepositor = await balancerDepositorContract.deploy(bptToken.address, locker.address, sdBalToken.address);
-        liquidityGauge = await liquidityGaugeContract.deploy();
         accumulator = await accumulatorContract.deploy(BAL);
+
+        // Liquidity Gauge with Proxy
+        liquidityGaugeImpl = await liquidityGaugeContract.deploy();
+
+        const proxyAdmin = await ProxyAdmin.deploy();
+
+        let ABI_SDTD = [
+            "function initialize(address _staking_token, address _admin, address _SDT, address _voting_escrow, address _veBoost_proxy, address _distributor)"
+          ];
+        let liquidityGaugeInterface = new ethers.utils.Interface(ABI_SDTD);
+
+        const data = liquidityGaugeInterface.encodeFunctionData("initialize", [
+            sdBalToken.address,
+            deployer.address,
+            SDT,
+            VE_SDT,
+            VE_SDT_BOOST_PROXY, 
+            RANDOM
+          ]);
+      
+          liquidityGaugeProxy = await Proxy.connect(deployer).deploy(liquidityGaugeImpl.address, proxyAdmin.address, data);
+          liquidityGaugeProxy = await ethers.getContractAt("LiquidityGaugeV4", liquidityGaugeProxy.address);
 
         // INITIALIZATION
         // Set Depositor in Locker 
@@ -139,11 +163,10 @@ describe("Balancer Depositor", function () {
         // Whitelist Locker in the Smart Wallet Checker to be able to lock BPT (Balancer Protocol Actions)
         await smartWalletChecker.connect(balancerMultisig).allowlistAddress(locker.address);
         // Initialize Liquidity Gauge & set to Depositor
-        await liquidityGauge.initialize(sdBalToken.address, deployer.address, SDT, VE_SDT, VE_SDT_BOOST_PROXY, RANDOM);
-        await balancerDepositor.setGauge(liquidityGauge.address);
+        await balancerDepositor.setGauge(liquidityGaugeProxy.address);
         // Initialize accumulator
         await accumulator.setLocker(locker.address);
-        await accumulator.setGauge(liquidityGauge.address);
+        await accumulator.setGauge(liquidityGaugeProxy.address);
     });
 
     describe("sdBAL", function () {
@@ -223,7 +246,7 @@ describe("Balancer Depositor", function () {
             expect(locked.end).to.be.equal(expectedEnd);
             expect(locked.amount).to.be.equal(lockingAmount);
 
-            expect(balance).to.be.gt(lockingAmount.mul(99).div(100));
+            expect(balance).to.be.gt(lockingAmount.mul(95).div(100));
             expect(balance).to.be.lt(lockingAmount);
         });
 
@@ -291,7 +314,7 @@ describe("Balancer Depositor", function () {
             const afterVeBALBalance = await veBAL.locked(locker.address);
             const afterBalance = await bptToken.balanceOf(bptTokenHolder._address);
             const sdBalBalance = await sdBalToken.balanceOf(bptTokenHolder._address);
-            const staked = await liquidityGauge.balanceOf(bptTokenHolder._address);
+            const staked = await liquidityGaugeProxy.balanceOf(bptTokenHolder._address);
 
             expect(afterVeBALBalance.amount).to.be.equal(currentVeBALBalance.amount.add(amount));
             expect(afterBalance).to.be.equal(beforeBalance.sub(amount));
@@ -302,8 +325,8 @@ describe("Balancer Depositor", function () {
             let rewardToken = await ethers.getContractAt(ERC20ABI, BAL);
             let bonusToken = await ethers.getContractAt(ERC20ABI, REWARD);
             // Add Reward
-            await liquidityGauge.add_reward(rewardToken.address, accumulator.address);
-            await liquidityGauge.add_reward(bonusToken.address, accumulator.address);
+            await liquidityGaugeProxy.add_reward(rewardToken.address, accumulator.address);
+            await liquidityGaugeProxy.add_reward(bonusToken.address, accumulator.address);
             // Set Accumulator
             await locker.setAccumulator(accumulator.address);
             await accumulator.setTokenRewards([rewardToken.address, bonusToken.address]);
@@ -323,8 +346,8 @@ describe("Balancer Depositor", function () {
             // Claim Token Rewards
             await accumulator.claimAllRewardsAndNotify();
 
-            let lgBalance = await rewardToken.balanceOf(liquidityGauge.address);
-            let lgBonusBalance = await bonusToken.balanceOf(liquidityGauge.address);
+            let lgBalance = await rewardToken.balanceOf(liquidityGaugeProxy.address);
+            let lgBonusBalance = await bonusToken.balanceOf(liquidityGaugeProxy.address);
 
             expect(lgBalance).to.be.gt(0);
             expect(lgBonusBalance).to.be.gt(0);

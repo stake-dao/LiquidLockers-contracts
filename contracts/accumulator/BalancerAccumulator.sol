@@ -18,7 +18,7 @@ contract BalancerAccumulator is BaseAccumulator {
     function claimAndNotify(uint256 _amount) external {
         require(locker != address(0), "locker not set");
         ILocker(locker).claimRewards(tokenReward, address(this));
-        _notifyReward(tokenReward, _amount);
+        _notifyReward(tokenReward, _amount, true);
     }
 
     /// @notice Claims rewards from the locker and notify all to the LGV4
@@ -26,7 +26,7 @@ contract BalancerAccumulator is BaseAccumulator {
         require(locker != address(0), "locker not set");
         ILocker(locker).claimRewards(tokenReward, address(this));
         uint256 amount = IERC20(tokenReward).balanceOf(address(this)); 
-        _notifyReward(tokenReward, amount);
+        _notifyReward(tokenReward, amount, true);
     }
 
     /// @notice Claims rewards from the locker and notify all to the LGV4
