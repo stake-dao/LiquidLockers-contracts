@@ -22,7 +22,8 @@ contract AngleAccumulatorV2 is BaseAccumulator {
 		require(locker != address(0), "locker not set");
 		ILocker(locker).claimRewards(SAN_USDC_EUR, address(this));
 		_zap();
-		_notifyReward(tokenReward, _amount, true);
+		_notifyReward(tokenReward, _amount);
+		_distributeSDT();
 	}
 
 	/// @notice Claims rewards from the locker and notify all to the LGV4
@@ -31,7 +32,8 @@ contract AngleAccumulatorV2 is BaseAccumulator {
 		ILocker(locker).claimRewards(SAN_USDC_EUR, address(this));
 		_zap();
 		uint256 amount = IERC20(tokenReward).balanceOf(address(this));
-		_notifyReward(tokenReward, amount, true);
+		_notifyReward(tokenReward, amount);
+		_distributeSDT();
 	}
 
 	/// @notice utility function for minting agEUR from the feedistributor token reward

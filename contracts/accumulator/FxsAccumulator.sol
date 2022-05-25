@@ -15,7 +15,8 @@ contract FxsAccumulator is BaseAccumulator {
 	function claimAndNotify(uint256 _amount) external {
 		require(locker != address(0), "locker not set");
 		ILocker(locker).claimFXSRewards(address(this));
-		_notifyReward(tokenReward, _amount, true);
+		_notifyReward(tokenReward, _amount);
+		_distributeSDT();
 	}
 
 	/// @notice Claims rewards from the locker and notify all to the LGV4
@@ -23,6 +24,7 @@ contract FxsAccumulator is BaseAccumulator {
 		require(locker != address(0), "locker not set");
 		ILocker(locker).claimFXSRewards(address(this));
 		uint256 amount = IERC20(tokenReward).balanceOf(address(this));
-		_notifyReward(tokenReward, amount, true);
+		_notifyReward(tokenReward, amount);
+		_distributeSDT();
 	}
 }

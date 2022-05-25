@@ -45,7 +45,8 @@ contract BaseAccumulator {
 	/// @param _amount amount to notify
 	function notifyExtraReward(address _tokenReward, uint256 _amount) external {
 		require(msg.sender == governance, "!gov");
-		_notifyReward(_tokenReward, _amount, true);
+		_notifyReward(_tokenReward, _amount);
+		_distributeSDT();
 	}
 
 	/// @notice Notify the reward using all balance of extra token
@@ -53,24 +54,27 @@ contract BaseAccumulator {
 	function notifyAllExtraReward(address _tokenReward) external {
 		require(msg.sender == governance, "!gov");
 		uint256 amount = IERC20(_tokenReward).balanceOf(address(this));
-		_notifyReward(_tokenReward, amount, true);
+		_notifyReward(_tokenReward, amount);
+		_distributeSDT();
 	}
 
 	function notifyExtraReward(address[] calldata _tokens, uint[] calldata amounts) external {
 		require(msg.sender == governance, "!gov");
 		_notifyExtraReward(_tokens, amounts);
+		_distributeSDT();
 	}
 
 	function _notifyExtraReward(address[] memory _tokens, uint[] memory amounts) internal {
 		uint length = _tokens.length;
 		for(uint i; i < length; ++i){
-			_notifyReward(_tokens[i], amounts[i], true);
+			_notifyReward(_tokens[i], amounts[i]);
 		}
 	}
 
-	function notifyAllExtraReward(address[] calldata _tokens) public {
+	function notifyAllExtraReward(address[] calldata _tokens) external {
 		require(msg.sender == governance, "!gov");
 		_notifyAllExtraReward(_tokens);
+		_distributeSDT();
 	}
 
 	function _notifyAllExtraReward(address[] memory _tokens) internal {
@@ -78,7 +82,13 @@ contract BaseAccumulator {
 		uint length = _tokens.length;
 		for(uint i; i < length; ++i){
 			amount = IERC20(_tokens[i]).balanceOf(address(this));
-			_notifyReward(_tokens[i], amount, true);
+			_notifyReward(_tokens[i], amount);
+		}
+	}
+
+	function _distributeSDT() internal {
+		if (sdtDistributor != address(0)) {
+			ISDTDistributor(sdtDistributor).distribute(gauge);
 		}
 	}
 
@@ -87,18 +97,13 @@ contract BaseAccumulator {
 	/// @param _amount amount to notify
 	function _notifyReward(
 		address _tokenReward,
-		uint256 _amount,
-		bool _distributeSDT
+		uint256 _amount
 	) internal {
 		require(gauge != address(0), "gauge not set");
 		require(_amount > 0, "set an amount > 0");
 		uint256 balanceBefore = IERC20(_tokenReward).balanceOf(address(this));
 		require(balanceBefore >= _amount, "amount not enough");
 		if (ILiquidityGauge(gauge).reward_data(_tokenReward).distributor != address(0)) {
-			if (_distributeSDT && sdtDistributor != address(0)) {
-				// Distribute SDT
-				ISDTDistributor(sdtDistributor).distribute(gauge);
-			}
 			uint256 claimerReward = (_amount * claimerFee) / 10000;
 			IERC20(_tokenReward).transfer(msg.sender, claimerReward);
 			_amount -= claimerReward;

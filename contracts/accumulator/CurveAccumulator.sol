@@ -15,12 +15,14 @@ contract CurveAccumulator is BaseAccumulator {
 	/// @notice Notify a 3crv amount to the LGV4
 	/// @param _amount amount to notify after the claim
 	function notify(uint256 _amount) external {
-		_notifyReward(tokenReward, _amount, true);
+		_notifyReward(tokenReward, _amount);
+		_distributeSDT();
 	}
 
 	/// @notice Notify all 3crv accumulator balance to the LGV4
 	function notifyAll() external {
 		uint256 crv3Amount = IERC20(CRV3).balanceOf(address(this));
-		_notifyReward(tokenReward, crv3Amount, true);
+		_notifyReward(tokenReward, crv3Amount);
+		_distributeSDT();
 	}
 }
