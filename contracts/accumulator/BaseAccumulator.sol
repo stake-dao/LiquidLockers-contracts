@@ -56,6 +56,32 @@ contract BaseAccumulator {
 		_notifyReward(_tokenReward, amount, true);
 	}
 
+	function notifyExtraReward(address[] calldata _tokens, uint[] calldata amounts) external {
+		require(msg.sender == governance, "!gov");
+		_notifyExtraReward(_tokens, amounts);
+	}
+
+	function _notifyExtraReward(address[] memory _tokens, uint[] memory amounts) internal {
+		uint length = _tokens.length;
+		for(uint i; i < length; ++i){
+			_notifyReward(_tokens[i], amounts[i], true);
+		}
+	}
+
+	function notifyAllExtraReward(address[] calldata _tokens) public {
+		require(msg.sender == governance, "!gov");
+		_notifyAllExtraReward(_tokens);
+	}
+
+	function _notifyAllExtraReward(address[] memory _tokens) internal {
+		uint amount;
+		uint length = _tokens.length;
+		for(uint i; i < length; ++i){
+			amount = IERC20(_tokens[i]).balanceOf(address(this));
+			_notifyReward(_tokens[i], amount, true);
+		}
+	}
+
 	/// @notice Notify the new reward to the LGV4
 	/// @param _tokenReward token to notify
 	/// @param _amount amount to notify
@@ -69,7 +95,7 @@ contract BaseAccumulator {
 		uint256 balanceBefore = IERC20(_tokenReward).balanceOf(address(this));
 		require(balanceBefore >= _amount, "amount not enough");
 		if (ILiquidityGauge(gauge).reward_data(_tokenReward).distributor != address(0)) {
-			if (_distributeSDT) {
+			if (_distributeSDT && sdtDistributor != address(0)) {
 				// Distribute SDT
 				ISDTDistributor(sdtDistributor).distribute(gauge);
 			}
