@@ -14,7 +14,7 @@ contract AngleAccumulatorV2 is BaseAccumulator {
 	address public constant ANGLE = 0x31429d1856aD1377A8A0079410B297e1a9e214c2;
 
 	/* ========== CONSTRUCTOR ========== */
-	constructor(address _tokenReward) BaseAccumulator(_tokenReward) {}
+	constructor(address _tokenReward, address _gauge) BaseAccumulator(_tokenReward, _gauge) {}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
 	/// @notice Claims rewards from the locker and notify an amount to the LGV4

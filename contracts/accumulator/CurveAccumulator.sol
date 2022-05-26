@@ -9,7 +9,7 @@ contract CurveAccumulator is BaseAccumulator {
 	address public constant CRV3 = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
 
 	/* ========== CONSTRUCTOR ========== */
-	constructor(address _tokenReward) BaseAccumulator(_tokenReward) {}
+	constructor(address _tokenReward, address _gauge) BaseAccumulator(_tokenReward, _gauge) {}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
 	/// @notice Notify a 3crv amount to the LGV4

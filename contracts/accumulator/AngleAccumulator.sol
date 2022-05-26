@@ -7,7 +7,7 @@ import "./BaseAccumulator.sol";
 /// @author StakeDAO
 contract AngleAccumulator is BaseAccumulator {
 	/* ========== CONSTRUCTOR ========== */
-	constructor(address _tokenReward) BaseAccumulator(_tokenReward) {}
+	constructor(address _tokenReward, address _gauge) BaseAccumulator(_tokenReward, _gauge) {}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
 	/// @notice Claims rewards from the locker and notify an amount to the LGV4
