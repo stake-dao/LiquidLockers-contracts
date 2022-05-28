@@ -579,7 +579,7 @@ contract MultiRewards is IRewards{
         rewardData[_rewardsToken].lastUpdateTime = block.timestamp;
         rewardData[_rewardsToken].periodFinish = block.timestamp;
         rewardDistributors[_rewardsToken][_distributor] = true;
-        emit RewardAdded(_rewardsToken, _distributor);
+        emit RewardAdded2(_rewardsToken, _distributor);
     }
 
     // Modify approval for an address to call notifyRewardAmount
@@ -733,7 +733,7 @@ contract MultiRewards is IRewards{
         // of transactions required and ensure correctness of the _reward amount
         IERC20(_rewardsToken).safeTransferFrom(msg.sender, address(this), _reward);
         
-        emit RewardAdded(_rewardsToken, _reward);
+        emit RewardAdded1(_rewardsToken, _reward);
     }
 
     // Added to support recovering LP Rewards from other systems such as BAL to be distributed to holders
@@ -765,13 +765,13 @@ contract MultiRewards is IRewards{
     }
 
     /* ========== EVENTS ========== */
-    event RewardAdded(address indexed _token, uint256 _reward);
+    event RewardAdded1(address indexed _token, uint256 _reward);
     event Deposited(address indexed _user, uint256 _amount);
     event Withdrawn(address indexed _user, uint256 _amount);
     event RewardPaid(address indexed _user, address indexed _rewardsToken, uint256 _reward);
     event Recovered(address _token, uint256 _amount);
     event HookSet(address _hook);
     event Activate();
-    event RewardAdded(address indexed _reward, address indexed _distributor);
+    event RewardAdded2(address indexed _reward, address indexed _distributor);
     event RewardDistributorApproved(address indexed _reward, address indexed _distributor);
 }
