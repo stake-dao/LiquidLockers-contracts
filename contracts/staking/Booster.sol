@@ -97,6 +97,8 @@ interface IPoolRegistry {
 	function setRewardActiveOnCreation(bool _active) external;
 
 	function setRewardImplementation(address _imp) external;
+
+	function setDistributor(address _distributor) external;
 }
 
 /*
@@ -250,7 +252,10 @@ contract Booster {
 		emit Recovered(_tokenAddress, _tokenAmount);
 	}
 
-	// ======== Start Liquid Locker Management Section ======== */
+
+
+
+	// #=#=#=#=#=#=#=# Start Liquid Locker Management Section #=#=#=#=#=#=#=# */
 	function createLock(uint256 _value, uint256 _unlockTime) external onlyOwner {
 		ILocker(proxy).createLock(_value, _unlockTime);
 	}
@@ -320,7 +325,7 @@ contract Booster {
 
 	// #=#=#=#=#=#=#=# End of Liquid Locker Management Section #=#=#=#=#=#=#=# //
 
-	// ======== Start Pool Registry Management Section ======== //
+	// #=#=#=#=#=#=#=# Start Pool Registry Management Section #=#=#=#=#=#=#=# //
 
 	//add pool on registry
 	function addPool(
@@ -334,6 +339,10 @@ contract Booster {
 	//set a new reward pool implementation for future pools
 	function setPoolRewardImplementation(address _impl) external onlyPoolManager {
 		IPoolRegistry(poolRegistry).setRewardImplementation(_impl);
+	}
+
+	function setDistributor(address _distributor) external onlyOwner {
+		IPoolRegistry(poolRegistry).setDistributor(_distributor);
 	}
 
 	//deactivate a pool
@@ -357,19 +366,21 @@ contract Booster {
 
 		//make voterProxy call proxyToggleStaker(vault) on the pool's stakingAddress to set it as a proxied child
 		bytes memory data = abi.encodeWithSelector(bytes4(keccak256("proxyToggleStaker(address)")), vault);
-		ILocker(proxy).execute(stakeAddress, uint256(0), data);
+		(bool success, ) = ILocker(proxy).execute(stakeAddress, uint256(0), data);
+		require(success, "Failed proxy toggle");
 
 		//call proxy initialize
 		IProxyVault(vault).initialize(msg.sender, stakeAddress, stakeToken, rewards);
 
 		//set vault vefxs proxy
 		data = abi.encodeWithSelector(bytes4(keccak256("setVeFXSProxy(address)")), proxy);
-		ILocker(proxy).execute(vault, uint256(0), data);
+		(success, ) = ILocker(proxy).execute(vault, uint256(0), data);
+		require(success, "Failed set Proxy");
 	}
 
 	// #=#=#=#=#=#=#=# End of Pool Registry Management Section #=#=#=#=#=#=#=# //
 
-	// ======== Start Deprecated Section ======== //
+	// #=#=#=#=#=#=#=# Start Deprecated Section #=#=#=#=#=#=#=# //
 	// This will surely be removed, because StakeDAO handles fees differently
 	//vote for gauge weights
 	/*
@@ -410,7 +421,7 @@ contract Booster {
     */
 	// #=#=#=#=#=#=#=# End of Deprecated Section #=#=#=#=#=#=#=# //
 
-	/* ========== EVENTS ========== */
+	/* #=#=#=#=#=#=#=#== EVENTS #=#=#=#=#=#=#=#== */
 	event SetPendingOwner(address indexed _address);
 	event OwnerChanged(address indexed _address);
 	event FeeQueueChanged(address indexed _address);

@@ -11,9 +11,9 @@
 # Mostly forked from Curve, except that now there is no direct link between the gauge controller
 # and the gauges. In this implementation, SDT rewards are like any other token rewards.
 
-from vyper.interfaces import ERC20
+#from vyper.interfaces import ERC20
 
-implements: ERC20
+#implements: ERC20
 
 interface VotingEscrow:
     def user_point_epoch(addr: address) -> uint256: view
@@ -22,9 +22,12 @@ interface VotingEscrow:
 interface VotingEscrowBoost:
     def adjusted_balance_of(_account: address) -> uint256: view
 
-interface ERC20Extended:
-    def symbol() -> String[26]: view
-    def decimals() -> uint256: view
+interface PoolRegistry: 
+    def vaultMap(_poolId: uint256, _owner : address) -> address: view
+
+#interface ERC20Extended:
+#    def symbol() -> String[26]: view
+#    def decimals() -> uint256: view
 
 
 event Deposit:
@@ -112,10 +115,12 @@ claim_data: HashMap[address, HashMap[address, uint256]]
 admin: public(address)
 future_admin: public(address)
 claimer: public(address)
+poolRegistry: public(address)
 
 initialized: public(bool)
 
 vault:public(address)
+pid: public(uint256)
 
 @external
 def __init__():
@@ -127,16 +132,14 @@ def __init__():
     self.initialized = True
 
 @external
-def initialize(_staking_token: address, _admin: address, _SDT: address, _voting_escrow: address, _veBoost_proxy: address, _distributor: address,_vault:address,symbol:String[26]):
+def initialize(_admin: address, _SDT: address, _voting_escrow: address, _veBoost_proxy: address, _distributor: address, _pid: uint256, _poolRegistry: address):
     """
     @notice Contract initializer
-    @param _staking_token Liquidity Pool contract address / remove
     @param _admin Admin who can kill the gauge
     @param _SDT Address of the SDT token
     @param _voting_escrow Address of the veSDT contract
     @param _veBoost_proxy Address of the proxy contract used to query veSDT balances and taking into account potential delegations
     @param _distributor Address of the contract responsible for distributing SDT tokens to this gauge
-    cancel vault, symbol, stacking token
     """
     assert self.initialized == False #dev: contract is already initialized
     self.initialized = True
@@ -146,24 +149,25 @@ def initialize(_staking_token: address, _admin: address, _SDT: address, _voting_
     assert _voting_escrow != ZERO_ADDRESS
     assert _veBoost_proxy != ZERO_ADDRESS
     assert _distributor != ZERO_ADDRESS
-    assert _vault != ZERO_ADDRESS
+    #assert _vault != ZERO_ADDRESS
 
     self.admin = _admin
-    self.staking_token = _staking_token
-    self.decimal_staking_token = ERC20Extended(_staking_token).decimals()
+    #self.staking_token = _staking_token
+    #self.decimal_staking_token = ERC20Extended(_staking_token).decimals()
 
-    self.name = concat("Stake DAO ", symbol, " Gauge")
-    self.symbol = concat("sd",symbol, "-gauge")
+    #self.name = concat("Stake DAO ", symbol, " Gauge")
+    #self.symbol = concat("sd",symbol, "-gauge")
     self.SDT = _SDT
     self.voting_escrow = _voting_escrow
     self.veBoost_proxy = _veBoost_proxy
-    self.vault = _vault
+    self.pid = _pid
+    self.poolRegistry = _poolRegistry
+    #self.vault = _vault
 
     # add in all liquidityGauge the SDT reward - the distribution could be null though
     self.reward_data[_SDT].distributor = _distributor
     self.reward_tokens[0] = _SDT
     self.reward_count = 1
-    
 
 @view
 @external
@@ -188,11 +192,11 @@ def _update_liquidity_limit(addr: address, l: uint256, L: uint256):
     """
     # To be called after totalSupply is updated
     voting_balance: uint256 = VotingEscrowBoost(self.veBoost_proxy).adjusted_balance_of(addr)
-    voting_total: uint256 = ERC20(self.voting_escrow).totalSupply()
+    #voting_total: uint256 = ERC20(self.voting_escrow).totalSupply()
 
     lim: uint256 = l * TOKENLESS_PRODUCTION / 100
-    if voting_total > 0:
-        lim += L * voting_balance / voting_total * (100 - TOKENLESS_PRODUCTION) / 100
+    #if voting_total > 0:
+    #    lim += L * voting_balance / voting_total * (100 - TOKENLESS_PRODUCTION) / 100
 
     lim = min(l, lim)
     old_bal: uint256 = self.working_balances[addr]
@@ -393,7 +397,7 @@ def kick(addr: address):
     )
     _balance: uint256 = self.balanceOf[addr]
 
-    assert ERC20(self.voting_escrow).balanceOf(addr) == 0 or t_ve > t_last # dev: kick not allowed
+    #assert ERC20(self.voting_escrow).balanceOf(addr) == 0 or t_ve > t_last # dev: kick not allowed
     assert self.working_balances[addr] > _balance * TOKENLESS_PRODUCTION / 100  # dev: kick not needed
 
     total_supply: uint256 = self.totalSupply
@@ -404,36 +408,37 @@ def kick(addr: address):
 
 @external
 @nonreentrant('lock')
-def deposit(_value: uint256, _addr: address = msg.sender, _claim_rewards: bool = False):
+def deposit(_value: uint256, _addr: address , _claim_rewards: bool = False):
     """
     @notice Deposit `_value` LP tokens
     @dev Depositting also claims pending reward tokens
     @param _value Number of tokens to deposit
     @param _addr Address to deposit for
     """
-    #change a little bit 
-    assert msg.sender == self.vault #only vault contract can deposit
+    #only personal vault can deposit
+    assert PoolRegistry(self.poolRegistry).vaultMap(self.pid,_addr) == msg.sender, "!only personal vault" 
+
     total_supply: uint256 = self.totalSupply
 
     if _value != 0:
         is_rewards: bool = self.reward_count != 0
         if is_rewards:
-            self._checkpoint_rewards(_addr, total_supply, _claim_rewards, ZERO_ADDRESS)
+            self._checkpoint_rewards(msg.sender, total_supply, _claim_rewards, ZERO_ADDRESS)
 
         total_supply += _value
-        new_balance: uint256 = self.balanceOf[_addr] + _value
+        new_balance: uint256 = self.balanceOf[msg.sender] + _value
         # define my own balance of and so on 
-        self.balanceOf[_addr] = new_balance
+        self.balanceOf[msg.sender] = new_balance
         self.totalSupply = total_supply
 
-        self._update_liquidity_limit(_addr, new_balance, total_supply)
+        self._update_liquidity_limit(msg.sender, new_balance, total_supply)
         #remove this
-        ERC20(self.staking_token).transferFrom(msg.sender, self, _value)
+        #ERC20(self.staking_token).transferFrom(msg.sender, self, _value)
     else:
-        self._checkpoint_rewards(_addr, total_supply, False, ZERO_ADDRESS, True)
+        self._checkpoint_rewards(msg.sender, total_supply, False, ZERO_ADDRESS, True)
 
-    log Deposit(_addr, _value)
-    log Transfer(ZERO_ADDRESS, _addr, _value)
+    log Deposit(msg.sender, _value)
+    #log Transfer(ZERO_ADDRESS, _addr, _value)
 
 
 @external
@@ -444,7 +449,8 @@ def withdraw(_value: uint256, _addr: address, _claim_rewards: bool = False):
     @dev Withdrawing also claims pending reward tokens
     @param _value Number of tokens to withdraw
     """
-    assert msg.sender == self.vault #only vault contract can withdraw
+    #assert msg.sender == self.vault #only vault contract can withdraw
+    assert PoolRegistry(self.poolRegistry).vaultMap(self.pid,_addr) == _addr, "!only personal vault" 
     total_supply: uint256 = self.totalSupply
 
     if _value != 0:
@@ -459,7 +465,7 @@ def withdraw(_value: uint256, _addr: address, _claim_rewards: bool = False):
 
         self._update_liquidity_limit(_addr, new_balance, total_supply)
 
-        ERC20(self.staking_token).transfer(msg.sender, _value)
+        #ERC20(self.staking_token).transfer(msg.sender, _value)
     else:
         self._checkpoint_rewards(_addr, total_supply, False, ZERO_ADDRESS, True)
 
