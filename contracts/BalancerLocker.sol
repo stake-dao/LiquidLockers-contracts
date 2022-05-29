@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/VeToken.sol";
-import "./interfaces/GaugeController.sol";
+import "./interfaces/IGaugeController.sol";
 import "./interfaces/BalancerFeeDistributor.sol";
 
 /// @title BalancerLocker
@@ -88,16 +88,16 @@ contract BalancerLocker {
 	function claimRewards(address _token, address _recipient) external onlyGovernanceOrAcc {
 		uint256 claimed = BalancerFeeDistributor(feeDistributor).claimToken(address(this), _token);
 		emit TokenClaimed(_recipient, _token, claimed);
-		IERC20(_token).safeTransfer(_recipient,  claimed);
+		IERC20(_token).safeTransfer(_recipient, claimed);
 	}
 
 	function claimAllRewards(address[] calldata _tokens, address _recipient) external onlyGovernanceOrAcc {
 		uint256[] memory claimed = BalancerFeeDistributor(feeDistributor).claimTokens(address(this), _tokens);
-		uint length = _tokens.length;
-		for(uint i; i < length; ++i){
+		uint256 length = _tokens.length;
+		for (uint256 i; i < length; ++i) {
 			IERC20(_tokens[i]).safeTransfer(_recipient, claimed[i]);
 		}
-		emit TokensClaimed(_recipient, _tokens,  claimed);
+		emit TokensClaimed(_recipient, _tokens, claimed);
 	}
 
 	/// @notice Withdraw the BALANCER_POOL_TOKEN from veBAL
@@ -115,12 +115,12 @@ contract BalancerLocker {
 	/// @param _gauge The gauge address to vote for
 	/// @param _weight The weight with which to vote
 	function voteGaugeWeight(address _gauge, uint256 _weight) external onlyGovernance {
-		GaugeController(gaugeController).vote_for_gauge_weights(_gauge, _weight);
+		IGaugeController(gaugeController).vote_for_gauge_weights(_gauge, _weight);
 		emit VotedOnGaugeWeight(_gauge, _weight);
 	}
 
-	/// @notice Set new governance address 
-	/// @param _governance governance address 
+	/// @notice Set new governance address
+	/// @param _governance governance address
 	function setGovernance(address _governance) external onlyGovernance {
 		governance = _governance;
 		emit GovernanceChanged(_governance);
@@ -133,7 +133,7 @@ contract BalancerLocker {
 		emit BalancerDepositorChanged(_depositor);
 	}
 
-	/// @notice Set the fee distributor 
+	/// @notice Set the fee distributor
 	/// @param _newFD fee distributor address
 	function setFeeDistributor(address _newFD) external onlyGovernance {
 		feeDistributor = _newFD;
@@ -141,7 +141,7 @@ contract BalancerLocker {
 	}
 
 	/// @notice Set the gauge controller
-	/// @param _gaugeController gauge controller address 
+	/// @param _gaugeController gauge controller address
 	function setGaugeController(address _gaugeController) external onlyGovernance {
 		gaugeController = _gaugeController;
 		emit GaugeControllerChanged(_gaugeController);
