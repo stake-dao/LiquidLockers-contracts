@@ -6,17 +6,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const THREE_CRV = "0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490";
-  const gauge = "0x7f50786A0b15723D741727882ee99a0BF34e3466";
+  const BPT = "0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56";
+  const locker = "0xea79d1A83Da6DB43a85942767C389fE0ACf336A5";
+  const minter = "0xF24d8651578a55b0C119B9910759a351A3458895";
 
-  await deploy("CURVEAccumulator", {
-    contract: "CurveAccumulator",
+  await deploy("BalancerDEPOSITOR", {
+    contract: "BalancerDepositor",
     from: deployer,
-    args: [THREE_CRV, gauge],
+    args: [BPT, locker, minter],
     log: true
   });
 };
 export default func;
 
-func.skip = async () => false;
-func.tags = ["CurveAccumulator"];
+func.skip = async () => true;
+func.tags = ["Depositor"];

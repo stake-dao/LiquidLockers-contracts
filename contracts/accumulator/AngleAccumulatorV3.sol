@@ -6,7 +6,7 @@ import "../interfaces/IStableMaster.sol";
 
 /// @title A contract that can claim sanUSDC_EUR rewards, burn them for USDC and mint agEUR to send to LGV4
 /// @author StakeDAO
-contract AngleAccumulatorV2 is BaseAccumulator {
+contract AngleAccumulatorV3 is BaseAccumulator {
 	address public constant STABLE_MASTER = 0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87;
 	address public constant POOL_MANAGER = 0xe9f183FC656656f1F17af1F2b0dF79b8fF9ad8eD;
 	address public constant SAN_USDC_EUR = 0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad;
