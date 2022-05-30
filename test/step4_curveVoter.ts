@@ -61,17 +61,19 @@ describe("Curve Voter", function () {
           "0xd4B22fEdcA85E684919955061fDf353b9d38389b",
           "0x9582C4ADACB3BCE56Fea3e590F05c3ca2fb9C477",
           "0x03fFC218C7A9306D21193565CbDc4378952faA8c",
+          "0x1cEBdB0856dd985fAe9b8fEa2262469360B8a3a6",
+          "0x60355587a8D4aa67c2E64060Ab36e566B9bCC000",
           "0x663FC22e92f26C377Ddf3C859b560C4732ee639a",
-          "0xc5aE4B5F86332e70f3205a8151Ee9eD9F71e0797"
+          "0x12dCD9E8D1577b5E4F066d8e7D404404Ef045342"
         ],
-        [0, 3900, 786, 210, 0]
+        [0, 3810, 804, 10, 53, 206, 4880]
       );
       const alUSDAllocationAfter = await curveGaugeController.vote_user_slopes(
         CURVE_LOCKER,
         "0x9582C4ADACB3BCE56Fea3e590F05c3ca2fb9C477"
       );
       expect(alUSDAllocationBefore[1]).to.be.equal(4607);
-      expect(alUSDAllocationAfter[1]).to.be.equal(3900);
+      expect(alUSDAllocationAfter[1]).to.be.equal(3810);
     });
   });
 });
