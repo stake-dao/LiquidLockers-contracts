@@ -87,6 +87,7 @@ decimal_staking_token: public(uint256)
 
 balanceOf: public(HashMap[address, uint256])
 totalSupply: public(uint256)
+# to be remove
 allowance: public(HashMap[address, HashMap[address, uint256]])
 
 name: public(String[64])
@@ -119,6 +120,7 @@ poolRegistry: public(address)
 
 initialized: public(bool)
 
+# to be removed
 vault:public(address)
 pid: public(uint256)
 
@@ -346,6 +348,7 @@ def set_rewards_receiver(_receiver: address):
     """
     self.rewards_receiver[msg.sender] = _receiver
 
+# to be removed
 @external
 def set_vault(_vault:address):
     """
@@ -354,6 +357,7 @@ def set_vault(_vault:address):
     """
     assert self.admin == msg.sender #dev : only admin can call this function 
     self.vault = _vault
+
 @external
 @nonreentrant('lock')
 def claim_rewards(_addr: address = msg.sender, _receiver: address = ZERO_ADDRESS):

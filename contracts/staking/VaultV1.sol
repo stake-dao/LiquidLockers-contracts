@@ -7,6 +7,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
+import "../interfaces/ILiquidityGaugeStratFrax.sol";
+
 interface IProxyVault {
 	enum VaultType {
 		Erc20Baic,
@@ -106,24 +108,6 @@ interface IRewards {
 	function rewardTokenLength() external view returns (uint256);
 
 	function active() external view returns (bool);
-}
-
-interface IRewardsLGV4 {
-	function balanceOf(address _address) external view returns (uint256);
-
-	function initialized() external view returns (bool);
-
-	function deposit(
-		uint256 _value,
-		address _addr,
-		bool _claim_reward
-	) external;
-
-	function withdraw(
-		uint256 _value,
-		address _addr,
-		bool _claim_reward
-	) external;
 }
 
 /**
@@ -608,17 +592,17 @@ contract StakingProxyBase is IProxyVault {
 	//checkpoint and add/remove weight to convex rewards contract
 	function _checkpointRewards() internal {
 		//if rewards are active, checkpoint
-		if (IRewardsLGV4(rewards).initialized()) {
+		if (ILiquidityGaugeStratFrax(rewards).initialized()) {
 			//using liquidity shares from staking contract will handle rebasing tokens correctly
 			uint256 userLiq = IFraxFarmBase(stakingAddress).lockedLiquidityOf(address(this));
 			//get current balance of reward contract
-			uint256 bal = IRewardsLGV4(rewards).balanceOf(address(this));
+			uint256 bal = ILiquidityGaugeStratFrax(rewards).balanceOf(address(this));
 			if (userLiq >= bal) {
 				//add the difference to reward contract
-				IRewardsLGV4(rewards).deposit(userLiq - bal, owner, false);
+				ILiquidityGaugeStratFrax(rewards).deposit(userLiq - bal, owner, false);
 			} else {
 				//remove the difference from the reward contract
-				IRewardsLGV4(rewards).withdraw(bal - userLiq, owner, false);
+				ILiquidityGaugeStratFrax(rewards).withdraw(bal - userLiq, owner, false);
 			}
 		}
 	}
@@ -901,11 +885,14 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 	//helper function to combine earned tokens on staking contract and any tokens that are on this vault
 	function earned() external view override returns (address[] memory token_addresses, uint256[] memory total_earned) {
 		//get list of reward tokens
+
 		address[] memory rewardTokens = IFraxFarmERC20(stakingAddress).getAllRewardTokens();
 		uint256[] memory stakedearned = IFraxFarmERC20(stakingAddress).earned(address(this));
 
-		token_addresses = new address[](rewardTokens.length + IRewards(rewards).rewardTokenLength());
-		total_earned = new uint256[](rewardTokens.length + IRewards(rewards).rewardTokenLength());
+		uint256 extraRewardsLength = ILiquidityGaugeStratFrax(rewards).reward_count();
+
+		token_addresses = new address[](rewardTokens.length + extraRewardsLength);
+		total_earned = new uint256[](rewardTokens.length + extraRewardsLength);
 		//add any tokens that happen to be already claimed but sitting on the vault
 		//(ex. withdraw claiming rewards)
 		for (uint256 i = 0; i < rewardTokens.length; i++) {
@@ -913,10 +900,10 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 			total_earned[i] = stakedearned[i] + IERC20(rewardTokens[i]).balanceOf(address(this));
 		}
 
-		IRewards.EarnedData[] memory extraRewards = IRewards(rewards).claimableRewards(address(this));
-		for (uint256 i = 0; i < extraRewards.length; i++) {
-			token_addresses[i + rewardTokens.length] = extraRewards[i].token;
-			total_earned[i + rewardTokens.length] = extraRewards[i].amount;
+		for (uint256 i = 0; i < extraRewardsLength; i++) {
+			address token = ILiquidityGaugeStratFrax(rewards).reward_tokens(i);
+			token_addresses[i + rewardTokens.length] = token;
+			total_earned[i + rewardTokens.length] = ILiquidityGaugeStratFrax(rewards).claimable_reward(address(this), token);
 		}
 	}
 

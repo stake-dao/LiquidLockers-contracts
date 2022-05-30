@@ -49,8 +49,8 @@ interface ILiquidityGaugeFrax {
 		address _voting_escrow,
 		address _veBoost_proxy,
 		address _distributor,
-        uint256 _pid,
-        address _poolRegistry
+		uint256 _pid,
+		address _poolRegistry
 	) external;
 }
 
@@ -150,7 +150,7 @@ contract PoolRegistry {
 		if (rewardImplementation != address(0)) {
 			rewards = IProxyFactory(proxyFactory).clone(rewardImplementation);
 			//IRewards(rewards).initialize(poolInfo.length, rewardsStartActive);
-			ILiquidityGaugeFrax(rewards).initialize(owner, SDT, veSDT, VEBOOST, distributor, poolInfo.length,address(this));
+			ILiquidityGaugeFrax(rewards).initialize(owner, SDT, veSDT, VEBOOST, distributor, poolInfo.length, address(this));
 		}
 
 		poolInfo.push(

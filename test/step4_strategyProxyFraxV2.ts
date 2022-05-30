@@ -31,6 +31,7 @@ const MAXLOCK = 3 * 60 * 60 * 24 * 364;
 const NULL = "0x0000000000000000000000000000000000000000";
 const STDDEPLOYER = "0xb36a0671b3d49587236d7833b01e79798175875f";
 const SDT = "0x73968b9a57c6e53d41345fd57a6e6ae27d6cdb2f";
+const SDT_HOLDER = "0x957fFde35b2d84F01d9BCaEb7528A2BCC268b9C1";
 const VE_SDT = "0x0C30476f66034E11782938DF8e4384970B6c9e8a";
 const VESDT_HOLDER = "0xdceb0bb3311342e3ce9e49f57affce9deac40ba1";
 const MASTERCHEF = "0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c";
@@ -64,6 +65,7 @@ describe("StakeDAO <> FRAX", function () {
   let timelock: JsonRpcSigner;
   let veSdtHolder: JsonRpcSigner;
   let govFrax: JsonRpcSigner;
+  let sdtHolder: JsonRpcSigner;
 
   let locker: Contract;
   let fxsTemple: Contract;
@@ -116,12 +118,17 @@ describe("StakeDAO <> FRAX", function () {
       method: "hardhat_impersonateAccount",
       params: [GOVFRAX]
     });
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [SDT_HOLDER]
+    });
     deployer = ethers.provider.getSigner(STDDEPLOYER);
     lpHolder = ethers.provider.getSigner(FXS_TEMPLE_HOLDER);
     noob = ethers.provider.getSigner(nooby.address);
     timelock = ethers.provider.getSigner(TIMELOCK);
     veSdtHolder = ethers.provider.getSigner(VESDT_HOLDER);
     govFrax = ethers.provider.getSigner(GOVFRAX);
+    sdtHolder = ethers.provider.getSigner(SDT_HOLDER)
 
     await network.provider.send("hardhat_setBalance", [STDDEPLOYER, ETH_100]);
     await network.provider.send("hardhat_setBalance", [FXS_TEMPLE_HOLDER, ETH_100]);
@@ -137,7 +144,7 @@ describe("StakeDAO <> FRAX", function () {
     const poolRegistryContract = await ethers.getContractFactory("PoolRegistry");
     const boosterContract = await ethers.getContractFactory("Booster");
     const feeRegistryContract = await ethers.getContractFactory("FeeRegistry");
-    LiquidityGaugeV4FraxContract = await ethers.getContractFactory("LiquidityGaugeV4StratFrax")
+    LiquidityGaugeV4FraxContract = await ethers.getContractFactory("LiquidityGaugeV4StratFrax");
     VaultV1Contract = await ethers.getContractFactory("VaultV1");
     MultiRewardContract = await ethers.getContractFactory("MultiRewards");
 
@@ -189,14 +196,9 @@ describe("StakeDAO <> FRAX", function () {
     await sdtDProxy.connect(deployer).initializeMasterchef(pidSdtD);
     await sdtDProxy.connect(deployer).setDistribution(true);
 
-
-
-
-
-
     /* ==== set LL as a valid veFXS Proxy ==== */
     await fxsTempleGauge.connect(govFrax).toggleValidVeFXSProxy(locker.address);
-    
+
     /* ==== Deploy Fee Registry ==== */
     feeRegistry = await feeRegistryContract.connect(deployer).deploy(veSDTProxy.address);
 
@@ -206,7 +208,7 @@ describe("StakeDAO <> FRAX", function () {
     /* ==== Deploy MutliReward ==== */
     mutliRewards = await MultiRewardContract.connect(deployer).deploy(poolRegistry.address);
     mutliRewards2 = await MultiRewardContract.connect(deployer).deploy(poolRegistry.address);
-    liquidityGauge = await LiquidityGaugeV4FraxContract.connect(deployer).deploy()
+    liquidityGauge = await LiquidityGaugeV4FraxContract.connect(deployer).deploy();
 
     /* ==== Deploy VaultV1 ==== */
     vaultV1Template = await VaultV1Contract.connect(deployer).deploy();
@@ -217,8 +219,6 @@ describe("StakeDAO <> FRAX", function () {
 
     // LL give governance right to the Booster
     await locker.connect(deployer).setGovernance(booster.address);
-
-
   });
 
   describe("### Testing booster contract ###", function () {
@@ -230,7 +230,6 @@ describe("StakeDAO <> FRAX", function () {
       // Booster should be the operator of the pool registry
 
       describe("Testing all the functions", function () {
-
         it("Should set booster contract as operator on poolRegistry", async function () {
           const opBefore = await poolRegistry.operator();
           await poolRegistry.connect(deployer).setOperator(booster.address);
@@ -252,7 +251,7 @@ describe("StakeDAO <> FRAX", function () {
 
         it("Should set distributor", async function () {
           await booster.connect(deployer).setDistributor(sdtDistributor.address);
-        })
+        });
 
         it("Should set reward active on creation to true", async function () {
           const before = await poolRegistry.rewardsStartActive();
@@ -280,7 +279,7 @@ describe("StakeDAO <> FRAX", function () {
           expect(PoolInfo0.rewardsAddress).eq(rewardsPID0.address);
           expect(PoolInfo0.active).eq(1);
         });
-        
+
         it("Should create a personal vault", async function () {
           const poolVaultLengthBefore = await poolRegistry.poolVaultLength(0);
 
@@ -291,17 +290,17 @@ describe("StakeDAO <> FRAX", function () {
           const vaultMap = await poolRegistry.vaultMap(0, lpHolder._address);
           const poolVaultLengthAfter = await poolRegistry.poolVaultLength(0);
           const veFXSMulti = await fxsTempleGauge.veFXSMultiplier(vaultAddress);
-          const owner = await personalVault1.owner()
-          
+          const owner = await personalVault1.owner();
+
           //console.log((veFXSMulti/10**18).toString());
           //console.log(poolVaultLengthBefore)
 
           expect(vaultMap).eq(vaultAddress);
           expect(poolVaultLengthBefore).eq(0);
           expect(poolVaultLengthAfter).eq(1);
-          expect(veFXSMulti).gt(0)
-          expect(owner).eq(lpHolder._address)
-          
+          expect(veFXSMulti).gt(0);
+          expect(owner).eq(lpHolder._address);
+
           // To be used after, do not delete it!!
           //await personalVault1.connect(deployer).setFeeRegistry(feeRegistry.address)
         });
@@ -331,9 +330,8 @@ describe("StakeDAO <> FRAX", function () {
           expect(PoolInfo0Before.active).eq(1);
           expect(PoolInfo0After.active).eq(0);
         });
-        
       });
-      
+
       describe("Testing all the reverting cases", function () {
         it("Should failed on setting operator", async function () {
           await expect(poolRegistry.connect(noob).setOperator(booster.address)).to.be.revertedWith("!auth");
@@ -373,134 +371,81 @@ describe("StakeDAO <> FRAX", function () {
         });
       });
 
-      // Works but not on the good section side
-      /*
-            it("Should set active the multiRewards from PID0", async function () {
-                const isActiveBefore = await rewardsPID0.active()
-                await rewardsPID0.connect(deployer).setActive()
-                const isActiveAfter = await rewardsPID0.active()
-                expect(isActiveBefore).eq(false)
-                expect(isActiveAfter).eq(true)
-            })
-            */
-      /*
-            it("Should add SDT as reward", async function () {
-                // For now the distributor is the StakeDAO Deployer
-                // Need to setup the sdtDistributorV2 as the distributor
-                await rewardsPID0.connect(deployer).addReward(SDT, deployer._address)
-
-                await sdt.connect(deployer).approve(rewardsPID0.address, LOCKEDAMOUNT)
-                await rewardsPID0.connect(deployer).notifyRewardAmount(SDT, LOCKEDAMOUNT)
-                const rewardData = await rewardsPID0.rewardData(SDT)
-                //console.log(rewardData)
-            })*/
     });
 
+    describe("Liquidity gauge strat frax section : ", function() {
+      it("Should deposit SDT reward token", async function () {
+        // TODO : Add SDT as reward on PID1 with distributor
+      })
+      // TODO : Add mooooore tests
+    })
+
     describe("Personal vault section : ", function () {
-        it("Should stake locked lp token", async function () {
-          // Setup all for creating a new pool, previous has been killed for testing
-          await booster.connect(deployer).setPoolRewardImplementation(liquidityGauge.address);
-          await booster.connect(deployer).setDistributor(sdtDistributor.address);
-          await booster.connect(deployer).setRewardActiveOnCreation(false);
-          await booster.connect(deployer).addPool(vaultV1Template.address, FXS_TEMPLE_GAUGE, FXS_TEMPLE);
+      it("Should stake locked lp token", async function () {
+        // Setup all for creating a new pool, previous has been killed for testing
+        await booster.connect(deployer).setPoolRewardImplementation(liquidityGauge.address);
+        await booster.connect(deployer).setDistributor(sdtDistributor.address);
+        await booster.connect(deployer).setRewardActiveOnCreation(false);
+        await booster.connect(deployer).addPool(vaultV1Template.address, FXS_TEMPLE_GAUGE, FXS_TEMPLE);
 
-          const NbrsOfPool = await poolRegistry.poolLength();
-          const PoolInfo1 = await poolRegistry.poolInfo(NbrsOfPool-1);
-          rewardsPID1 = LiquidityGaugeV4FraxContract.attach(PoolInfo1.rewardsAddress);
+        const NbrsOfPool = await poolRegistry.poolLength();
+        const PoolInfo1 = await poolRegistry.poolInfo(NbrsOfPool - 1);
+        rewardsPID1 = LiquidityGaugeV4FraxContract.attach(PoolInfo1.rewardsAddress);
 
-          //console.log(NbrsOfPool,PoolInfo1)
+        //console.log(NbrsOfPool,PoolInfo1)
 
-          // Create a vault for the user on the new pool
-          await booster.connect(lpHolder).createVault(NbrsOfPool-1)
-          const vaultAddress = await poolRegistry.vaultMap(NbrsOfPool-1, lpHolder._address)
-          personalVault1 = VaultV1Contract.attach(vaultAddress);
+        // Create a vault for the user on the new pool
+        await booster.connect(lpHolder).createVault(NbrsOfPool - 1);
+        const vaultAddress = await poolRegistry.vaultMap(NbrsOfPool - 1, lpHolder._address);
+        personalVault1 = VaultV1Contract.attach(vaultAddress);
 
-          // Temporary solution, waiting to deploy feeRegistry
-          await personalVault1.connect(deployer).setFeeRegistry(feeRegistry.address)
+        // Temporary solution, waiting to deploy feeRegistry
+        await personalVault1.connect(deployer).setFeeRegistry(feeRegistry.address);
 
-          const balanceOfBefore = await rewardsPID1.balanceOf(personalVault1.address)
-          const totalSupplyBefore = await rewardsPID1.totalSupply()
+        const balanceOfBefore = await rewardsPID1.balanceOf(personalVault1.address);
+        const totalSupplyBefore = await rewardsPID1.totalSupply();
 
-          await fxsTemple.connect(lpHolder).approve(personalVault1.address,LOCKEDAMOUNT)
-          await personalVault1.connect(lpHolder).stakeLocked(LOCKEDAMOUNT, LOCKDURATION)
+        await fxsTemple.connect(lpHolder).approve(personalVault1.address, LOCKEDAMOUNT);
+        await personalVault1.connect(lpHolder).stakeLocked(LOCKEDAMOUNT, LOCKDURATION);
 
-          const balanceOfAfter = await rewardsPID1.balanceOf(personalVault1.address)
-          const totalSupplyAfter = await rewardsPID1.totalSupply()
-          const lockedStakesOfLength = await fxsTempleGauge.lockedStakesOfLength(vaultAddress)
-          const lockedStakesOf = await fxsTempleGauge.lockedStakesOf(personalVault1.address)
+        const balanceOfAfter = await rewardsPID1.balanceOf(personalVault1.address);
+        const totalSupplyAfter = await rewardsPID1.totalSupply();
+        const lockedStakesOfLength = await fxsTempleGauge.lockedStakesOfLength(vaultAddress);
+        const lockedStakesOf = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
 
-          expect(balanceOfBefore).eq(0)
-          expect(balanceOfAfter).eq(LOCKEDAMOUNT)
-          expect(totalSupplyBefore).eq(0)
-          expect(totalSupplyAfter).eq(LOCKEDAMOUNT)
-          expect(lockedStakesOfLength).eq(1)
-          expect(lockedStakesOf[lockedStakesOfLength-1]["kek_id"]).not.eq(0)
-          expect(lockedStakesOf[lockedStakesOfLength-1]["liquidity"]).eq(LOCKEDAMOUNT)
+        expect(balanceOfBefore).eq(0);
+        expect(balanceOfAfter).eq(LOCKEDAMOUNT);
+        expect(totalSupplyBefore).eq(0);
+        expect(totalSupplyAfter).eq(LOCKEDAMOUNT);
+        expect(lockedStakesOfLength).eq(1);
+        expect(lockedStakesOf[lockedStakesOfLength - 1]["kek_id"]).not.eq(0);
+        expect(lockedStakesOf[lockedStakesOfLength - 1]["liquidity"]).eq(LOCKEDAMOUNT);
+      });
 
-        })
+      it("Should add liquidity to a previous deposit", async function () {
+        const lockedStakesOfBefore = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
 
-        it("Should add liquidity to a previous deposit", async function () {
-          const lockedStakesOfBefore = await fxsTempleGauge.lockedStakesOf(personalVault1.address)
+        await fxsTemple.connect(lpHolder).approve(personalVault1.address, LOCKEDAMOUNT);
+        await personalVault1.connect(lpHolder).lockAdditional(lockedStakesOfBefore[0]["kek_id"], LOCKEDAMOUNT);
 
-          await fxsTemple.connect(lpHolder).approve(personalVault1.address,LOCKEDAMOUNT)
-          await personalVault1.connect(lpHolder).lockAdditional(lockedStakesOfBefore[0]["kek_id"],LOCKEDAMOUNT)
+        const lockedStakesOfLength = await fxsTempleGauge.lockedStakesOfLength(personalVault1.address);
+        const lockedStakesOfAfter = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
+        const balanceOf = await rewardsPID1.balanceOf(personalVault1.address);
+        const totalSupply = await rewardsPID1.totalSupply();
 
-          const lockedStakesOfLength = await fxsTempleGauge.lockedStakesOfLength(personalVault1.address)
-          const lockedStakesOfAfter = await fxsTempleGauge.lockedStakesOf(personalVault1.address)
-          const balanceOf = await rewardsPID1.balanceOf(personalVault1.address)
-          const totalSupply = await rewardsPID1.totalSupply()
+        expect(lockedStakesOfAfter[lockedStakesOfLength - 1]["liquidity"]).eq(LOCKEDAMOUNTx2);
+        expect(balanceOf).eq(LOCKEDAMOUNTx2);
+        expect(totalSupply).eq(LOCKEDAMOUNTx2);
+      });
 
-          expect(lockedStakesOfAfter[lockedStakesOfLength-1]["liquidity"]).eq(LOCKEDAMOUNTx2)
-          expect(balanceOf).eq(LOCKEDAMOUNTx2)
-          expect(totalSupply).eq(LOCKEDAMOUNTx2)
-        })
+      it("Should time jump and withdraw locked", async function () {
+        await network.provider.send("evm_increaseTime", [LOCKDURATION]);
+        await network.provider.send("evm_mine", []);
+        const earned = await personalVault1.connect(lpHolder).earned();
 
-        /*
-        it("Create a deposit LP into Frax Gauge", async function () {
-            await fxsTemple.connect(lpHolder).approve(personalVault1.address, LOCKEDAMOUNT)
-            await personalVault1.connect(lpHolder).stakeLocked(LOCKEDAMOUNT, LOCKDURATION)
-        })
-        it("Should withdraw after time increase", async function () {
-            const beforeBalanceLP = await fxsTemple.balanceOf(lpHolder._address)
-            const beforeBalanceFxs = await fxs.balanceOf(lpHolder._address)
-            const beforeBalanceTemple = await temple.balanceOf(lpHolder._address)
-            await network.provider.send("evm_increaseTime", [LOCKDURATION]);
-            await network.provider.send("evm_mine", []);
-            const lockedStakesOf = await fxsTempleGauge.lockedStakesOf(personalVault1.address)
-            const kekId = lockedStakesOf[0]["kek_id"]
-            await personalVault1.connect(lpHolder).withdrawLocked(kekId)
-            const lockedStakesOfAfter = await fxsTempleGauge.lockedStakesOf(personalVault1.address)
-            const afterBalanceLP = await fxsTemple.balanceOf(lpHolder._address)
-            const afterBalanceFxs = await fxs.balanceOf(lpHolder._address)
-            const afterBalanceTemple = await temple.balanceOf(lpHolder._address)
+        //console.log(earned);
+      });
 
-            //console.log("LP : ", (beforeBalanceLP/10**18).toString())
-            //console.log("Fxs: ", (beforeBalanceFxs/10**18).toString())
-            //console.log("Temple: ", (beforeBalanceTemple/10**18).toString())
-            //console.log("LP : ", (afterBalanceLP/10**18).toString())
-            //console.log("Fxs: ", (afterBalanceFxs/10**18).toString())
-            //console.log("Temple: ", (afterBalanceTemple/10**18).toString())
-
-            expect(afterBalanceLP).gt(beforeBalanceLP)
-            expect(afterBalanceFxs).gt(beforeBalanceFxs)
-            expect(afterBalanceTemple).gt(beforeBalanceTemple)
-
-        })
-        it("Should send the reward to the user", async function () {
-            const beforeBalanceSdt = await sdt.balanceOf(lpHolder._address)
-            const earned = await personalVault1.earned()
-            await personalVault1.connect(lpHolder)["getReward()"]()
-            const afterBalanceSdt = await sdt.balanceOf(lpHolder._address)
-
-            //console.log("earned: ",earned)
-            //console.log("Sdt: ",(beforeBalanceSdt/10**18).toString())
-            //console.log("Sdt: ",(afterBalanceSdt/10**18).toString())
-
-            expect(afterBalanceSdt).gt(beforeBalanceSdt)
-
-        })
-        */
-
-        })
+    });
   });
 });
