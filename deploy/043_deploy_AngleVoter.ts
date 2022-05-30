@@ -15,5 +15,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 export default func;
 
-func.skip = async () => true;
+func.skip = async () => false;
 func.tags = ["AngleVoter"];

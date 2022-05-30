@@ -21,14 +21,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const iface = new hre.ethers.utils.Interface(ABI);
 
-  const data = iface.encodeFunctionData("initialize", [
-    stakingToken,
-    admin,
-    SDT,
-    veSDT,
-    veBoostProxy,
-    sdtDistributor
-  ]);
+  const data = iface.encodeFunctionData("initialize", [stakingToken, admin, SDT, veSDT, veBoostProxy, sdtDistributor]);
 
   await deploy(`LiquidityGaugeV4-sdBAL`, {
     contract: "TransparentUpgradeableProxy",
@@ -40,5 +33,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func;
 
-func.skip = async () => false;
+func.skip = async () => true;
 func.tags = ["LiquidityGaugeV4"];
