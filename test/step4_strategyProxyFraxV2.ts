@@ -13,6 +13,7 @@ import FxsTempleGaugeFraxABI from "./fixtures/fxsTempleGauge.json";
 import MASTERCHEFABI from "./fixtures/Masterchef.json";
 import ERC20ABI from "./fixtures/ERC20.json";
 import FXSABI from "./fixtures/FXS.json";
+import DISTRIBUTORABI from "./fixtures/SDTDistributor.json"
 import { Console, info } from "console";
 import exp from "constants";
 import { type } from "os";
@@ -35,6 +36,9 @@ const SDT_HOLDER = "0x957fFde35b2d84F01d9BCaEb7528A2BCC268b9C1";
 const VE_SDT = "0x0C30476f66034E11782938DF8e4384970B6c9e8a";
 const VESDT_HOLDER = "0xdceb0bb3311342e3ce9e49f57affce9deac40ba1";
 const MASTERCHEF = "0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c";
+const SDTDPROXY = "0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C";
+const DEPLOYER_NEW = "0x0dE5199779b43E13B3Bec21e91117E18736BC1A8";
+const DISTRIBUTOR = "0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C"
 
 const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 const TEMPLE = "0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7";
@@ -66,6 +70,7 @@ describe("StakeDAO <> FRAX", function () {
   let veSdtHolder: JsonRpcSigner;
   let govFrax: JsonRpcSigner;
   let sdtHolder: JsonRpcSigner;
+  let deployer_new: JsonRpcSigner;
 
   let locker: Contract;
   let fxsTemple: Contract;
@@ -90,6 +95,7 @@ describe("StakeDAO <> FRAX", function () {
   let rewardsPID0_2: Contract;
   let feeRegistry: Contract;
   let liquidityGauge: Contract;
+  let distributor: Contract;
 
   let VaultV1Contract: any;
   let MultiRewardContract: any;
@@ -122,6 +128,10 @@ describe("StakeDAO <> FRAX", function () {
       method: "hardhat_impersonateAccount",
       params: [SDT_HOLDER]
     });
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [DEPLOYER_NEW]
+    });
     deployer = ethers.provider.getSigner(STDDEPLOYER);
     lpHolder = ethers.provider.getSigner(FXS_TEMPLE_HOLDER);
     noob = ethers.provider.getSigner(nooby.address);
@@ -129,6 +139,7 @@ describe("StakeDAO <> FRAX", function () {
     veSdtHolder = ethers.provider.getSigner(VESDT_HOLDER);
     govFrax = ethers.provider.getSigner(GOVFRAX);
     sdtHolder = ethers.provider.getSigner(SDT_HOLDER)
+    deployer_new = ethers.provider.getSigner(DEPLOYER_NEW);
 
     await network.provider.send("hardhat_setBalance", [STDDEPLOYER, ETH_100]);
     await network.provider.send("hardhat_setBalance", [FXS_TEMPLE_HOLDER, ETH_100]);
@@ -157,6 +168,7 @@ describe("StakeDAO <> FRAX", function () {
     sdt = await ethers.getContractAt(ERC20ABI, SDT);
     temple = await ethers.getContractAt(ERC20ABI, TEMPLE);
     masterchef = await ethers.getContractAt(MASTERCHEFABI, MASTERCHEF);
+    distributor = await ethers.getContractAt(DISTRIBUTORABI, DISTRIBUTOR)
 
     /* ==== Deploy ==== */
     veSDTProxy = await veSdtFxsProxyFactory.deploy([FXS, WETH, FRAX]);
@@ -177,24 +189,8 @@ describe("StakeDAO <> FRAX", function () {
       deployer._address,
       deployer._address
     ]);
-    sdtDProxy = await Proxy.connect(deployer).deploy(sdtDistributor.address, proxyAdmin.address, dataSdtD);
-    sdtDProxy = await ethers.getContractAt("SdtDistributor", sdtDProxy.address);
-    /* Deployed quick and dirty */
-
-    /* ==== Add gauge types ==== */
-    const typesWeight = parseEther("1");
-    await gc.connect(deployer)["add_type(string,uint256)"]("Mainnet staking", typesWeight); // 0
-    await gc.connect(deployer)["add_type(string,uint256)"]("External", typesWeight); // 1
-    await gc.connect(deployer)["add_type(string,uint256)"]("Cross Chain", typesWeight); // 2
-
-    /* ==== Masterchef <> SdtDistributor setup ==== */
-    const masterToken = await sdtDProxy.masterchefToken();
-    await masterchef.connect(timelock).add(1000, masterToken, false);
-    const poolsLength = await masterchef.poolLength();
-
-    const pidSdtD = poolsLength - 1;
-    await sdtDProxy.connect(deployer).initializeMasterchef(pidSdtD);
-    await sdtDProxy.connect(deployer).setDistribution(true);
+    //sdtDProxy = await Proxy.connect(deployer).deploy(sdtDistributor.address, proxyAdmin.address, dataSdtD);
+    //sdtDProxy = await ethers.getContractAt(SDTDISTRIBUTORABI, SDTDPROXY);
 
     /* ==== set LL as a valid veFXS Proxy ==== */
     await fxsTempleGauge.connect(govFrax).toggleValidVeFXSProxy(locker.address);
@@ -219,6 +215,26 @@ describe("StakeDAO <> FRAX", function () {
 
     // LL give governance right to the Booster
     await locker.connect(deployer).setGovernance(booster.address);
+
+
+    /* ==== Add gauge types ==== */
+    const typesWeight = parseEther("1");
+    await gc.connect(deployer)["add_type(string,uint256)"]("Mainnet staking", typesWeight); // 0
+    await gc.connect(deployer)["add_type(string,uint256)"]("External", typesWeight); // 1
+    await gc.connect(deployer)["add_type(string,uint256)"]("Cross Chain", typesWeight); // 2
+
+    /* ==== Masterchef <> SdtDistributor setup ==== */
+    //const masterToken = await sdtDProxy.masterchefToken();
+    //await masterchef.connect(timelock).add(10, masterToken, false);
+    //const poolsLength = await masterchef.poolLength();
+
+    //const pidSdtD = poolsLength - 1;
+    //await sdtDProxy.connect(deployer_new).initializeMasterchef(pidSdtD);
+    //await sdtDProxy.connect(deployer_new).setDistribution(true);
+
+
+
+
   });
 
   describe("### Testing booster contract ###", function () {
@@ -250,7 +266,7 @@ describe("StakeDAO <> FRAX", function () {
         });
 
         it("Should set distributor", async function () {
-          await booster.connect(deployer).setDistributor(sdtDistributor.address);
+          await booster.connect(deployer).setDistributor(distributor.address);
         });
 
         it("Should set reward active on creation to true", async function () {
@@ -374,6 +390,66 @@ describe("StakeDAO <> FRAX", function () {
     });
 
     describe("Liquidity gauge strat frax section : ", function() {
+      it("Should add gauge to gauge controller", async function () {
+        // Setup all for creating a new pool, previous has been killed for testing
+        await booster.connect(deployer).setPoolRewardImplementation(liquidityGauge.address);
+        await booster.connect(deployer).setDistributor(distributor.address);
+        await booster.connect(deployer).setRewardActiveOnCreation(false);
+        await booster.connect(deployer).addPool(vaultV1Template.address, FXS_TEMPLE_GAUGE, FXS_TEMPLE);
+
+        const NbrsOfPool = await poolRegistry.poolLength();
+        const PoolInfo1 = await poolRegistry.poolInfo(NbrsOfPool - 1);
+        
+        rewardsPID1 = LiquidityGaugeV4FraxContract.attach(PoolInfo1.rewardsAddress);
+        const dist = await rewardsPID1.reward_data(SDT)
+        //console.log(dist)
+        let lastBlock = await ethers.provider.getBlock("latest")
+        let currentTimestamp = lastBlock.timestamp - (lastBlock.timestamp % 86_400)
+
+        const add_gauge = await gc.connect(deployer)["add_gauge(address,int128,uint256)"](rewardsPID1.address, 0, 0); // gauge - type - weight
+        await gc.connect(veSdtHolder)["vote_for_gauge_weights(address,uint256)"](rewardsPID1.address, 10000);
+        const app = await distributor.connect(deployer_new)["approveGauge(address)"](rewardsPID1.address);
+        
+
+
+        // increase the timestamp by 8 days
+        await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 8]);
+        await network.provider.send("evm_mine", []);
+        lastBlock = await ethers.provider.getBlock("latest")
+        currentTimestamp = lastBlock.timestamp - (lastBlock.timestamp % 86_400)
+
+        // Rounded down to day
+        const before_DistributorBalance = await sdt.balanceOf(distributor.address);
+        const sdt_MasterChefB = await sdt.balanceOf(MASTERCHEF)
+        
+        const timePeriod = await distributor.timePeriod()
+
+        const distribute = await distributor.connect(deployer_new).distribute(rewardsPID0.address);
+        const RECEIPT = await distribute.wait();
+        console.log("Distribe events: ",RECEIPT.events)
+        const lastMasterchefPull = await distributor.connect(deployer).lastMasterchefPull()
+        const after_LGV4 = await sdt.balanceOf(rewardsPID1.address)
+        const after_DistributorBalance = await sdt.balanceOf(distributor.address);
+        const sdt_MasterChefA = await sdt.balanceOf(MASTERCHEF)
+        const lastPull = await distributor.pulls(currentTimestamp)
+        const get_gauge_weight = await gc.connect(deployer)["get_gauge_weight(address)"](rewardsPID1.address)
+        const gauge_relative_weight = await gc.connect(deployer)["gauge_relative_weight(address,uint256)"](rewardsPID1.address,currentTimestamp)
+        const points_total = await gc.connect(deployer)["points_total(uint256)"](currentTimestamp)
+        const expectedDistribution = after_DistributorBalance - before_DistributorBalance;
+
+        console.log("time period: \t\t", timePeriod.toString())
+        console.log("lastMasterchefPull: \t",lastMasterchefPull.toString())
+        console.log("timestamp: \t\t", lastBlock.timestamp.toString())
+        console.log("last pull + time: \t", (Number(lastMasterchefPull)+Number(timePeriod)).toString())
+        console.log("get_gauge_weight: \t",get_gauge_weight.toString())
+        console.log("gauge_relative_weight: \t",gauge_relative_weight.toString())
+        console.log("points_total: \t\t",points_total.toString())
+        console.log("pulls: \t\t\t", lastPull.toString())
+        console.log("Balance LGV4: \t\t", after_LGV4.toString())
+        console.log("sdt_Distributor diff: \t",(before_DistributorBalance - after_DistributorBalance).toString())
+        console.log("sdt_MasterChef diff: \t",(sdt_MasterChefB - sdt_MasterChefA).toString())
+        //expect(Number(lastPull)).to.be.equal(expectedDistribution);
+      })
       it("Should deposit SDT reward token", async function () {
         // TODO : Add SDT as reward on PID1 with distributor
       })
@@ -382,15 +458,8 @@ describe("StakeDAO <> FRAX", function () {
 
     describe("Personal vault section : ", function () {
       it("Should stake locked lp token", async function () {
-        // Setup all for creating a new pool, previous has been killed for testing
-        await booster.connect(deployer).setPoolRewardImplementation(liquidityGauge.address);
-        await booster.connect(deployer).setDistributor(sdtDistributor.address);
-        await booster.connect(deployer).setRewardActiveOnCreation(false);
-        await booster.connect(deployer).addPool(vaultV1Template.address, FXS_TEMPLE_GAUGE, FXS_TEMPLE);
-
         const NbrsOfPool = await poolRegistry.poolLength();
         const PoolInfo1 = await poolRegistry.poolInfo(NbrsOfPool - 1);
-        rewardsPID1 = LiquidityGaugeV4FraxContract.attach(PoolInfo1.rewardsAddress);
 
         //console.log(NbrsOfPool,PoolInfo1)
 
