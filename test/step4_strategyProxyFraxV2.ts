@@ -421,6 +421,7 @@ describe("StakeDAO <> FRAX", function () {
         // Rounded down to day
         const before_DistributorBalance = await sdt.balanceOf(distributor.address);
         const sdt_MasterChefB = await sdt.balanceOf(MASTERCHEF)
+        const lastMasterchefPullBefore = await distributor.connect(deployer).lastMasterchefPull()
         
         const timePeriod = await distributor.timePeriod()
 
@@ -437,10 +438,11 @@ describe("StakeDAO <> FRAX", function () {
         const points_total = await gc.connect(deployer)["points_total(uint256)"](currentTimestamp)
         const expectedDistribution = after_DistributorBalance - before_DistributorBalance;
 
-        console.log("time period: \t\t", timePeriod.toString())
+        console.log("time period: \t\t     ", timePeriod.toString())
+        console.log("lastMasterchefPull B: \t",lastMasterchefPullBefore.toString())
         console.log("lastMasterchefPull: \t",lastMasterchefPull.toString())
-        console.log("timestamp: \t\t", lastBlock.timestamp.toString())
         console.log("last pull + time: \t", (Number(lastMasterchefPull)+Number(timePeriod)).toString())
+        console.log("timestamp: \t\t", lastBlock.timestamp.toString())
         console.log("get_gauge_weight: \t",get_gauge_weight.toString())
         console.log("gauge_relative_weight: \t",gauge_relative_weight.toString())
         console.log("points_total: \t\t",points_total.toString())
