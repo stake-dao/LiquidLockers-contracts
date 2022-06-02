@@ -11,10 +11,6 @@
 # Mostly forked from Curve, except that now there is no direct link between the gauge controller
 # and the gauges. In this implementation, SDT rewards are like any other token rewards.
 
-#from vyper.interfaces import ERC20
-
-#implements: ERC20
-
 interface VotingEscrow:
     def user_point_epoch(addr: address) -> uint256: view
     def user_point_history__ts(addr: address, epoch: uint256) -> uint256: view
@@ -24,11 +20,6 @@ interface VotingEscrowBoost:
 
 interface PoolRegistry: 
     def vaultMap(_poolId: uint256, _owner : address) -> address: view
-
-#interface ERC20Extended:
-#    def symbol() -> String[26]: view
-#    def decimals() -> uint256: view
-
 
 event Deposit:
     provider: indexed(address)
@@ -50,16 +41,6 @@ event CommitOwnership:
 
 event ApplyOwnership:
     admin: address
-
-event Transfer:
-    _from: indexed(address)
-    _to: indexed(address)
-    _value: uint256
-
-event Approval:
-    _owner: indexed(address)
-    _spender: indexed(address)
-    _value: uint256
 
 event RewardDataUpdate:
     _token: indexed(address)
@@ -87,11 +68,6 @@ decimal_staking_token: public(uint256)
 
 balanceOf: public(HashMap[address, uint256])
 totalSupply: public(uint256)
-# to be remove
-allowance: public(HashMap[address, HashMap[address, uint256]])
-
-name: public(String[64])
-symbol: public(String[40])
 
 working_balances: public(HashMap[address, uint256])
 working_supply: public(uint256)
@@ -120,8 +96,6 @@ poolRegistry: public(address)
 
 initialized: public(bool)
 
-# to be removed
-vault:public(address)
 pid: public(uint256)
 
 @external
@@ -181,7 +155,6 @@ def decimals() -> uint256:
     """
     return self.decimal_staking_token
 
-
 @internal
 def _update_liquidity_limit(addr: address, l: uint256, L: uint256):
     """
@@ -207,7 +180,6 @@ def _update_liquidity_limit(addr: address, l: uint256, L: uint256):
     self.working_supply = _working_supply
 
     log UpdateLiquidityLimit(addr, l, L, lim, _working_supply)
-
 
 @internal
 def _checkpoint_reward(_user: address, token: address, _total_supply: uint256, _user_balance: uint256, _claim: bool, receiver: address):
@@ -311,7 +283,6 @@ def claimed_reward(_addr: address, _token: address) -> uint256:
     """
     return self.claim_data[_addr][_token] % 2**128
 
-
 @view
 @external
 def claimable_reward(_user: address, _reward_token: address) -> uint256:
@@ -338,7 +309,6 @@ def claimable_reward(_user: address, _reward_token: address) -> uint256:
 
     return shift(self.claim_data[_user][_reward_token], -128) + new_claimable
 
-
 @external
 def set_rewards_receiver(_receiver: address):
     """
@@ -347,16 +317,6 @@ def set_rewards_receiver(_receiver: address):
     @param _receiver Receiver address for any rewards claimed via `claim_rewards`
     """
     self.rewards_receiver[msg.sender] = _receiver
-
-# to be removed
-@external
-def set_vault(_vault:address):
-    """
-    @notice Set the vault contract
-    @param _vault Address of the new vault
-    """
-    assert self.admin == msg.sender #dev : only admin can call this function 
-    self.vault = _vault
 
 @external
 @nonreentrant('lock')
@@ -387,7 +347,6 @@ def claim_rewards_for(_addr: address, _receiver: address):
         assert _receiver == self.claimer # dev: if the receiver is not the user it needs to be the claimer
     self._checkpoint_rewards(_addr, self.totalSupply, True, _receiver)
 
-
 @external
 def kick(addr: address):
     """
@@ -408,7 +367,6 @@ def kick(addr: address):
     self._checkpoint_rewards(addr, total_supply, False, ZERO_ADDRESS, True)
 
     self._update_liquidity_limit(addr, self.balanceOf[addr], total_supply)
-
 
 @external
 @nonreentrant('lock')
@@ -436,14 +394,10 @@ def deposit(_value: uint256, _addr: address , _claim_rewards: bool = False):
         self.totalSupply = total_supply
 
         self._update_liquidity_limit(msg.sender, new_balance, total_supply)
-        #remove this
-        #ERC20(self.staking_token).transferFrom(msg.sender, self, _value)
     else:
         self._checkpoint_rewards(msg.sender, total_supply, False, ZERO_ADDRESS, True)
 
     log Deposit(msg.sender, _value)
-    #log Transfer(ZERO_ADDRESS, _addr, _value)
-
 
 @external
 @nonreentrant('lock')
@@ -454,140 +408,25 @@ def withdraw(_value: uint256, _addr: address, _claim_rewards: bool = False):
     @param _value Number of tokens to withdraw
     """
     #assert msg.sender == self.vault #only vault contract can withdraw
-    assert PoolRegistry(self.poolRegistry).vaultMap(self.pid,_addr) == _addr, "!only personal vault" 
+    assert PoolRegistry(self.poolRegistry).vaultMap(self.pid,_addr) == msg.sender, "!only personal vault" 
     total_supply: uint256 = self.totalSupply
 
     if _value != 0:
         is_rewards: bool = self.reward_count != 0
         if is_rewards:
-            self._checkpoint_rewards(_addr, total_supply, _claim_rewards, ZERO_ADDRESS)
+            self._checkpoint_rewards(msg.sender, total_supply, _claim_rewards, ZERO_ADDRESS)
 
         total_supply -= _value
-        new_balance: uint256 = self.balanceOf[_addr] - _value
-        self.balanceOf[_addr] = new_balance
+        new_balance: uint256 = self.balanceOf[msg.sender] - _value
+        #assert 0==1, "Hello"
+        self.balanceOf[msg.sender] = new_balance
         self.totalSupply = total_supply
 
-        self._update_liquidity_limit(_addr, new_balance, total_supply)
-
-        #ERC20(self.staking_token).transfer(msg.sender, _value)
+        self._update_liquidity_limit(msg.sender, new_balance, total_supply)
     else:
-        self._checkpoint_rewards(_addr, total_supply, False, ZERO_ADDRESS, True)
+        self._checkpoint_rewards(msg.sender, total_supply, False, ZERO_ADDRESS, True)
 
-    log Withdraw(_addr, _value)
-    log Transfer(msg.sender, ZERO_ADDRESS, _value)
-
-
-@internal
-def _transfer(_from: address, _to: address, _value: uint256):
-    total_supply: uint256 = self.totalSupply
-
-    if _value != 0:
-        is_rewards: bool = self.reward_count != 0
-        if is_rewards:
-            self._checkpoint_rewards(_from, total_supply, False, ZERO_ADDRESS)
-        new_balance: uint256 = self.balanceOf[_from] - _value
-        self.balanceOf[_from] = new_balance
-        self._update_liquidity_limit(_from, new_balance, total_supply)
-
-        if is_rewards:
-            self._checkpoint_rewards(_to, total_supply, False, ZERO_ADDRESS)
-        new_balance = self.balanceOf[_to] + _value
-        self.balanceOf[_to] = new_balance
-        self._update_liquidity_limit(_to, new_balance, total_supply)
-    else:
-        self._checkpoint_rewards(_from, total_supply, False, ZERO_ADDRESS, True)
-        self._checkpoint_rewards(_to, total_supply, False, ZERO_ADDRESS, True)
-
-    log Transfer(_from, _to, _value)
-
-
-@external
-@nonreentrant('lock')
-def transfer(_to : address, _value : uint256) -> bool:
-    """
-    @notice Transfer token for a specified address
-    @dev Transferring claims pending reward tokens for the sender and receiver
-    @param _to The address to transfer to.
-    @param _value The amount to be transferred.
-    """
-    self._transfer(msg.sender, _to, _value)
-
-    return True
-
-
-@external
-@nonreentrant('lock')
-def transferFrom(_from : address, _to : address, _value : uint256) -> bool:
-    """
-     @notice Transfer tokens from one address to another.
-     @dev Transferring claims pending reward tokens for the sender and receiver
-     @param _from address The address which you want to send tokens from
-     @param _to address The address which you want to transfer to
-     @param _value uint256 the amount of tokens to be transferred
-    """
-    _allowance: uint256 = self.allowance[_from][msg.sender]
-    if _allowance != MAX_UINT256:
-        self.allowance[_from][msg.sender] = _allowance - _value
-
-    self._transfer(_from, _to, _value)
-
-    return True
-
-
-@external
-def approve(_spender : address, _value : uint256) -> bool:
-    """
-    @notice Approve the passed address to transfer the specified amount of
-            tokens on behalf of msg.sender
-    @dev Beware that changing an allowance via this method brings the risk
-         that someone may use both the old and new allowance by unfortunate
-         transaction ordering. This may be mitigated with the use of
-         {incraseAllowance} and {decreaseAllowance}.
-         https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-    @param _spender The address which will transfer the funds
-    @param _value The amount of tokens that may be transferred
-    @return bool success
-    """
-    self.allowance[msg.sender][_spender] = _value
-    log Approval(msg.sender, _spender, _value)
-
-    return True
-
-
-@external
-def increaseAllowance(_spender: address, _added_value: uint256) -> bool:
-    """
-    @notice Increase the allowance granted to `_spender` by the caller
-    @dev This is alternative to {approve} that can be used as a mitigation for
-         the potential race condition
-    @param _spender The address which will transfer the funds
-    @param _added_value The amount of to increase the allowance
-    @return bool success
-    """
-    allowance: uint256 = self.allowance[msg.sender][_spender] + _added_value
-    self.allowance[msg.sender][_spender] = allowance
-
-    log Approval(msg.sender, _spender, allowance)
-
-    return True
-
-
-@external
-def decreaseAllowance(_spender: address, _subtracted_value: uint256) -> bool:
-    """
-    @notice Decrease the allowance granted to `_spender` by the caller
-    @dev This is alternative to {approve} that can be used as a mitigation for
-         the potential race condition
-    @param _spender The address which will transfer the funds
-    @param _subtracted_value The amount of to decrease the allowance
-    @return bool success
-    """
-    allowance: uint256 = self.allowance[msg.sender][_spender] - _subtracted_value
-    self.allowance[msg.sender][_spender] = allowance
-
-    log Approval(msg.sender, _spender, allowance)
-
-    return True
+    log Withdraw(msg.sender, _value)
 
 @external
 def add_reward(_reward_token: address, _distributor: address):
@@ -678,3 +517,133 @@ def accept_transfer_ownership():
 
     self.admin = _admin
     log ApplyOwnership(_admin)
+
+
+
+
+
+
+
+
+####### Old stuff removed #####
+#@external
+#@nonreentrant('lock')
+#def transfer(_to : address, _value : uint256) -> bool:
+#    """
+#    @notice Transfer token for a specified address
+#    @dev Transferring claims pending reward tokens for the sender and receiver
+#    @param _to The address to transfer to.
+#    @param _value The amount to be transferred.
+#    """
+#    self._transfer(msg.sender, _to, _value)
+#
+#    return True
+
+
+#@external
+#@nonreentrant('lock')
+#def transferFrom(_from : address, _to : address, _value : uint256) -> bool:
+#    """
+#     @notice Transfer tokens from one address to another.
+#     @dev Transferring claims pending reward tokens for the sender and receiver
+#     @param _from address The address which you want to send tokens from
+#     @param _to address The address which you want to transfer to
+#     @param _value uint256 the amount of tokens to be transferred
+#    """
+#    _allowance: uint256 = self.allowance[_from][msg.sender]
+#    if _allowance != MAX_UINT256:
+#        self.allowance[_from][msg.sender] = _allowance - _value
+#
+#    self._transfer(_from, _to, _value)
+#
+#    return True
+
+
+#@external
+#def approve(_spender : address, _value : uint256) -> bool:
+#    """
+#    @notice Approve the passed address to transfer the specified amount of
+#            tokens on behalf of msg.sender
+#    @dev Beware that changing an allowance via this method brings the risk
+#         that someone may use both the old and new allowance by unfortunate
+#         transaction ordering. This may be mitigated with the use of
+#         {incraseAllowance} and {decreaseAllowance}.
+#         https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+#    @param _spender The address which will transfer the funds
+#    @param _value The amount of tokens that may be transferred
+#    @return bool success
+#    """
+#    self.allowance[msg.sender][_spender] = _value
+#    log Approval(msg.sender, _spender, _value)
+#
+#    return True
+
+
+#@external
+#def increaseAllowance(_spender: address, _added_value: uint256) -> bool:
+#    """
+#    @notice Increase the allowance granted to `_spender` by the caller
+#    @dev This is alternative to {approve} that can be used as a mitigation for
+#         the potential race condition
+#    @param _spender The address which will transfer the funds
+#    @param _added_value The amount of to increase the allowance
+#    @return bool success
+#    """
+#    allowance: uint256 = self.allowance[msg.sender][_spender] + _added_value
+#    self.allowance[msg.sender][_spender] = allowance
+#
+#    log Approval(msg.sender, _spender, allowance)
+#
+#    return True
+
+
+#@external
+#def decreaseAllowance(_spender: address, _subtracted_value: uint256) -> bool:
+#    """
+#    @notice Decrease the allowance granted to `_spender` by the caller
+#    @dev This is alternative to {approve} that can be used as a mitigation for
+#         the potential race condition
+#    @param _spender The address which will transfer the funds
+#    @param _subtracted_value The amount of to decrease the allowance
+#    @return bool success
+#    """
+#    allowance: uint256 = self.allowance[msg.sender][_spender] - _subtracted_value
+#    self.allowance[msg.sender][_spender] = allowance
+#
+#    log Approval(msg.sender, _spender, allowance)
+#
+#    return True
+
+
+#@internal
+#def _transfer(_from: address, _to: address, _value: uint256):
+#    total_supply: uint256 = self.totalSupply
+#
+#    if _value != 0:
+#        is_rewards: bool = self.reward_count != 0
+#        if is_rewards:
+#            self._checkpoint_rewards(_from, total_supply, False, ZERO_ADDRESS)
+#        new_balance: uint256 = self.balanceOf[_from] - _value
+#        self.balanceOf[_from] = new_balance
+#        self._update_liquidity_limit(_from, new_balance, total_supply)
+#
+#        if is_rewards:
+#            self._checkpoint_rewards(_to, total_supply, False, ZERO_ADDRESS)
+#        new_balance = self.balanceOf[_to] + _value
+#        self.balanceOf[_to] = new_balance
+#        self._update_liquidity_limit(_to, new_balance, total_supply)
+#    else:
+#        self._checkpoint_rewards(_from, total_supply, False, ZERO_ADDRESS, True)
+#        self._checkpoint_rewards(_to, total_supply, False, ZERO_ADDRESS, True)
+#
+#    log Transfer(_from, _to, _value)
+
+# to be removed
+#@external
+#def set_vault(_vault:address):
+#    """
+#    @notice Set the vault contract
+#    @param _vault Address of the new vault
+#    """
+#    assert self.admin == msg.sender #dev : only admin can call this function 
+#    self.vault = _vault
