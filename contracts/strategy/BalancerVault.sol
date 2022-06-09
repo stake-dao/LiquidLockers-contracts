@@ -160,8 +160,8 @@ contract BalancerVault is ERC20Upgradeable {
 
 	function earn() internal {
 		uint256 tokenBalance = available();
-		token.approve(address(angleStrategy), 0);
-		token.approve(address(angleStrategy), tokenBalance);
+		token.approve(address(balancerStrategy), 0);
+		token.approve(address(balancerStrategy), tokenBalance);
 		balancerStrategy.deposit(address(token), tokenBalance);
 		emit Earn(address(token), tokenBalance);
 	}
