@@ -48,40 +48,51 @@ contract BalancerVault is ERC20Upgradeable {
 	function deposit(
 		address _staker,
 		uint256 _amount,
+		bool _earn
+	) public {
+		require(address(liquidityGauge) != address(0), "Gauge not yet initialized");
+		token.safeTransferFrom(msg.sender, address(this), _amount);
+		_deposit(_staker, _amount, _earn);
+	}
+
+	function provideLiquidityAndDeposit(
+		address _staker,
 		bool _earn,
-		bool provideLiquidity,
 		uint256[] calldata maxAmountsIn,
 		uint256 _minAmount
 	) public {
 		require(address(liquidityGauge) != address(0), "Gauge not yet initialized");
-		if (!provideLiquidity) {
-			token.safeTransferFrom(msg.sender, address(this), _amount);
-		} else {
-			(IERC20[] memory tokens, , ) = IBalancerVault(BALANCER_VAULT).getPoolTokens(poolId);
-			address[] memory assets = new address[](tokens.length);
-			require(tokens.length == maxAmountsIn.length, "!length");
-			for (uint256 i; i < tokens.length; i++) {
-				tokens[i].transferFrom(msg.sender, address(this), maxAmountsIn[i]);
-				tokens[i].approve(BALANCER_VAULT, maxAmountsIn[i]);
-				assets[i] = address(tokens[i]);
-			}
-			IBalancerVault.JoinPoolRequest memory pr = IBalancerVault.JoinPoolRequest(
-				assets,
-				maxAmountsIn,
-				abi.encode(1, maxAmountsIn, _minAmount),
-				false
-			);
-			uint256 lpBalanceBefore = token.balanceOf(address(this));
-			IBalancerVault(BALANCER_VAULT).joinPool(
-				poolId, // poolId
-				address(this),
-				address(this),
-				pr
-			);
-			uint256 lpBalanceAfter = token.balanceOf(address(this));
-			_amount = lpBalanceAfter - lpBalanceBefore;
+		(IERC20[] memory tokens, , ) = IBalancerVault(BALANCER_VAULT).getPoolTokens(poolId);
+		require(tokens.length == maxAmountsIn.length, "!length");
+		address[] memory assets = new address[](tokens.length);
+		for (uint256 i; i < tokens.length; i++) {
+			tokens[i].transferFrom(msg.sender, address(this), maxAmountsIn[i]);
+			tokens[i].approve(BALANCER_VAULT, maxAmountsIn[i]);
+			assets[i] = address(tokens[i]);
 		}
+		IBalancerVault.JoinPoolRequest memory pr = IBalancerVault.JoinPoolRequest(
+			assets,
+			maxAmountsIn,
+			abi.encode(1, maxAmountsIn, _minAmount),
+			false
+		);
+		uint256 lpBalanceBefore = token.balanceOf(address(this));
+		IBalancerVault(BALANCER_VAULT).joinPool(
+			poolId, // poolId
+			address(this),
+			address(this),
+			pr
+		);
+		uint256 lpBalanceAfter = token.balanceOf(address(this));
 
+		_deposit(_staker, lpBalanceAfter - lpBalanceBefore, _earn);
+	}
+
+	function _deposit(
+		address _staker,
+		uint256 _amount,
+		bool _earn
+	) internal {
 		if (!_earn) {
 			uint256 keeperCut = (_amount * keeperFee) / 10000;
 			_amount -= keeperCut;
@@ -114,10 +125,6 @@ contract BalancerVault is ERC20Upgradeable {
 		}
 		token.safeTransfer(msg.sender, _shares - withdrawFee);
 		emit Withdraw(msg.sender, _shares - withdrawFee);
-	}
-
-	function withdrawAll() external {
-		withdraw(balanceOf(msg.sender));
 	}
 
 	function setGovernance(address _governance) external {

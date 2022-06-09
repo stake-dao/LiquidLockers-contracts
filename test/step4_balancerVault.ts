@@ -153,11 +153,9 @@ describe("Balancer Strategy Vault", function () {
       ),
       false
     ]);
-    await vault.deposit(
+    await vault.provideLiquidityAndDeposit(
       localDeployer.address,
-      0,
       false,
-      true,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       minAmount[0]
     );
@@ -188,11 +186,9 @@ describe("Balancer Strategy Vault", function () {
       ),
       false
     ]);
-    await weightedPoolVault.deposit(
+    await weightedPoolVault.provideLiquidityAndDeposit(
       localDeployer.address,
-      0,
       false,
-      true,
       [ethers.utils.parseEther("10"), ethers.utils.parseEther("170"), ethers.utils.parseEther("1")],
       minAmount[0]
     );
