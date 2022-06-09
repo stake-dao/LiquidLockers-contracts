@@ -108,7 +108,7 @@ contract BalancerVault is ERC20Upgradeable {
 		uint256 withdrawFee;
 		if (_shares > tokenBalance) {
 			uint256 amountToWithdraw = _shares - tokenBalance;
-			// angleStrategy.withdraw(address(token), amountToWithdraw);
+			balancerStrategy.withdraw(address(token), amountToWithdraw);
 			withdrawFee = (amountToWithdraw * withdrawalFee) / 10000;
 			token.safeTransfer(governance, withdrawFee);
 		}
