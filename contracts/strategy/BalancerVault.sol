@@ -102,7 +102,6 @@ contract BalancerVault is ERC20Upgradeable {
 			accumulatedFee = 0;
 		}
 		_mint(address(this), _amount);
-		ERC20Upgradeable(address(this)).approve(liquidityGauge, _amount);
 		ILiquidityGaugeStrat(liquidityGauge).deposit(_amount, _staker);
 		if (_earn) {
 			earn();
@@ -121,7 +120,9 @@ contract BalancerVault is ERC20Upgradeable {
 			uint256 amountToWithdraw = _shares - tokenBalance;
 			balancerStrategy.withdraw(address(token), amountToWithdraw);
 			withdrawFee = (amountToWithdraw * withdrawalFee) / 10000;
-			token.safeTransfer(governance, withdrawFee);
+			if (withdrawFee > 0) {
+				token.safeTransfer(governance, withdrawFee);
+			}
 		}
 		token.safeTransfer(msg.sender, _shares - withdrawFee);
 		emit Withdraw(msg.sender, _shares - withdrawFee);
@@ -140,6 +141,7 @@ contract BalancerVault is ERC20Upgradeable {
 	function setLiquidityGauge(address _liquidityGauge) external {
 		require(msg.sender == governance, "!governance");
 		liquidityGauge = _liquidityGauge;
+		ERC20Upgradeable(address(this)).approve(liquidityGauge, type(uint256).max);
 	}
 
 	function setBalancerStrategy(BalancerStrategy _newStrat) external {
