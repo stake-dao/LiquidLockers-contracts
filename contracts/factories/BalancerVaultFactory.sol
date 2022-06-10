@@ -19,8 +19,8 @@ interface IBalancerLiquidityGauge {
 contract BalancerVaultFactory {
 	using ClonesUpgradeable for address;
 
-	address public vaultImpl = address(new BalancerVault());
-	address public gaugeImpl;
+	address public immutable vaultImpl = address(new BalancerVault());
+	address public constant GAUGE_IMPL = 0x3Dc56D46F0Bd13655EfB29594a2e44534c453BF9;
 	address public constant GOVERNANCE = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063;
 	address public constant GAUGE_CONTROLLER = 0xC128468b7Ce63eA702C1f104D55A2566b13D3ABD;
 	address public constant BAL = 0xba100000625a3754423978a60c9317c58a424e3D;
@@ -28,19 +28,13 @@ contract BalancerVaultFactory {
 	address public constant SDT = 0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F;
 	address public constant VEBOOST = 0xD67bdBefF01Fc492f1864E61756E5FBB3f173506;
 	address public constant CLAIM_REWARDS = 0x633120100e108F03aCe79d6C78Aac9a56db1be0F; // v2
-	address public balancerStrategy;
-	address public sdtDistributor;
+	address public balancerStrategy; // edits it to constant later
+	address public constant SDT_DISTRIBUTOR = 0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C;
 	event VaultDeployed(address proxy, address lpToken, address impl);
 	event GaugeDeployed(address proxy, address stakeToken, address impl);
 
-	constructor(
-		address _gaugeImpl, 
-		address _balancerStrategy,
-		address _sdtDistributor
-	) {
-		gaugeImpl = _gaugeImpl;
+	constructor(address _balancerStrategy) {
 		balancerStrategy = _balancerStrategy;
-		sdtDistributor = _sdtDistributor;
 	}
 
 	/**
@@ -53,16 +47,12 @@ contract BalancerVaultFactory {
 		address vaultLpToken = IBalancerLiquidityGauge(_balGaugeAddress).lp_token();
 		string memory tokenSymbol = ERC20Upgradeable(vaultLpToken).symbol();
 		address vaultImplAddress = _cloneAndInitVault(
-			vaultImpl,
 			ERC20Upgradeable(vaultLpToken),
-			GOVERNANCE,
 			string(abi.encodePacked("sd", tokenSymbol, " Vault")),
 			string(abi.encodePacked("sd", tokenSymbol, "-vault"))
 		);
 		address gaugeImplAddress = _cloneAndInitGauge(
-			gaugeImpl,
 			vaultImplAddress,
-			GOVERNANCE,
 			tokenSymbol
 		);
 		BalancerVault(vaultImplAddress).setLiquidityGauge(gaugeImplAddress);
@@ -81,23 +71,18 @@ contract BalancerVaultFactory {
 
 	/**
 	@dev Internal function to clone the vault 
-	@param _impl address of contract to clone
 	@param _lpToken balancer BPT token address 
-	@param _governance governance address 
 	@param _name vault name
 	@param _symbol vault symbol
 	 */
 	function _cloneAndInitVault(
-		address _impl,
 		ERC20Upgradeable _lpToken,
-		address _governance,
 		string memory _name,
 		string memory _symbol
 	) internal returns (address) {
 		BalancerVault deployed = cloneVault(
-			_impl,
 			_lpToken,
-			keccak256(abi.encodePacked(_governance, _name, _symbol, balancerStrategy))
+			keccak256(abi.encodePacked(GOVERNANCE, _name, _symbol, balancerStrategy))
 		);
 		deployed.init(_lpToken, address(this), _name, _symbol, BalancerStrategy(balancerStrategy));
 		return address(deployed);
@@ -105,25 +90,21 @@ contract BalancerVaultFactory {
 
 	/**
 	@dev Internal function to clone the gauge multi rewards
-	@param _impl address of contract to clone
 	@param _stakingToken sd LP token address 
-	@param _governance governance address 
 	@param _symbol gauge symbol
 	 */
 	function _cloneAndInitGauge(
-		address _impl,
 		address _stakingToken,
-		address _governance,
 		string memory _symbol
 	) internal returns (address) {
-		ILiquidityGaugeStrat deployed = cloneGauge(_impl, _stakingToken, keccak256(abi.encodePacked(_governance, _symbol)));
+		ILiquidityGaugeStrat deployed = cloneGauge(_stakingToken, keccak256(abi.encodePacked(GOVERNANCE, _symbol)));
 		deployed.initialize(
 			_stakingToken,
 			address(this),
 			SDT,
 			VESDT,
 			VEBOOST,
-			sdtDistributor,
+			SDT_DISTRIBUTOR,
 			_stakingToken,
 			_symbol
 		);
@@ -132,35 +113,31 @@ contract BalancerVaultFactory {
 
 	/**
 	@dev Internal function that deploy and returns a clone of vault impl
-	@param _impl address of contract to clone
 	@param _lpToken balancer BPT token address
 	@param _paramsHash governance+name+symbol+strategy parameters hash
 	 */
 	function cloneVault(
-		address _impl,
 		ERC20Upgradeable _lpToken,
 		bytes32 _paramsHash
 	) internal returns (BalancerVault) {
-		address deployed = address(_impl).cloneDeterministic(keccak256(abi.encodePacked(address(_lpToken), _paramsHash)));
-		emit VaultDeployed(deployed, address(_lpToken), _impl);
+		address deployed = address(vaultImpl).cloneDeterministic(keccak256(abi.encodePacked(address(_lpToken), _paramsHash)));
+		emit VaultDeployed(deployed, address(_lpToken), vaultImpl);
 		return BalancerVault(deployed);
 	}
 
 	/**
 	@dev Internal function that deploy and returns a clone of gauge impl
-	@param _impl address of contract to clone
 	@param _stakingToken sd LP token address
 	@param _paramsHash governance+name+symbol parameters hash
 	 */
 	function cloneGauge(
-		address _impl,
 		address _stakingToken,
 		bytes32 _paramsHash
 	) internal returns (ILiquidityGaugeStrat) {
-		address deployed = address(_impl).cloneDeterministic(
+		address deployed = address(GAUGE_IMPL).cloneDeterministic(
 			keccak256(abi.encodePacked(address(_stakingToken), _paramsHash))
 		);
-		emit GaugeDeployed(deployed, _stakingToken, _impl);
+		emit GaugeDeployed(deployed, _stakingToken, GAUGE_IMPL);
 		return ILiquidityGaugeStrat(deployed);
 	}
 
