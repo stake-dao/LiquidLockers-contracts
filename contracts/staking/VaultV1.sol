@@ -54,7 +54,7 @@ interface IFeeRegistry {
 
 	function veSDTPart() external view returns (uint256);
 
-	function multisig() external view returns (address);
+	function multiSig() external view returns (address);
 
 	function accumulator() external view returns (address);
 
@@ -614,23 +614,26 @@ contract StakingProxyBase is IProxyVault {
 		uint256 multisigFee = IFeeRegistry(feeRegistry).multisigPart();
 		uint256 accumulatorFee = IFeeRegistry(feeRegistry).accumulatorPart();
 		uint256 veSDTFee = IFeeRegistry(feeRegistry).veSDTPart();
+		
 
 		//send fxs fees to fee deposit
 		uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
 		uint256 sendMulti = (fxsBalance * multisigFee) / FEE_DENOMINATOR;
 		uint256 sendAccum = (fxsBalance * accumulatorFee) / FEE_DENOMINATOR;
 		uint256 sendveSDT = (fxsBalance * veSDTFee) / FEE_DENOMINATOR;
+	
 		if (sendMulti > 0) {
 			// Implement a different logic for stakeDAO
 			//IERC20(fxs).transfer(IFeeRegistry(feeRegistry).getFeeDepositor(usingProxy), sendAmount);
-			IERC20(fxs).transfer(IFeeRegistry(feeRegistry).multisig(), sendMulti);
-		}
-		if (sendAccum > 0) {
-			IERC20(fxs).transfer(IFeeRegistry(feeRegistry).accumulator(), sendAccum);
+			IERC20(fxs).transfer(IFeeRegistry(feeRegistry).multiSig(), sendMulti);
 		}
 		if (sendveSDT > 0) {
 			IERC20(fxs).transfer(IFeeRegistry(feeRegistry).veSDTFeeProxy(), sendveSDT);
 		}
+		if (sendAccum > 0) {
+			IERC20(fxs).transfer(IFeeRegistry(feeRegistry).accumulator(), sendAccum);
+		}
+
 
 		//transfer remaining fxs to owner
 		uint256 sendAmount = IERC20(fxs).balanceOf(address(this));
@@ -641,16 +644,16 @@ contract StakingProxyBase is IProxyVault {
 
 	//get extra rewards
 	function _processExtraRewards() internal {
-		if (IRewards(rewards).active()) {
+		if (ILiquidityGaugeStratFrax(rewards).initialized()) {
 			//check if there is a balance because the reward contract could have be activated later
 			//dont use _checkpointRewards since difference of 0 will still call deposit() and cost gas
-			uint256 bal = IRewards(rewards).balanceOf(address(this));
+			uint256 bal = ILiquidityGaugeStratFrax(rewards).balanceOf(address(this));
 			uint256 userLiq = IFraxFarmBase(stakingAddress).lockedLiquidityOf(address(this));
 			if (bal == 0 && userLiq > 0) {
 				//bal == 0 and liq > 0 can only happen if rewards were turned on after staking
-				IRewards(rewards).deposit(owner, userLiq);
+				ILiquidityGaugeStratFrax(rewards).deposit(userLiq, owner, false);
 			}
-			IRewards(rewards).getReward(owner);
+			ILiquidityGaugeStratFrax(rewards).claim_rewards(address(this),owner);
 		} else {}
 	}
 
@@ -934,10 +937,9 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 
 		//process fxs fees
 		_processFxs();
-
+		
 		//get list of reward tokens
 		address[] memory rewardTokens = IFraxFarmERC20(stakingAddress).getAllRewardTokens();
-
 		//transfer
 		_transferTokens(rewardTokens);
 

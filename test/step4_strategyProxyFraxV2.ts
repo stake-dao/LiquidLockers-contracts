@@ -42,6 +42,7 @@ const DEPLOYER_NEW = "0x0dE5199779b43E13B3Bec21e91117E18736BC1A8";
 const DISTRIBUTOR = "0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C"
 const GAUGECONTROLLER = "0x3F3F0776D411eb97Cfa4E3eb25F33c01ca4e7Ca8";
 const GCADMIN = "0x0dE5199779b43E13B3Bec21e91117E18736BC1A8";
+const MULTISIG = "0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063";
 
 const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 const TEMPLE = "0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7";
@@ -51,7 +52,7 @@ const FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0";
 const GOVFRAX = "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27";
 const FXS_TEMPLE = "0x6021444f1706f15465bEe85463BCc7d7cC17Fc03";
 const FXS_TEMPLE_GAUGE = "0x10460d02226d6ef7B2419aE150E6377BdbB7Ef16";
-const FXS_TEMPLE_HOLDER = "0xa5f74ae4b22a792f18c42ec49a85cf560f16559f";
+const FXS_TEMPLE_HOLDER = "0xc00674553a6E3Bf232E09852510F5feC90A519f9";
 
 const TIMELOCK = "0xD3cFc4E65a73BB6C482383EB38f5C3E1d1411616";
 const FXSACCUMULATOR = "0x1CC16bEdaaCD15848bcA5eB80188e0931bC59fB2";
@@ -250,8 +251,8 @@ describe("StakeDAO <> FRAX", function () {
 
   describe("### Testing booster contract ###", function () {
     const LOCKDURATION = 2 * WEEK;
-    const LOCKEDAMOUNT = parseUnits("120", 18);
-    const LOCKEDAMOUNTx2 = parseUnits("240", 18);
+    const LOCKEDAMOUNT = parseUnits("150", 18);
+    const LOCKEDAMOUNTx2 = parseUnits("300", 18);
 
     describe("Pool registry section : ", function () {
       // Booster should be the operator of the pool registry
@@ -484,6 +485,7 @@ describe("StakeDAO <> FRAX", function () {
         expect(lockedStakesOf[lockedStakesOfLength - 1]["liquidity"]).eq(LOCKEDAMOUNT);
       });
 
+      
       it("Should add liquidity to a previous deposit", async function () {
         const lockedStakesOfBefore = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
 
@@ -499,35 +501,84 @@ describe("StakeDAO <> FRAX", function () {
         expect(balanceOf).eq(LOCKEDAMOUNTx2);
         expect(totalSupply).eq(LOCKEDAMOUNTx2);
       });
+/*
+      it("Should get reward", async function () {
+        const before_Temple = await temple.balanceOf(lpHolder._address);
+        const before_Fxs = await fxs.balanceOf(lpHolder._address);
+        const before_Fxs_multi = await fxs.balanceOf(MULTISIG)
+        const before_Fxs_accum = await fxs.balanceOf(FXSACCUMULATOR)
+        const before_Fxs_veSDT = await fxs.balanceOf(veSDTProxy.address)
+        const before_Sdt = await sdt.balanceOf(lpHolder._address);
+        
 
+        await personalVault1.connect(lpHolder)["setFeeRegistry(address)"](feeRegistry.address)
+        await network.provider.send("evm_increaseTime", [WEEK]);
+        await network.provider.send("evm_mine", []);
+        await personalVault1.connect(lpHolder)["getReward()"]()
+
+        const after_Temple = await temple.balanceOf(lpHolder._address);
+        const after_Fxs = await fxs.balanceOf(lpHolder._address);
+        const after_Fxs_multi = await fxs.balanceOf(MULTISIG)
+        const after_Fxs_accum = await fxs.balanceOf(FXSACCUMULATOR)
+        const after_Fxs_veSDT = await fxs.balanceOf(veSDTProxy.address)
+        const after_Sdt = await sdt.balanceOf(lpHolder._address);
+
+        console.log("FXS gain :\t",(after_Fxs - before_Fxs)/10**18)
+        //console.log("FXS mult :\t",(after_Fxs_multi - before_Fxs_multi)/10**18)
+        //console.log("FXS accu :\t",(after_Fxs_accum - before_Fxs_accum)/10**18)
+        //console.log("FXS veSDT :\t",(after_Fxs_veSDT - before_Fxs_veSDT)/10**18)
+        console.log("Temple gain :\t",(after_Temple - before_Temple)/10**18)
+        console.log("SDT gain:\t",(after_Sdt - before_Sdt)/10**18)
+
+        expect((after_Fxs - before_Fxs)).gt(0)
+        expect((after_Fxs_multi - before_Fxs_multi)).gt(0)
+        expect((after_Fxs_accum - before_Fxs_accum)).gt(0)
+        expect((after_Fxs_veSDT - before_Fxs_veSDT)).gt(0)
+        expect((after_Temple - before_Temple)).gt(0)
+        expect((after_Sdt - before_Sdt)).gt(0)
+      })*/
+      
       it("Should time jump and withdraw locked", async function () {
         const lockedStakesOfBefore = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
         await network.provider.send("evm_increaseTime", [LOCKDURATION]);
         await network.provider.send("evm_mine", []);
+
         const before_Temple = await temple.balanceOf(lpHolder._address);
         const before_Fxs = await fxs.balanceOf(lpHolder._address);
         const before_Sdt = await sdt.balanceOf(lpHolder._address);
-        const earned = await personalVault1.earned();
+        //console.log((before_Fxs/10**18).toString())
+        //console.log(before_Temple.toString())
+        //console.log(before_Sdt.toString())
+        const earned = await personalVault1.earned();       
 
         await personalVault1.connect(lpHolder).withdrawLocked(lockedStakesOfBefore[0]["kek_id"]);
+        await personalVault1.connect(lpHolder)["setFeeRegistry(address)"](feeRegistry.address)
+        await personalVault1.connect(lpHolder)["getReward()"]()
+
 
         const after_Temple = await temple.balanceOf(lpHolder._address);
         const after_Fxs = await fxs.balanceOf(lpHolder._address);
         const after_Sdt = await sdt.balanceOf(lpHolder._address);
 
-        console.log((after_Fxs - before_Fxs)/10**18)
-        console.log((after_Temple - before_Temple)/10**18)
-        console.log((after_Sdt - before_Sdt)/10**18)
+        console.log("FXS gain :\t",(after_Fxs - before_Fxs)/10**18)
+        console.log("Temple gain :\t",(after_Temple - before_Temple)/10**18)
+        console.log("SDT gain:\t",(after_Sdt - before_Sdt)/10**18)
 
-        console.log((earned[1][1]/10**18).toString());
+        console.log("Earned FXS :\t",(earned[1][0]/10**18).toString());
+        console.log("Earned TEM:\t",(earned[1][1]/10**18).toString());
+        console.log("Earned SDT:\t",(earned[1][2]/10**18).toString());
+        //console.log(earned)
+
+        expect((after_Fxs - before_Fxs)).gt(0)
+        expect((after_Temple - before_Temple)).gt(0)
+        expect((after_Sdt - before_Sdt)).gt(0)
       });
+      
+
+
 
     });
   });
-  async function mineNBlocks(n:any) {
-    for (let index = 0; index < n; index++) {
-      await network.provider.send("evm_mine", []);
-    }
-  }
+
 });
 

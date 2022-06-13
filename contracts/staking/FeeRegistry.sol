@@ -16,16 +16,16 @@ contract FeeRegistry{
     //uint256 public platformIncentive = 0;
 
     /* StakeDAO */ 
-    uint256 public multisigPart = 300;
-    uint256 public accumulatorPart = 300;
-    uint256 public veSDTPart = 400;
-    uint256 public totalFees = 1000;
+    uint256 public multisigPart = 0;
+    uint256 public accumulatorPart = 0;
+    uint256 public veSDTPart = 0;
+    uint256 public totalFees = 0;
     /* ======== */
     address public feeDeposit;
     uint256 public constant maxFees = 2000;
     uint256 public constant FEE_DENOMINATOR = 10000;
 
-    address public multiSig = address(0x1CC16bEdaaCD15848bcA5eB80188e0931bC59fB2);
+    address public multiSig = address(0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063);
     address public accumulator = address(0x1CC16bEdaaCD15848bcA5eB80188e0931bC59fB2);
     address public veSDTFeeProxy;
 

@@ -342,7 +342,7 @@ def claim_rewards_for(_addr: address, _receiver: address):
                      ZERO_ADDRESS, uses the default reward receiver
                      for the caller
     """
-    assert self.claimer == msg.sender  # dev: only the claim contract can claim for other 
+    assert self.claimer == msg.sender, "not claimer"  # dev: only the claim contract can claim for other 
     if _receiver != _addr:
         assert _receiver == self.claimer # dev: if the receiver is not the user it needs to be the claimer
     self._checkpoint_rewards(_addr, self.totalSupply, True, _receiver)
