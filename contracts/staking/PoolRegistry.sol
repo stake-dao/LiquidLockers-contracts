@@ -1,57 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import "../interfaces/ILiquidityGaugeStrat.sol";
+import "../interfaces/ILiquidityGaugeStratFrax.sol";
 
 interface IProxyFactory {
 	function clone(address) external returns (address);
-}
-
-interface IRewards {
-	struct EarnedData {
-		address token;
-		uint256 amount;
-	}
-
-	function initialize(uint256 _pid, bool _startActive) external;
-
-	function addReward(address _rewardsToken, address _distributor) external;
-
-	function approveRewardDistributor(
-		address _rewardsToken,
-		address _distributor,
-		bool _approved
-	) external;
-
-	function deposit(address _owner, uint256 _amount) external;
-
-	function withdraw(address _owner, uint256 _amount) external;
-
-	function getReward(address _forward) external;
-
-	function notifyRewardAmount(address _rewardsToken, uint256 _reward) external;
-
-	function balanceOf(address account) external view returns (uint256);
-
-	function claimableRewards(address _account) external view returns (EarnedData[] memory userRewards);
-
-	function rewardTokens(uint256 _rid) external view returns (address);
-
-	function rewardTokenLength() external view returns (uint256);
-
-	function active() external view returns (bool);
-}
-
-interface ILiquidityGaugeFrax {
-	function initialize(
-		address _admin,
-		address _SDT,
-		address _voting_escrow,
-		address _veBoost_proxy,
-		address _distributor,
-		uint256 _pid,
-		address _poolRegistry
-	) external;
 }
 
 contract PoolRegistry {
@@ -83,6 +36,7 @@ contract PoolRegistry {
 		address stakingAddress,
 		address stakingToken
 	);
+	
 	event PoolDeactivated(uint256 indexed poolid);
 	event AddUserVault(address indexed user, uint256 indexed poolid);
 	event OperatorChanged(address indexed account);
@@ -149,8 +103,7 @@ contract PoolRegistry {
 		address rewards;
 		if (rewardImplementation != address(0)) {
 			rewards = IProxyFactory(proxyFactory).clone(rewardImplementation);
-			//IRewards(rewards).initialize(poolInfo.length, rewardsStartActive);
-			ILiquidityGaugeFrax(rewards).initialize(owner, SDT, veSDT, VEBOOST, distributor, poolInfo.length, address(this));
+			ILiquidityGaugeStratFrax(rewards).initialize(owner, SDT, veSDT, VEBOOST, distributor, poolInfo.length, address(this));
 		}
 
 		poolInfo.push(
@@ -172,7 +125,7 @@ contract PoolRegistry {
 
 		//spawn new clone
 		address rewards = IProxyFactory(proxyFactory).clone(rewardImplementation);
-		IRewards(rewards).initialize(_pid, rewardsStartActive);
+		ILiquidityGaugeStratFrax(rewards).initialize(owner, SDT, veSDT, VEBOOST, distributor, poolInfo.length, address(this));
 
 		//change address
 		poolInfo[_pid].rewardsAddress = rewards;

@@ -498,7 +498,7 @@ contract StakingProxyBase is IProxyVault {
 
 	address public constant fxs = address(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
 	address public constant vefxsProxy = address(0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f);
-	address public feeRegistry; // = address(0xC9aCB83ADa68413a6Aa57007BC720EE2E2b3C46D); //fee registry
+	address public feeRegistry; // Need to be hardcoded when contract is deployed
 
 	address public owner; //owner of the vault
 	address public stakingAddress; //farming contract
@@ -524,7 +524,7 @@ contract StakingProxyBase is IProxyVault {
 	}
 
 	modifier onlyAdmin() {
-		require(vefxsProxy == msg.sender, "!auth_admin");
+		require(vefxsProxy == msg.sender, "!auth_admin_here");
 		_;
 	}
 
@@ -535,30 +535,7 @@ contract StakingProxyBase is IProxyVault {
 		address _stakingToken,
 		address _rewardsAddress
 	) external virtual override {}
-
-	function changeRewards(address _rewardsAddress) external onlyAdmin {
-		//remove from old rewards and claim
-		if (IRewards(rewards).active()) {
-			uint256 bal = IRewards(rewards).balanceOf(address(this));
-			if (bal > 0) {
-				IRewards(rewards).withdraw(owner, bal);
-			}
-			IRewards(rewards).getReward(owner);
-		}
-
-		//set to new rewards
-		rewards = _rewardsAddress;
-
-		//update balance
-		_checkpointRewards();
-	}
-
-	//checkpoint weight on farm by calling getReward as its the lowest cost thing to do.
-	function checkpointRewards() external onlyAdmin {
-		//claim rewards to local vault
-		IFraxFarmBase(stakingAddress).getReward(address(this));
-	}
-
+	
 	function setVeFXSProxy(address _proxy) external onlyAdmin {
 		//set the vefxs proxy
 		_setVeFXSProxy(_proxy);
@@ -569,8 +546,10 @@ contract StakingProxyBase is IProxyVault {
 		IFraxFarmBase(stakingAddress).stakerSetVeFXSProxy(_proxyAddress);
 		usingProxy = _proxyAddress;
 	}
+	
 
 	// Alternative solution until the feeRegistry is really deployed
+	// Todo : Remove it before the deployement
 	function setFeeRegistry(address _feeRegistry) external {
 		feeRegistry = _feeRegistry;
 	}
@@ -600,6 +579,7 @@ contract StakingProxyBase is IProxyVault {
 			if (userLiq >= bal) {
 				//add the difference to reward contract
 				ILiquidityGaugeStratFrax(rewards).deposit(userLiq - bal, owner, false);
+				
 			} else {
 				//remove the difference from the reward contract
 				ILiquidityGaugeStratFrax(rewards).withdraw(bal - userLiq, owner, false);
@@ -610,12 +590,10 @@ contract StakingProxyBase is IProxyVault {
 	//apply fees to fxs and send remaining to owner
 	function _processFxs() internal {
 		//get fee rate from booster
-		//uint256 totalFees = IFeeRegistry(feeRegistry).totalFees();
 		uint256 multisigFee = IFeeRegistry(feeRegistry).multisigPart();
 		uint256 accumulatorFee = IFeeRegistry(feeRegistry).accumulatorPart();
 		uint256 veSDTFee = IFeeRegistry(feeRegistry).veSDTPart();
 		
-
 		//send fxs fees to fee deposit
 		uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
 		uint256 sendMulti = (fxsBalance * multisigFee) / FEE_DENOMINATOR;
@@ -623,8 +601,6 @@ contract StakingProxyBase is IProxyVault {
 		uint256 sendveSDT = (fxsBalance * veSDTFee) / FEE_DENOMINATOR;
 	
 		if (sendMulti > 0) {
-			// Implement a different logic for stakeDAO
-			//IERC20(fxs).transfer(IFeeRegistry(feeRegistry).getFeeDepositor(usingProxy), sendAmount);
 			IERC20(fxs).transfer(IFeeRegistry(feeRegistry).multiSig(), sendMulti);
 		}
 		if (sendveSDT > 0) {
@@ -642,7 +618,7 @@ contract StakingProxyBase is IProxyVault {
 		}
 	}
 
-	//get extra rewards
+	//get extra rewards from the liquidity gauge
 	function _processExtraRewards() internal {
 		if (ILiquidityGaugeStratFrax(rewards).initialized()) {
 			//check if there is a balance because the reward contract could have be activated later
@@ -967,3 +943,44 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 		_processExtraRewards();
 	}
 }
+
+/*
+	Deprecated Zone
+
+	// Not needed because when set up the reward address when initializing the vault
+	// If a new reward address is needed, this need to be change on the poolRegistry Contract 
+	// with changing rewardsAddress. 
+	/*
+	function changeRewards(address _rewardsAddress) external onlyOwner {
+		//remove from old rewards and claim
+		if (ILiquidityGaugeStratFrax(rewards).initialized()) {
+			uint256 bal = ILiquidityGaugeStratFrax(rewards).balanceOf(address(this));
+			if (bal > 0) {
+				//IRewards(rewards).withdraw(owner, bal);
+				ILiquidityGaugeStratFrax(rewards).withdraw(bal, owner, false);
+			}
+			//IRewards(rewards).getReward(owner);
+			
+			ILiquidityGaugeStratFrax(rewards).claim_rewards(address(this),owner);
+		}
+
+		//set to new rewards
+		rewards = _rewardsAddress;
+
+		//update balance
+		_checkpointRewards();
+	}
+	function changeRewards(address _rewardsAddress) external onlyAdmin {
+		rewards = _rewardsAddress;
+	}
+	*/
+
+	//checkpoint weight on farm by calling getReward as its the lowest cost thing to do.
+	// Should not be needed anymore because this contract will only be copied. 
+	// No found should be deposited on the inital contract, so not rewards should arrive.
+	/*
+	function checkpointRewards() external onlyAdmin {
+		//claim rewards to local vault
+		IFraxFarmBase(stakingAddress).getReward(address(this));
+	}
+	*/

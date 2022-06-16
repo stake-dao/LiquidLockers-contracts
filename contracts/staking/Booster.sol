@@ -5,34 +5,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../interfaces/ILocker.sol";
 
-interface IStaker {
-	function createLock(uint256, uint256) external returns (bool);
-
-	function increaseAmount(uint256) external returns (bool);
-
-	function increaseTime(uint256) external returns (bool);
-
-	function release() external returns (bool);
-
-	function checkpointFeeRewards(address) external;
-
-	function claimFees(
-		address,
-		address,
-		address
-	) external returns (uint256);
-
-	function voteGaugeWeight(address, uint256) external returns (bool);
-
-	function operator() external view returns (address);
-
-	function execute(
-		address _to,
-		uint256 _value,
-		bytes calldata _data
-	) external returns (bool, bytes memory);
-}
-
 interface IProxyVault {
 	enum VaultType {
 		Erc20Baic,
@@ -46,6 +18,8 @@ interface IProxyVault {
 		address _stakingToken,
 		address _rewardsAddress
 	) external;
+
+	function changeRewards(address _rewardsAddress) external;
 
 	function usingProxy() external returns (address);
 
@@ -99,6 +73,8 @@ interface IPoolRegistry {
 	function setRewardImplementation(address _imp) external;
 
 	function setDistributor(address _distributor) external;
+
+	function setOperator(address _op) external;
 }
 
 /*
@@ -111,33 +87,32 @@ contract Booster {
 
 	address public immutable proxy;
 	address public immutable poolRegistry;
-	address public immutable feeRegistry;
 	address public owner;
 	address public pendingOwner;
 	address public poolManager;
-	address public rewardManager;
-	address public feeclaimer;
-	address public feeQueue;
+	//address public rewardManager;
+	//address public feeclaimer;
+	//address public feeQueue;
+	//address public immutable feeRegistry;
 	bool public isShutdown;
 
-	mapping(address => mapping(address => bool)) public feeClaimMap;
+	//mapping(address => mapping(address => bool)) public feeClaimMap;
 
 	constructor(
 		address _proxy,
-		address _poolReg,
-		address _feeReg
+		address _poolReg
+		//address _feeReg
 	) {
 		proxy = _proxy;
 		poolRegistry = _poolReg;
-		feeRegistry = _feeReg;
 		isShutdown = false;
 		owner = msg.sender;
-		rewardManager = msg.sender;
 		poolManager = msg.sender;
-		feeclaimer = msg.sender;
-
-		feeClaimMap[address(0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872)][fxs] = true;
-		emit FeeClaimPairSet(address(0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872), fxs, true);
+		//feeclaimer = msg.sender;
+		//feeRegistry = _feeReg;
+		//rewardManager = msg.sender;
+		//feeClaimMap[address(0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872)][fxs] = true;
+		//emit FeeClaimPairSet(address(0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872), fxs, true);
 	}
 
 	modifier onlyOwner() {
@@ -165,33 +140,6 @@ contract Booster {
 		emit OwnerChanged(owner);
 	}
 
-	//set fee queue, a contract fees are moved to when claiming
-	function setFeeQueue(address _queue) external onlyOwner {
-		feeQueue = _queue;
-		emit FeeQueueChanged(_queue);
-	}
-
-	//set who can call claim fees, 0x0 address will allow anyone to call
-	function setFeeClaimer(address _claimer) external onlyOwner {
-		feeclaimer = _claimer;
-		emit FeeClaimerChanged(_claimer);
-	}
-
-	function setFeeClaimPair(
-		address _claimAddress,
-		address _token,
-		bool _active
-	) external onlyOwner {
-		feeClaimMap[_claimAddress][_token] = _active;
-		emit FeeClaimPairSet(_claimAddress, _token, _active);
-	}
-
-	//set a reward manager address that controls extra reward contracts for each pool
-	function setRewardManager(address _rmanager) external onlyOwner {
-		rewardManager = _rmanager;
-		emit RewardManagerChanged(_rmanager);
-	}
-
 	//set pool manager
 	function setPoolManager(address _pmanager) external onlyOwner {
 		poolManager = _pmanager;
@@ -206,42 +154,6 @@ contract Booster {
 		emit Shutdown();
 	}
 
-	//claim operator roles for certain systems for direct access
-	/*
-    function claimOperatorRoles() external onlyOwner{
-        require(!isShutdown,"shutdown");
-
-        //claim operator role of pool registry
-        bytes memory data = abi.encodeWithSelector(bytes4(keccak256("setOperator(address)")), address(this));
-        IStaker(proxy).execute(poolRegistry,uint256(0),data);
-    }
-    */
-
-	//set fees on user vaults
-	function setPoolFees(
-		uint256 _cvxfxs,
-		uint256 _cvx,
-		uint256 _platform
-	) external onlyOwner {
-		require(!isShutdown, "shutdown");
-
-		bytes memory data = abi.encodeWithSelector(
-			bytes4(keccak256("setFees(uint256,uint256,uint256)")),
-			_cvxfxs,
-			_cvx,
-			_platform
-		);
-		ILocker(proxy).execute(feeRegistry, uint256(0), data);
-	}
-
-	//set fee deposit address for all user vaults
-	function setPoolFeeDeposit(address _deposit) external onlyOwner {
-		require(!isShutdown, "shutdown");
-
-		bytes memory data = abi.encodeWithSelector(bytes4(keccak256("setDepositAddress(address)")), _deposit);
-		ILocker(proxy).execute(feeRegistry, uint256(0), data);
-	}
-
 	//recover tokens on this contract
 	function recoverERC20(
 		address _tokenAddress,
@@ -251,9 +163,7 @@ contract Booster {
 		IERC20(_tokenAddress).safeTransfer(_withdrawTo, _tokenAmount);
 		emit Recovered(_tokenAddress, _tokenAmount);
 	}
-
-
-
+	
 
 	// #=#=#=#=#=#=#=# Start Liquid Locker Management Section #=#=#=#=#=#=#=# */
 	function createLock(uint256 _value, uint256 _unlockTime) external onlyOwner {
@@ -325,8 +235,33 @@ contract Booster {
 
 	// #=#=#=#=#=#=#=# End of Liquid Locker Management Section #=#=#=#=#=#=#=# //
 
+
+
+
+
+
 	// #=#=#=#=#=#=#=# Start Pool Registry Management Section #=#=#=#=#=#=#=# //
 
+	/* ---- Setter ---- */
+	function setOperator(address _op) external onlyPoolManager{
+		IPoolRegistry(poolRegistry).setOperator(_op);
+	}
+
+	function setDistributor(address _distributor) external onlyPoolManager {
+		IPoolRegistry(poolRegistry).setDistributor(_distributor);
+	}
+	
+	//set a new reward pool implementation for future pools
+	function setPoolRewardImplementation(address _impl) external onlyPoolManager {
+		IPoolRegistry(poolRegistry).setRewardImplementation(_impl);
+	}
+
+	//set extra reward contracts to be active when pools are created
+	function setRewardActiveOnCreation(bool _active) external onlyPoolManager {
+		IPoolRegistry(poolRegistry).setRewardActiveOnCreation(_active);
+	}
+
+	/* ---- Pool management ---- */
 	//add pool on registry
 	function addPool(
 		address _implementation,
@@ -336,13 +271,9 @@ contract Booster {
 		IPoolRegistry(poolRegistry).addPool(_implementation, _stakingAddress, _stakingToken);
 	}
 
-	//set a new reward pool implementation for future pools
-	function setPoolRewardImplementation(address _impl) external onlyPoolManager {
-		IPoolRegistry(poolRegistry).setRewardImplementation(_impl);
-	}
-
-	function setDistributor(address _distributor) external onlyOwner {
-		IPoolRegistry(poolRegistry).setDistributor(_distributor);
+	//replace rewards contract on a specific pool
+	function createNewPoolRewards(uint256 _pid) external onlyPoolManager {
+		IPoolRegistry(poolRegistry).createNewPoolRewards(_pid);
 	}
 
 	//deactivate a pool
@@ -350,20 +281,12 @@ contract Booster {
 		IPoolRegistry(poolRegistry).deactivatePool(_pid);
 	}
 
-	function createNewPoolRewards(uint256 _pid) external onlyPoolManager {
-		IPoolRegistry(poolRegistry).createNewPoolRewards(_pid);
-	}
-
-	//set extra reward contracts to be active when pools are created
-	function setRewardActiveOnCreation(bool _active) external onlyPoolManager {
-		IPoolRegistry(poolRegistry).setRewardActiveOnCreation(_active);
-	}
-
+	/* ---- Vault management ---- */
+	//create a vault for a user
 	function createVault(uint256 _pid) external {
 		//create minimal proxy vault for specified pool
 		(address vault, address stakeAddress, address stakeToken, address rewards) = IPoolRegistry(poolRegistry)
 			.addUserVault(_pid, msg.sender);
-
 		//make voterProxy call proxyToggleStaker(vault) on the pool's stakingAddress to set it as a proxied child
 		bytes memory data = abi.encodeWithSelector(bytes4(keccak256("proxyToggleStaker(address)")), vault);
 		(bool success, ) = ILocker(proxy).execute(stakeAddress, uint256(0), data);
@@ -380,6 +303,7 @@ contract Booster {
 
 	// #=#=#=#=#=#=#=# End of Pool Registry Management Section #=#=#=#=#=#=#=# //
 
+/*
 	// #=#=#=#=#=#=#=# Start Deprecated Section #=#=#=#=#=#=#=# //
 	// This will surely be removed, because StakeDAO handles fees differently
 	//vote for gauge weights
@@ -419,7 +343,76 @@ contract Booster {
         IStaker(proxy).checkpointFeeRewards(_distroContract);
     }
     */
+
+	//set fees on user vaults
+	// Not needed anymore because the deployer of the feeRegistry Contract 
+	// Will have all the power for modifing fees
+	// For Convex, this is the FXS Locker who has all the power
+	/*
+	function setPoolFees(
+		uint256 _cvxfxs,
+		uint256 _cvx,
+		uint256 _platform
+	) external onlyOwner {
+		require(!isShutdown, "shutdown");
+
+		bytes memory data = abi.encodeWithSelector(
+			bytes4(keccak256("setFees(uint256,uint256,uint256)")),
+			_cvxfxs,
+			_cvx,
+			_platform
+		);
+		ILocker(proxy).execute(feeRegistry, uint256(0), data);
+	}
+
+	//set fee deposit address for all user vaults
+	function setPoolFeeDeposit(address _deposit) external onlyOwner {
+		require(!isShutdown, "shutdown");
+
+		bytes memory data = abi.encodeWithSelector(bytes4(keccak256("setDepositAddress(address)")), _deposit);
+		ILocker(proxy).execute(feeRegistry, uint256(0), data);
+	}
+	*/
+
+	//set fee queue, a contract fees are moved to when claiming
+	/*
+	function setFeeQueue(address _queue) external onlyOwner {
+		feeQueue = _queue;
+		emit FeeQueueChanged(_queue);
+	}
+
+	//set who can call claim fees, 0x0 address will allow anyone to call
+	function setFeeClaimer(address _claimer) external onlyOwner {
+		feeclaimer = _claimer;
+		emit FeeClaimerChanged(_claimer);
+	}
+
+	function setFeeClaimPair(
+		address _claimAddress,
+		address _token,
+		bool _active
+	) external onlyOwner {
+		feeClaimMap[_claimAddress][_token] = _active;
+		emit FeeClaimPairSet(_claimAddress, _token, _active);
+	}
+	//set a reward manager address that controls extra reward contracts for each pool
+	function setRewardManager(address _rmanager) external onlyOwner {
+		rewardManager = _rmanager;
+		emit RewardManagerChanged(_rmanager);
+	}
+	*/
+
+	// Not needed anymore
+	/*
+	function changeRewards(address _implementation, address _rewardsAddress) external onlyOwner{
+		bytes memory data = abi.encodeWithSelector(bytes4(keccak256("changeRewards(address)")), _rewardsAddress);
+		(bool success, ) = ILocker(proxy).execute(_implementation, uint256(0), data);
+		require(success,"changeRewards_failed");
+	}
+	*/
 	// #=#=#=#=#=#=#=# End of Deprecated Section #=#=#=#=#=#=#=# //
+
+
 
 	/* #=#=#=#=#=#=#=#== EVENTS #=#=#=#=#=#=#=#== */
 	event SetPendingOwner(address indexed _address);

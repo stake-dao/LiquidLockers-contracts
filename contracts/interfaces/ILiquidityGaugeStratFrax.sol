@@ -54,14 +54,13 @@ interface ILiquidityGaugeStratFrax {
 	function commit_transfer_ownership(address) external;
 
 	function initialize(
-		address _staking_token,
 		address _admin,
 		address _SDT,
 		address _voting_escrow,
 		address _veBoost_proxy,
 		address _distributor,
-		address _vault,
-		string memory _symbol
+		uint256 _pid,
+		address _poolRegistry
 	) external;
 
 	function add_reward(address, address) external;
