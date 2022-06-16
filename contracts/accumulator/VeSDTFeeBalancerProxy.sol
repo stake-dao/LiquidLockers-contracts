@@ -52,7 +52,6 @@ contract VeSDTFeeBalancerProxy is Ownable {
 	address public constant BAL = 0xba100000625a3754423978a60c9317c58a424e3D;
 	address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 	address public constant FEE_D = 0x29f3dd38dB24d3935CF1bf841e6b2B461A3E5D92;
-	address public constant FRAX = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
 	address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 	address public constant BALANCER_VAULT = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
 	uint256 public claimerFee = 100;
@@ -113,7 +112,7 @@ contract VeSDTFeeBalancerProxy is Ownable {
 		ISdFraxVault(SD_FRAX_3CRV).deposit(frax3CrvBalance);
 
 		// emit the event before the sdFrax3Crv transfer
-		// claimerPart in FRAX, feeDistributor part in sdFrax3Crv
+		// claimerPart in BAL, feeDistributor part in sdFrax3Crv
 		emit RewardSent(claimerPart, IERC20(SD_FRAX_3CRV).balanceOf(address(this)));
 
         // Transfer SDFRAX3CRV to the veSDT Fee Distributor
@@ -128,7 +127,7 @@ contract VeSDTFeeBalancerProxy is Ownable {
 
     /// @notice function to set a new claier fee 
 	/// @param _newClaimerFee claimer fee
-	function setClaimerFe(uint256 _newClaimerFee) external onlyOwner {
+	function setClaimerFee(uint256 _newClaimerFee) external onlyOwner {
         require(_newClaimerFee <= BASE_FEE, ">100%");
 		claimerFee = _newClaimerFee;
 	}

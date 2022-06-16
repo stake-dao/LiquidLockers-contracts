@@ -65,7 +65,9 @@ describe("Balancer Depositor", function () {
             const balBalanceClaimerAfter = await bal.balanceOf(bob.address);
             const balancerFeeDAfter = await sdFrax3Crv.balanceOf(FEE_D_SD);
             expect(balBalanceClaimerAfter.sub(balBalanceClaimerBefore)).eq(amountToSend.div(baseFee).mul(claimerFee))
-            expect(balancerFeeDAfter.sub(balancerFeeDBefore)).gt(parseEther("640"));
+            expect(balancerFeeDAfter.sub(balancerFeeDBefore)).gt(parseEther("350"));
+            const balLeft  = await bal.balanceOf(veSdtFeeProxy.address);
+            expect(balLeft).eq(0);
         });
     });
 });
