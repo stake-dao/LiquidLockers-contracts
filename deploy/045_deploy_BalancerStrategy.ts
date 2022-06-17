@@ -9,7 +9,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const governance = "0x0dE5199779b43E13B3Bec21e91117E18736BC1A8";
   const multisigSD = "0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063";
   const balancerAcummulator = "0x9A211c972AebF2aE70F1ec14845848baAB79d6Af";
-  const veSDTFeeBalancerProxy = ""; // add it after the deploy (script 44)
+  const veSDTFeeBalancerProxy = "0xF94492a9efEE2A6A82256e5794C988D3A711539d";
   const sdtDistributor = "0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C";
   await deploy("BalancerSTRATEGY", {
     contract: "BalancerStrategy",

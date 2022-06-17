@@ -13,7 +13,6 @@ contract BalancerStrategy is BaseStrategy {
 
 	BalancerAccumulator public accumulator;
 	address public sdtDistributor;
-	address public constant BALANCER_FEE_D = 0x26743984e3357eFC59f2fd6C1aFDC310335a61c9;
 	address public constant BAL_MINTER = 0x239e55F427D44C3cc793f49bFB507ebe76638a2b;
 	address public constant BAL = 0xba100000625a3754423978a60c9317c58a424e3D;
 
@@ -83,8 +82,8 @@ contract BalancerStrategy is BaseStrategy {
 		accumulator.depositToken(_token, _amount);
 	}
 
-	/// @notice function to claim the reward
-	/// @param _token token address
+	/// @notice function to claim the reward and distribute it
+	/// @param _token BPT token address
 	function claim(address _token) external override {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
@@ -111,7 +110,7 @@ contract BalancerStrategy is BaseStrategy {
 		require(success, "BAL transfer failed!");
 
 		// Distribute BAL
-		uint256 balNetRewards = sendFee(gauge, BAL, balMinted);
+		uint256 balNetRewards = sendFee(gauge, balMinted);
 		IERC20(BAL).approve(multiGauges[gauge], balNetRewards);
 		ILiquidityGauge(multiGauges[gauge]).deposit_reward_token(BAL, balNetRewards);
 		emit Claimed(gauge, BAL, balMinted);
@@ -139,18 +138,21 @@ contract BalancerStrategy is BaseStrategy {
 		}
 	}
 
-	function sendFee(address _gauge, address _rewardToken, uint256 _rewardsBalance) internal returns(uint256) {
+	/// @notice internal function for distributing fees to recipients 
+	/// @param _gauge gauge address
+	/// @param _rewardsBalance total balance to distribute
+	function sendFee(address _gauge, uint256 _rewardsBalance) internal returns(uint256) {
 		// calculate the amount for each fee recipient
 		uint256 multisigFee = (_rewardsBalance * perfFee[_gauge]) / BASE_FEE;
 		uint256 accumulatorPart = (_rewardsBalance * accumulatorFee[_gauge]) / BASE_FEE;
 		uint256 veSDTPart = (_rewardsBalance * veSDTFee[_gauge]) / BASE_FEE;
 		uint256 claimerPart = (_rewardsBalance * claimerRewardFee[_gauge]) / BASE_FEE;
 		// send 
-		IERC20(_rewardToken).approve(address(accumulator), accumulatorPart);
-		accumulator.depositToken(_rewardToken, accumulatorPart);
-		IERC20(_rewardToken).transfer(rewardsReceiver, multisigFee);
-		IERC20(_rewardToken).transfer(veSDTFeeProxy, veSDTPart);
-		IERC20(_rewardToken).transfer(msg.sender, claimerPart);
+		IERC20(BAL).approve(address(accumulator), accumulatorPart);
+		accumulator.depositToken(BAL, accumulatorPart);
+		IERC20(BAL).transfer(rewardsReceiver, multisigFee);
+		IERC20(BAL).transfer(veSDTFeeProxy, veSDTPart);
+		IERC20(BAL).transfer(msg.sender, claimerPart);
 		return _rewardsBalance - multisigFee - accumulatorPart - veSDTPart - claimerPart;
 	}
 
@@ -163,8 +165,7 @@ contract BalancerStrategy is BaseStrategy {
 	}
 
 	/// @notice function to set a new gauge
-	/// It permits to set it as  address(0), for disabling it
-	/// in case of migration
+	/// It permits to set it as address(0), for disabling it
 	/// @param _token token address
 	/// @param _gauge gauge address
 	function setGauge(address _token, address _gauge) external override onlyGovernanceOrFactory {
@@ -172,27 +173,6 @@ contract BalancerStrategy is BaseStrategy {
 		// Set new gauge
 		gauges[_token] = _gauge;
 		emit GaugeSet(_gauge, _token);
-	}
-
-	/// @notice function to migrate any LP to another strategy contract (hard migration)
-	/// @param _token token address
-	function migrateLP(address _token) external onlyApprovedVault {
-		require(gauges[_token] != address(0), "not existent gauge");
-		migrate(_token);
-	}
-
-	/// @notice function to migrate any LP, it sends them to the vault
-	/// @param _token token address
-	function migrate(address _token) internal {
-		address gauge = gauges[_token];
-		uint256 amount = IERC20(gauge).balanceOf(address(locker));
-		// Withdraw LPs from the old gauge
-		(bool success, ) = locker.execute(gauge, 0, abi.encodeWithSignature("withdraw(uint256)", amount));
-		require(success, "Withdraw failed!");
-
-		// Transfer LPs to the approved vault
-		(success, ) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, amount));
-		require(success, "Transfer failed!");
 	}
 
 	/// @notice function to set a multi gauge
@@ -232,6 +212,8 @@ contract BalancerStrategy is BaseStrategy {
 		governance = _newGovernance;
 	}
 
+	/// @notice function to set the vault/gauge factory
+	/// @param _newVaultGaugeFactory factory address
 	function setVaultGaugeFactory(address _newVaultGaugeFactory) external onlyGovernance {
 		require(_newVaultGaugeFactory != address(0), "zero address");
 		vaultGaugeFactory = _newVaultGaugeFactory;
