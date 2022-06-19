@@ -1,65 +1,9 @@
-/**
- *Submitted for verification at Etherscan.io on 2022-05-13
- */
-
-// File: contracts\interfaces\IProxyVault.sol
-
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
 import "../interfaces/ILiquidityGaugeStratFrax.sol";
-
-interface IProxyVault {
-	enum VaultType {
-		Erc20Baic,
-		UniV3,
-		Convex
-	}
-
-	function initialize(
-		address _owner,
-		address _stakingAddress,
-		address _stakingToken,
-		address _rewardsAddress
-	) external;
-
-	function usingProxy() external returns (address);
-
-	function rewards() external returns (address);
-
-	function getReward() external;
-
-	function getReward(bool _claim) external;
-
-	function getReward(bool _claim, address[] calldata _rewardTokenList) external;
-
-	function earned() external view returns (address[] memory token_addresses, uint256[] memory total_earned);
-}
-
-interface IFeeRegistry {
-	//function cvxfxsIncentive() external view returns(uint256);
-	//function cvxIncentive() external view returns(uint256);
-	//function platformIncentive() external view returns(uint256);
-	function totalFees() external view returns (uint256);
-
-	function maxFees() external view returns (uint256);
-
-	function feeDeposit() external view returns (address);
-
-	function getFeeDepositor(address _from) external view returns (address);
-
-	function multisigPart() external view returns (uint256);
-
-	function accumulatorPart() external view returns (uint256);
-
-	function veSDTPart() external view returns (uint256);
-
-	function multiSig() external view returns (address);
-
-	function accumulator() external view returns (address);
-
-	function veSDTFeeProxy() external view returns (address);
-}
+import "../interfaces/IProxyVault.sol";
+import "../interfaces/IFeeRegistry.sol";
 
 interface IFraxFarmBase {
 	function totalLiquidityLocked() external view returns (uint256);
@@ -73,41 +17,6 @@ interface IFraxFarmBase {
 	function stakerSetVeFXSProxy(address proxy_address) external;
 
 	function getReward(address destination_address) external returns (uint256[] memory);
-}
-
-interface IRewards {
-	struct EarnedData {
-		address token;
-		uint256 amount;
-	}
-
-	function initialize(uint256 _pid, bool _startActive) external;
-
-	function addReward(address _rewardsToken, address _distributor) external;
-
-	function approveRewardDistributor(
-		address _rewardsToken,
-		address _distributor,
-		bool _approved
-	) external;
-
-	function deposit(address _owner, uint256 _amount) external;
-
-	function withdraw(address _owner, uint256 _amount) external;
-
-	function getReward(address _forward) external;
-
-	function notifyRewardAmount(address _rewardsToken, uint256 _reward) external;
-
-	function balanceOf(address account) external view returns (uint256);
-
-	function claimableRewards(address _account) external view returns (EarnedData[] memory userRewards);
-
-	function rewardTokens(uint256 _rid) external view returns (address);
-
-	function rewardTokenLength() external view returns (uint256);
-
-	function active() external view returns (bool);
 }
 
 /**
@@ -503,7 +412,7 @@ contract StakingProxyBase is IProxyVault {
 	address public owner; //owner of the vault
 	address public stakingAddress; //farming contract
 	address public stakingToken; //farming token
-	address public override rewards; //extra rewards on convex
+	address public override rewards; //extra rewards on Stake DAO
 	address public override usingProxy; //address of proxy being used
 
 	uint256 public constant FEE_DENOMINATOR = 10000;
@@ -535,7 +444,34 @@ contract StakingProxyBase is IProxyVault {
 		address _stakingToken,
 		address _rewardsAddress
 	) external virtual override {}
-	
+
+	//need to be called by each user for each personal vault
+	//when a pool change the Liquidity gauge reward address
+	function changeRewards(address _rewardsAddress) external onlyOwner {
+		require(ILiquidityGaugeStratFrax(rewards).initialized(), "pool not initialized yet");
+
+		//remove from old rewards and claim
+		uint256 bal = 0;
+		if (ILiquidityGaugeStratFrax(rewards).initialized()) {
+			bal = ILiquidityGaugeStratFrax(rewards).balanceOf(address(this));
+			if (bal > 0) {
+				ILiquidityGaugeStratFrax(rewards).withdraw(bal, owner, false);
+			}
+			ILiquidityGaugeStratFrax(rewards).claim_rewards(address(this), owner);
+		}
+
+		//set to new rewards
+		rewards = _rewardsAddress;
+
+		// deposit in new rewards
+		if (bal > 0) {
+			ILiquidityGaugeStratFrax(rewards).deposit(bal, owner, false);
+		}
+
+		//update balance
+		_checkpointRewards();
+	}
+
 	function setVeFXSProxy(address _proxy) external onlyAdmin {
 		//set the vefxs proxy
 		_setVeFXSProxy(_proxy);
@@ -546,7 +482,6 @@ contract StakingProxyBase is IProxyVault {
 		IFraxFarmBase(stakingAddress).stakerSetVeFXSProxy(_proxyAddress);
 		usingProxy = _proxyAddress;
 	}
-	
 
 	// Alternative solution until the feeRegistry is really deployed
 	// Todo : Remove it before the deployement
@@ -579,7 +514,6 @@ contract StakingProxyBase is IProxyVault {
 			if (userLiq >= bal) {
 				//add the difference to reward contract
 				ILiquidityGaugeStratFrax(rewards).deposit(userLiq - bal, owner, false);
-				
 			} else {
 				//remove the difference from the reward contract
 				ILiquidityGaugeStratFrax(rewards).withdraw(bal - userLiq, owner, false);
@@ -593,13 +527,13 @@ contract StakingProxyBase is IProxyVault {
 		uint256 multisigFee = IFeeRegistry(feeRegistry).multisigPart();
 		uint256 accumulatorFee = IFeeRegistry(feeRegistry).accumulatorPart();
 		uint256 veSDTFee = IFeeRegistry(feeRegistry).veSDTPart();
-		
+
 		//send fxs fees to fee deposit
 		uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
 		uint256 sendMulti = (fxsBalance * multisigFee) / FEE_DENOMINATOR;
 		uint256 sendAccum = (fxsBalance * accumulatorFee) / FEE_DENOMINATOR;
 		uint256 sendveSDT = (fxsBalance * veSDTFee) / FEE_DENOMINATOR;
-	
+
 		if (sendMulti > 0) {
 			IERC20(fxs).transfer(IFeeRegistry(feeRegistry).multiSig(), sendMulti);
 		}
@@ -609,7 +543,6 @@ contract StakingProxyBase is IProxyVault {
 		if (sendAccum > 0) {
 			IERC20(fxs).transfer(IFeeRegistry(feeRegistry).accumulator(), sendAccum);
 		}
-
 
 		//transfer remaining fxs to owner
 		uint256 sendAmount = IERC20(fxs).balanceOf(address(this));
@@ -629,7 +562,7 @@ contract StakingProxyBase is IProxyVault {
 				//bal == 0 and liq > 0 can only happen if rewards were turned on after staking
 				ILiquidityGaugeStratFrax(rewards).deposit(userLiq, owner, false);
 			}
-			ILiquidityGaugeStratFrax(rewards).claim_rewards(address(this),owner);
+			ILiquidityGaugeStratFrax(rewards).claim_rewards(address(this), owner);
 		} else {}
 	}
 
@@ -789,8 +722,6 @@ abstract contract ReentrancyGuard {
 	}
 }
 
-// File: contracts\StakingProxyERC20.sol
-
 pragma solidity ^0.8.7;
 
 contract VaultV1 is StakingProxyBase, ReentrancyGuard {
@@ -853,7 +784,9 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 	}
 
 	//withdraw a staked position
-	function withdrawLocked(bytes32 _kek_id) external onlyOwner nonReentrant {
+	function withdrawLocked(bytes32 _kek_id, bool _claim) external onlyOwner nonReentrant {
+		getReward(_claim);
+
 		//withdraw directly to owner(msg.sender)
 		IFraxFarmERC20(stakingAddress).withdrawLocked(_kek_id, msg.sender);
 
@@ -913,7 +846,7 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 
 		//process fxs fees
 		_processFxs();
-		
+
 		//get list of reward tokens
 		address[] memory rewardTokens = IFraxFarmERC20(stakingAddress).getAllRewardTokens();
 		//transfer
@@ -943,44 +876,3 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 		_processExtraRewards();
 	}
 }
-
-/*
-	Deprecated Zone
-
-	// Not needed because when set up the reward address when initializing the vault
-	// If a new reward address is needed, this need to be change on the poolRegistry Contract 
-	// with changing rewardsAddress. 
-	/*
-	function changeRewards(address _rewardsAddress) external onlyOwner {
-		//remove from old rewards and claim
-		if (ILiquidityGaugeStratFrax(rewards).initialized()) {
-			uint256 bal = ILiquidityGaugeStratFrax(rewards).balanceOf(address(this));
-			if (bal > 0) {
-				//IRewards(rewards).withdraw(owner, bal);
-				ILiquidityGaugeStratFrax(rewards).withdraw(bal, owner, false);
-			}
-			//IRewards(rewards).getReward(owner);
-			
-			ILiquidityGaugeStratFrax(rewards).claim_rewards(address(this),owner);
-		}
-
-		//set to new rewards
-		rewards = _rewardsAddress;
-
-		//update balance
-		_checkpointRewards();
-	}
-	function changeRewards(address _rewardsAddress) external onlyAdmin {
-		rewards = _rewardsAddress;
-	}
-	*/
-
-	//checkpoint weight on farm by calling getReward as its the lowest cost thing to do.
-	// Should not be needed anymore because this contract will only be copied. 
-	// No found should be deposited on the inital contract, so not rewards should arrive.
-	/*
-	function checkpointRewards() external onlyAdmin {
-		//claim rewards to local vault
-		IFraxFarmBase(stakingAddress).getReward(address(this));
-	}
-	*/

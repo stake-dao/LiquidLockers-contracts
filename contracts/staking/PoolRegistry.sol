@@ -9,24 +9,23 @@ interface IProxyFactory {
 
 contract PoolRegistry {
 	address public owner;
-	address public constant proxyFactory = address(0x66807B5598A848602734B82E432dD88DBE13fC8f);
+	address public constant PROXY_FACTORY = address(0x66807B5598A848602734B82E432dD88DBE13fC8f);
 	address public constant SDT = address(0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F);
-	address public constant veSDT = address(0x0C30476f66034E11782938DF8e4384970B6c9e8a);
+	address public constant VE_SDT = address(0x0C30476f66034E11782938DF8e4384970B6c9e8a);
 	address public constant VEBOOST = address(0xD67bdBefF01Fc492f1864E61756E5FBB3f173506);
 
 	address public operator;
-	address public rewardImplementation;
+	address public rewardImplementation; // Liquidity Gauge Contract model
 	address public distributor;
-	bool public rewardsStartActive;
 	PoolInfo[] public poolInfo;
 	mapping(uint256 => mapping(address => address)) public vaultMap; //pool -> user -> vault
 	mapping(uint256 => address[]) public poolVaultList; //pool -> vault array
 
 	struct PoolInfo {
-		address implementation;
-		address stakingAddress;
-		address stakingToken;
-		address rewardsAddress;
+		address implementation; // Personal Vault model
+		address stakingAddress; // Frax Gauge for stacking LP token
+		address stakingToken; // LP token
+		address rewardsAddress; // Liquidity Gauge V4 from Stake DAO for extra rewards
 		uint8 active;
 	}
 
@@ -36,7 +35,7 @@ contract PoolRegistry {
 		address stakingAddress,
 		address stakingToken
 	);
-	
+
 	event PoolDeactivated(uint256 indexed poolid);
 	event AddUserVault(address indexed user, uint256 indexed poolid);
 	event OperatorChanged(address indexed account);
@@ -73,12 +72,6 @@ contract PoolRegistry {
 		emit RewardImplementationChanged(_imp);
 	}
 
-	//set rewards to be active when pool is created
-	function setRewardActiveOnCreation(bool _active) external onlyOperator {
-		rewardsStartActive = _active;
-		emit RewardActiveOnCreationChanged(_active);
-	}
-
 	//get number of pools
 	function poolLength() external view returns (uint256) {
 		return poolInfo.length;
@@ -90,7 +83,11 @@ contract PoolRegistry {
 	}
 
 	//add a new pool and implementation
-	// implementation is the "personal vault"
+	/**
+	 * @param _implementation is address of personal vault contract model
+	 * @param _stakingAddress is address of Frax gauge for stacking LP token
+	 * @param _stakingToken	is LP token for Frax gauge
+	 */
 	function addPool(
 		address _implementation,
 		address _stakingAddress,
@@ -102,8 +99,16 @@ contract PoolRegistry {
 
 		address rewards;
 		if (rewardImplementation != address(0)) {
-			rewards = IProxyFactory(proxyFactory).clone(rewardImplementation);
-			ILiquidityGaugeStratFrax(rewards).initialize(owner, SDT, veSDT, VEBOOST, distributor, poolInfo.length, address(this));
+			rewards = IProxyFactory(PROXY_FACTORY).clone(rewardImplementation);
+			ILiquidityGaugeStratFrax(rewards).initialize(
+				owner,
+				SDT,
+				VE_SDT,
+				VEBOOST,
+				distributor,
+				poolInfo.length,
+				address(this)
+			);
 		}
 
 		poolInfo.push(
@@ -124,8 +129,8 @@ contract PoolRegistry {
 		require(rewardImplementation != address(0), "!imp");
 
 		//spawn new clone
-		address rewards = IProxyFactory(proxyFactory).clone(rewardImplementation);
-		ILiquidityGaugeStratFrax(rewards).initialize(owner, SDT, veSDT, VEBOOST, distributor, poolInfo.length, address(this));
+		address rewards = IProxyFactory(PROXY_FACTORY).clone(rewardImplementation);
+		ILiquidityGaugeStratFrax(rewards).initialize(owner, SDT, VE_SDT, VEBOOST, distributor, _pid, address(this));
 
 		//change address
 		poolInfo[_pid].rewardsAddress = rewards;
@@ -155,7 +160,7 @@ contract PoolRegistry {
 		require(pool.active > 0, "!active");
 
 		//create
-		vault = IProxyFactory(proxyFactory).clone(pool.implementation);
+		vault = IProxyFactory(PROXY_FACTORY).clone(pool.implementation);
 		//add to user map
 		vaultMap[_pid][_user] = vault;
 		//add to pool vault list
