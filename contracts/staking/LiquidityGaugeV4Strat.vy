@@ -130,13 +130,11 @@ def __init__():
 def initialize(_staking_token: address, _admin: address, _SDT: address, _voting_escrow: address, _veBoost_proxy: address, _distributor: address,_vault:address,symbol:String[26]):
     """
     @notice Contract initializer
-    @param _staking_token Liquidity Pool contract address / remove
     @param _admin Admin who can kill the gauge
     @param _SDT Address of the SDT token
     @param _voting_escrow Address of the veSDT contract
     @param _veBoost_proxy Address of the proxy contract used to query veSDT balances and taking into account potential delegations
     @param _distributor Address of the contract responsible for distributing SDT tokens to this gauge
-    cancel vault, symbol, stacking token
     """
     assert self.initialized == False #dev: contract is already initialized
     self.initialized = True
