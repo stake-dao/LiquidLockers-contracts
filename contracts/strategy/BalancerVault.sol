@@ -45,6 +45,10 @@ contract BalancerVault is ERC20Upgradeable {
 		balancerStrategy = _balancerStrategy;
 	}
 
+	/// @notice function to deposit the BPT token
+	/// @param _staker address to stake for
+	/// @param _amount amount to deposit
+	/// @param _earn earn or not 
 	function deposit(
 		address _staker,
 		uint256 _amount,
@@ -55,25 +59,30 @@ contract BalancerVault is ERC20Upgradeable {
 		_deposit(_staker, _amount, _earn);
 	}
 
+	/// @notice function to provide liquidity in underlying tokens 
+	/// @param _staker address to stake for
+	/// @param _maxAmountsIn amounts for each underlying token
+	/// @param _earn earn or not 
+	/// @param _minAmount amount to deposit
 	function provideLiquidityAndDeposit(
 		address _staker,
+		uint256[] calldata _maxAmountsIn,
 		bool _earn,
-		uint256[] calldata maxAmountsIn,
 		uint256 _minAmount
 	) public {
 		require(address(liquidityGauge) != address(0), "Gauge not yet initialized");
 		(IERC20[] memory tokens, , ) = IBalancerVault(BALANCER_VAULT).getPoolTokens(poolId);
-		require(tokens.length == maxAmountsIn.length, "!length");
+		require(tokens.length == _maxAmountsIn.length, "!length");
 		address[] memory assets = new address[](tokens.length);
 		for (uint256 i; i < tokens.length; i++) {
-			tokens[i].transferFrom(msg.sender, address(this), maxAmountsIn[i]);
-			tokens[i].approve(BALANCER_VAULT, maxAmountsIn[i]);
+			tokens[i].transferFrom(msg.sender, address(this), _maxAmountsIn[i]);
+			tokens[i].approve(BALANCER_VAULT, _maxAmountsIn[i]);
 			assets[i] = address(tokens[i]);
 		}
 		IBalancerVault.JoinPoolRequest memory pr = IBalancerVault.JoinPoolRequest(
 			assets,
-			maxAmountsIn,
-			abi.encode(1, maxAmountsIn, _minAmount),
+			_maxAmountsIn,
+			abi.encode(1, _maxAmountsIn, _minAmount),
 			false
 		);
 		uint256 lpBalanceBefore = token.balanceOf(address(this));
@@ -88,6 +97,10 @@ contract BalancerVault is ERC20Upgradeable {
 		_deposit(_staker, lpBalanceAfter - lpBalanceBefore, _earn);
 	}
 
+	/// @notice internal deposit function
+	/// @param _staker address to stake for
+	/// @param _amount amount to deposit
+	/// @param _earn earn or not 
 	function _deposit(
 		address _staker,
 		uint256 _amount,
@@ -109,6 +122,8 @@ contract BalancerVault is ERC20Upgradeable {
 		emit Deposit(_staker, _amount);
 	}
 
+	/// @notice function to withdraw
+	/// @param _shares amount to withdraw
 	function withdraw(uint256 _shares) public {
 		uint256 userTotalShares = ILiquidityGaugeStrat(liquidityGauge).balanceOf(msg.sender);
 		require(_shares <= userTotalShares, "Not enough staked");
@@ -128,45 +143,60 @@ contract BalancerVault is ERC20Upgradeable {
 		emit Withdraw(msg.sender, _shares - withdrawFee);
 	}
 
+	/// @notice function to set the governance
+	/// @param _governance governance address
 	function setGovernance(address _governance) external {
 		require(msg.sender == governance, "!governance");
 		governance = _governance;
 	}
 
+	/// @notice function to set the keeper fee
+	/// @param _newFee keeper fee
 	function setKeeperFee(uint256 _newFee) external {
 		require(msg.sender == governance, "!governance");
 		keeperFee = _newFee;
 	}
 
+	/// @notice function to set the gauge multi rewards
+	/// @param _liquidityGauge gauge address
 	function setLiquidityGauge(address _liquidityGauge) external {
 		require(msg.sender == governance, "!governance");
 		liquidityGauge = _liquidityGauge;
 		ERC20Upgradeable(address(this)).approve(liquidityGauge, type(uint256).max);
 	}
-
+	
+	/// @notice function to set the balancer strategy
+	/// @param _newStrat balancer strategy infos
 	function setBalancerStrategy(BalancerStrategy _newStrat) external {
 		require(msg.sender == governance, "!governance");
 		balancerStrategy = _newStrat;
 	}
 
+	/// @notice function to return the vault token decimals
 	function decimals() public view override returns (uint8) {
 		return token.decimals();
 	}
 
+	/// @notice function to set the withdrawn fee
+	/// @param _newFee withdrawn fee
 	function setWithdrawnFee(uint256 _newFee) external {
 		require(msg.sender == governance, "!governance");
 		withdrawalFee = _newFee;
 	}
 
+	/// @notice function to set the min
+	/// @param _min min amount
 	function setMin(uint256 _min) external {
 		require(msg.sender == governance, "!governance");
 		min = _min;
 	}
 
+	/// @notice view function to fetch the available amount to send to the strategy
 	function available() public view returns (uint256) {
 		return ((token.balanceOf(address(this)) - accumulatedFee) * min) / max;
 	}
 
+	/// @notice internal function to move funds to the strategy
 	function earn() internal {
 		uint256 tokenBalance = available();
 		token.approve(address(balancerStrategy), 0);
