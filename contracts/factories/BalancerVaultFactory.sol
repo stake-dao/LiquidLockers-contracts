@@ -28,14 +28,10 @@ contract BalancerVaultFactory {
 	address public constant SDT = 0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F;
 	address public constant VEBOOST = 0xD67bdBefF01Fc492f1864E61756E5FBB3f173506;
 	address public constant CLAIM_REWARDS = 0x633120100e108F03aCe79d6C78Aac9a56db1be0F; // v2
-	address public balancerStrategy; // edits it to constant later
+	address public constant BALANCER_STRATEGY = 0x873b031Ea6E4236E44d933Aae5a66AF6d4DA419d;
 	address public constant SDT_DISTRIBUTOR = 0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C;
 	event VaultDeployed(address proxy, address lpToken, address impl);
 	event GaugeDeployed(address proxy, address stakeToken, address impl);
-
-	constructor(address _balancerStrategy) {
-		balancerStrategy = _balancerStrategy;
-	}
 
 	/**
 	@dev Function to clone Balancer Vault and its gauge contracts 
@@ -57,14 +53,14 @@ contract BalancerVaultFactory {
 		);
 		BalancerVault(vaultImplAddress).setLiquidityGauge(gaugeImplAddress);
 		BalancerVault(vaultImplAddress).setGovernance(GOVERNANCE);
-		BalancerStrategy(balancerStrategy).toggleVault(vaultImplAddress);
-		BalancerStrategy(balancerStrategy).setGauge(vaultLpToken, _balGaugeAddress);
-		BalancerStrategy(balancerStrategy).setMultiGauge(_balGaugeAddress, gaugeImplAddress);
-		BalancerStrategy(balancerStrategy).manageFee(BalancerStrategy.MANAGEFEE.PERFFEE, _balGaugeAddress, 200); //%2 default
-		BalancerStrategy(balancerStrategy).manageFee(BalancerStrategy.MANAGEFEE.VESDTFEE, _balGaugeAddress, 500); //%5 default
-		BalancerStrategy(balancerStrategy).manageFee(BalancerStrategy.MANAGEFEE.ACCUMULATORFEE, _balGaugeAddress, 800); //%8 default
-		BalancerStrategy(balancerStrategy).manageFee(BalancerStrategy.MANAGEFEE.CLAIMERREWARD, _balGaugeAddress, 50); //%0.5 default
-		ILiquidityGaugeStrat(gaugeImplAddress).add_reward(BAL, balancerStrategy);
+		BalancerStrategy(BALANCER_STRATEGY).toggleVault(vaultImplAddress);
+		BalancerStrategy(BALANCER_STRATEGY).setGauge(vaultLpToken, _balGaugeAddress);
+		BalancerStrategy(BALANCER_STRATEGY).setMultiGauge(_balGaugeAddress, gaugeImplAddress);
+		BalancerStrategy(BALANCER_STRATEGY).manageFee(BalancerStrategy.MANAGEFEE.PERFFEE, _balGaugeAddress, 200); //%2 default
+		BalancerStrategy(BALANCER_STRATEGY).manageFee(BalancerStrategy.MANAGEFEE.VESDTFEE, _balGaugeAddress, 500); //%5 default
+		BalancerStrategy(BALANCER_STRATEGY).manageFee(BalancerStrategy.MANAGEFEE.ACCUMULATORFEE, _balGaugeAddress, 800); //%8 default
+		BalancerStrategy(BALANCER_STRATEGY).manageFee(BalancerStrategy.MANAGEFEE.CLAIMERREWARD, _balGaugeAddress, 50); //%0.5 default
+		ILiquidityGaugeStrat(gaugeImplAddress).add_reward(BAL, BALANCER_STRATEGY);
 		ILiquidityGaugeStrat(gaugeImplAddress).set_claimer(CLAIM_REWARDS);
 		ILiquidityGaugeStrat(gaugeImplAddress).commit_transfer_ownership(GOVERNANCE);
 	}
@@ -82,9 +78,9 @@ contract BalancerVaultFactory {
 	) internal returns (address) {
 		BalancerVault deployed = cloneVault(
 			_lpToken,
-			keccak256(abi.encodePacked(GOVERNANCE, _name, _symbol, balancerStrategy))
+			keccak256(abi.encodePacked(GOVERNANCE, _name, _symbol, BALANCER_STRATEGY))
 		);
-		deployed.init(_lpToken, address(this), _name, _symbol, BalancerStrategy(balancerStrategy));
+		deployed.init(_lpToken, address(this), _name, _symbol, BalancerStrategy(BALANCER_STRATEGY));
 		return address(deployed);
 	}
 
