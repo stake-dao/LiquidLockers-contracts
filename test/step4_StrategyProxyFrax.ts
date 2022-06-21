@@ -15,6 +15,7 @@ import ERC20ABI from "./fixtures/ERC20.json";
 import FXSABI from "./fixtures/FXS.json";
 import DISTRIBUTORABI from "./fixtures/SDTDistributor.json";
 import GAUGECONTROLLERABI from "./fixtures/GaugeControllerABI.json";
+import SDFRAX3CRVABI from "./fixtures/sdFrax3CRV.json";
 
 /* ======================== Time ======================= */
 const DAY = 60 * 60 * 24;
@@ -35,6 +36,7 @@ const STDDEPLOYER = "0xb36a0671b3d49587236d7833b01e79798175875f";
 const DEPLOYER_NEW = "0x0dE5199779b43E13B3Bec21e91117E18736BC1A8";
 const MASTERCHEF = "0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c";
 const TIMELOCK = "0xD3cFc4E65a73BB6C482383EB38f5C3E1d1411616";
+const FEED = "0x29f3dd38dB24d3935CF1bf841e6b2B461A3E5D92";
 
 // ---- Liquid Locker ---- //
 const FXSACCUMULATOR = "0x1CC16bEdaaCD15848bcA5eB80188e0931bC59fB2";
@@ -47,6 +49,7 @@ const VEBOOST = "0xD67bdBefF01Fc492f1864E61756E5FBB3f173506";
 const SDT_HOLDER = "0x957fFde35b2d84F01d9BCaEb7528A2BCC268b9C1";
 const VESDT_HOLDER = "0xdceb0bb3311342e3ce9e49f57affce9deac40ba1";
 const VESDT_HOLDER2 = "0x5919b3d42bd84e816533c2dd6a7dff7d02303e87";
+const SDFRAX3CRV = "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7";
 
 // ---- DAO Gauge ---- //
 const DISTRIBUTOR = "0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C";
@@ -88,6 +91,7 @@ describe("StakeDAO <> FRAX", function () {
   let fxs: Contract;
   let sdt: Contract;
   let temple: Contract;
+  let sdFrax3CRV: Contract;
   let veSDTProxy: Contract;
   let poolRegistry: Contract;
   let booster: Contract;
@@ -181,11 +185,12 @@ describe("StakeDAO <> FRAX", function () {
     fxs = await ethers.getContractAt(FXSABI, FXS);
     sdt = await ethers.getContractAt(ERC20ABI, SDT);
     temple = await ethers.getContractAt(ERC20ABI, TEMPLE);
+    sdFrax3CRV = await ethers.getContractAt(SDFRAX3CRVABI, SDFRAX3CRV);
     distributor = await ethers.getContractAt(DISTRIBUTORABI, DISTRIBUTOR);
     gaugeController = await ethers.getContractAt(GAUGECONTROLLERABI, GAUGECONTROLLER);
 
     /* ==== Deployement Section ==== */
-    veSDTProxy = await veSdtFxsProxyFactory.deploy([FXS, WETH, FRAX]);
+    veSDTProxy = await veSdtFxsProxyFactory.deploy([FXS, FRAX]);
     feeRegistry = await feeRegistryContract.connect(deployer).deploy(veSDTProxy.address);
     poolRegistry = await poolRegistryContract.connect(deployer).deploy();
     liquidityGauge = await LiquidityGaugeV4FraxContract.connect(deployer).deploy();
@@ -198,11 +203,6 @@ describe("StakeDAO <> FRAX", function () {
     // Set Liquid Locker as a valid veFXS Proxy
     await fxsTempleGauge.connect(govFrax).toggleValidVeFXSProxy(locker.address);
   });
-
-  // Contract Todo  : - Create the veSDTFeeFraxProxy
-  //
-  //
-  //
 
   describe("### Testing Frax Strategies, boosted by Stake DAO Liquid Lockers 🐘💧🔒 ###", function () {
     const LOCKDURATION = 2 * WEEK;
@@ -807,6 +807,26 @@ describe("StakeDAO <> FRAX", function () {
     });
     it("Should revert because can't use address null", async function () {
       await expect(feeRegistry.connect(deployer).setMultisig(NULL)).to.be.revertedWith("!address(0)");
+    });
+  });
+  describe("### Testing veSDTFeeFraxProxy contract ###", function () {
+    it("Should run", async function () {
+      await fxs.connect(lpHolder).transfer(veSDTProxy.address, parseUnits("20", 18));
+      const fxsBalanceBefore = await fxs.balanceOf(veSDTProxy.address);
+      const claimerBefore = await frax.balanceOf(noob._address);
+      const feeDBalanceBefore = await sdFrax3CRV.balanceOf(FEED);
+
+      const sendRewards = await veSDTProxy.connect(noob).sendRewards();
+
+      const fxsBalanceAfter = await fxs.balanceOf(veSDTProxy.address);
+      const claimerAfter = await frax.balanceOf(noob._address);
+      const feeDBalanceAfter = await sdFrax3CRV.balanceOf(FEED);
+
+      //console.log((feeDBalanceBefore/10**18).toString(),(feeDBalanceAfter/10**18).toString())
+      expect(fxsBalanceBefore).not.eq(0);
+      expect(fxsBalanceAfter).eq(0);
+      expect(claimerAfter - claimerBefore).not.eq(0);
+      expect(feeDBalanceAfter - feeDBalanceBefore).gt(0);
     });
   });
 });

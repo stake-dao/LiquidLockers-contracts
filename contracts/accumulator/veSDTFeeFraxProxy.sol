@@ -12,7 +12,6 @@ contract veSDTFeeFraxProxy is Ownable {
 	using SafeERC20 for IERC20;
 	address public constant sdFrax3Crv = 0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7;
 	address public constant frax3Crv = 0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B;
-	address public constant angle = 0x31429d1856aD1377A8A0079410B297e1a9e214c2;
 	address public constant fxs = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
 	address public constant feeD = 0x29f3dd38dB24d3935CF1bf841e6b2B461A3E5D92;
 	address public constant frax = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
