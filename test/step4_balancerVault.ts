@@ -155,8 +155,8 @@ describe("Balancer Strategy Vault", function () {
     ]);
     await vault.provideLiquidityAndDeposit(
       localDeployer.address,
-      false,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      false,
       minAmount[0]
     );
     const keeperCut = minAmount[0].mul(10).div(10000);
@@ -188,8 +188,8 @@ describe("Balancer Strategy Vault", function () {
     ]);
     await weightedPoolVault.provideLiquidityAndDeposit(
       localDeployer.address,
-      false,
       [ethers.utils.parseEther("10"), ethers.utils.parseEther("170"), ethers.utils.parseEther("1")],
+      false,
       minAmount[0]
     );
     const keeperCut = minAmount[0].mul(10).div(10000);
@@ -207,5 +207,25 @@ describe("Balancer Strategy Vault", function () {
     expect(gaugeTokenBalanceAfter, "Wrong accounting for liquidity gauge token").to.be.eq(
       expectedLiquidityGaugeTokenAmount
     );
+  });
+  it("it should be able to deposit with single underlying asset", async () => {
+    const lpBalanceBefore = await ohmDaiWethLp.balanceOf(weightedPoolVault.address);
+    const minAmount = await balancerHelper.queryJoin(OHM_DAI_WETH_POOL_ID, deployer._address, deployer._address, [
+      [OHM, DAI, WETH],
+      [ethers.utils.parseEther("10"), 0, 0],
+      ethers.utils.defaultAbiCoder.encode(["uint256", "uint256[]"], [1, [ethers.utils.parseEther("10"), 0, 0]]),
+      false
+    ]);
+    await weightedPoolVault.provideLiquidityAndDeposit(
+      localDeployer.address,
+      [ethers.utils.parseEther("10"), 0, 0],
+      false,
+      minAmount[0]
+    );
+    const lpBalanceAfter = await ohmDaiWethLp.balanceOf(weightedPoolVault.address);
+    const ohmBalanceOfVault = await ohm.balanceOf(weightedPoolVault.address);
+    expect(ohmBalanceOfVault).to.be.eq(0);
+    expect(lpBalanceAfter).to.be.gt(lpBalanceBefore);
+    expect(lpBalanceAfter).to.be.equal(lpBalanceBefore.add(minAmount[0]));
   });
 });
