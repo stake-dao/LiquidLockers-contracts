@@ -75,8 +75,10 @@ contract BalancerVault is ERC20Upgradeable {
 		require(tokens.length == _maxAmountsIn.length, "!length");
 		address[] memory assets = new address[](tokens.length);
 		for (uint256 i; i < tokens.length; i++) {
-			tokens[i].transferFrom(msg.sender, address(this), _maxAmountsIn[i]);
-			tokens[i].approve(BALANCER_VAULT, _maxAmountsIn[i]);
+			if (_maxAmountsIn[i] > 0) {
+				tokens[i].transferFrom(msg.sender, address(this), _maxAmountsIn[i]);
+				tokens[i].approve(BALANCER_VAULT, _maxAmountsIn[i]);
+			}
 			assets[i] = address(tokens[i]);
 		}
 		IBalancerVault.JoinPoolRequest memory pr = IBalancerVault.JoinPoolRequest(
