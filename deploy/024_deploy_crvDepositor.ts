@@ -10,8 +10,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const CRV_LOCKER = "0x52f541764E6e90eeBc5c21Ff570De0e2D63766B6";
   const minter = await deployments.get("sdCRV");
 
-  await deploy("CRVDepositor", {
-    contract: "Depositor",
+  await deploy("CrvDepositor", {
     from: deployer,
     args: [CRV, CRV_LOCKER, minter.address],
     log: true

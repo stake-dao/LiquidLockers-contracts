@@ -8,8 +8,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const THREE_CRV = "0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490";
 
-  await deploy("CURVEAccumulator", {
-    contract: "CurveAccumulator",
+  await deploy("CurveAccumulator", {
     from: deployer,
     args: [THREE_CRV],
     log: true
@@ -17,5 +16,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 export default func;
 
-func.skip = async () => true;
+func.skip = async () => false;
 func.tags = ["CurveAccumulator"];
