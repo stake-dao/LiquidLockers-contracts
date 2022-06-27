@@ -112,7 +112,7 @@ contract BaseAccumulator {
 
 			uint256 balanceAfter = IERC20(_tokenReward).balanceOf(address(this));
 
-			require(balanceBefore - balanceAfter == _amount, "wrong amount notified");
+			require(balanceBefore - balanceAfter == _amount + claimerReward, "wrong amount notified");
 
 			emit RewardNotified(gauge, _tokenReward, _amount);
 		}
