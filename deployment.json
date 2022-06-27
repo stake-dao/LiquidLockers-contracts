@@ -5853,7 +5853,7 @@
           "gas": 5918
         },
         {
-          "stateMutability": "view",
+          "stateMutability": "nonpayable",
           "type": "function",
           "name": "time_weight",
           "inputs": [
@@ -5892,6 +5892,7 @@
             {
               "name": "slope",
               "type": "uint256"
+
             }
           ],
           "gas": 6037
@@ -5909,7 +5910,7 @@
           "outputs": [
             {
               "name": "",
-              "type": "uint256"
+              "type": "bool"
             }
           ],
           "gas": 3333
@@ -5927,7 +5928,7 @@
           "outputs": [
             {
               "name": "",
-              "type": "uint256"
+              "type": "bool"
             }
           ],
           "gas": 3433
@@ -6185,6 +6186,7 @@
           "type": "function",
           "name": "decimals",
           "inputs": [],
+
           "outputs": [
             {
               "name": "",
@@ -6389,6 +6391,7 @@
             {
               "name": "_value",
               "type": "uint256"
+
             }
           ],
           "outputs": []
@@ -6453,6 +6456,7 @@
             {
               "name": "",
               "type": "bool"
+
             }
           ],
           "gas": 14154316
@@ -7659,10 +7663,12 @@
               "type": "address"
             },
             {
-              "name": "_distributor",
+              "internalType": "address",
+              "name": "newAdmin",
               "type": "address"
             }
           ],
+          "name": "changeProxyAdmin",
           "outputs": [],
           "gas": 113100
         },
@@ -7714,6 +7720,9 @@
           "gas": 3585430
         },
         {
+          "inputs": [],
+          "name": "renounceOwnership",
+          "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function",
           "name": "commit_transfer_ownership",
@@ -7723,6 +7732,7 @@
               "type": "address"
             }
           ],
+          "name": "transferOwnership",
           "outputs": [],
           "gas": 40142
         },
@@ -7756,6 +7766,11 @@
             {
               "name": "",
               "type": "address"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
             }
           ],
           "gas": 3078
@@ -7807,6 +7822,12 @@
             {
               "name": "arg0",
               "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "bool",
+              "name": "_isInterfaceKnown",
+              "type": "bool"
             }
           ],
           "outputs": [
@@ -7903,6 +7924,7 @@
           "inputs": [],
           "outputs": [
             {
+              "internalType": "bytes32",
               "name": "",
               "type": "uint256"
             }
@@ -7934,6 +7956,7 @@
           "inputs": [],
           "outputs": [
             {
+              "internalType": "bytes32",
               "name": "",
               "type": "uint256"
             }
@@ -7952,6 +7975,7 @@
           ],
           "outputs": [
             {
+              "internalType": "bytes32",
               "name": "",
               "type": "address"
             }
@@ -8030,6 +8054,7 @@
           ],
           "outputs": [
             {
+              "internalType": "bool",
               "name": "",
               "type": "uint256"
             }
@@ -8043,8 +8068,9 @@
           "inputs": [],
           "outputs": [
             {
+              "internalType": "bytes32",
               "name": "",
-              "type": "address"
+              "type": "bytes32"
             }
           ],
           "gas": 3588
@@ -8056,7 +8082,13 @@
           "inputs": [],
           "outputs": [
             {
-              "name": "",
+              "internalType": "bytes32",
+              "name": "role",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "address",
+              "name": "account",
               "type": "address"
             }
           ],
@@ -8069,7 +8101,13 @@
           "inputs": [],
           "outputs": [
             {
-              "name": "",
+              "internalType": "bytes32",
+              "name": "role",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "address",
+              "name": "account",
               "type": "address"
             }
           ],
@@ -8082,6 +8120,7 @@
           "inputs": [],
           "outputs": [
             {
+              "internalType": "bool",
               "name": "",
               "type": "bool"
             }
@@ -8437,8 +8476,10 @@
           "type": "function",
           "name": "decimals",
           "inputs": [],
+          "name": "timePeriod",
           "outputs": [
             {
+              "internalType": "uint256",
               "name": "",
               "type": "uint256"
             }
@@ -8457,8 +8498,9 @@
           ],
           "outputs": [
             {
-              "name": "",
-              "type": "bool"
+              "internalType": "address",
+              "name": "_delegateGauge",
+              "type": "address"
             }
           ],
           "gas": 3493693
@@ -9183,7 +9225,7 @@
           "outputs": [
             {
               "name": "",
-              "type": "address"
+              "type": "bool"
             }
           ],
           "gas": 3618
@@ -9223,80 +9265,21 @@
           "inputs": [
             {
               "internalType": "address",
-              "name": "_logic",
+              "name": "spender",
               "type": "address"
             },
             {
-              "internalType": "address",
-              "name": "admin_",
-              "type": "address"
-            },
-            {
-              "internalType": "bytes",
-              "name": "_data",
-              "type": "bytes"
+              "internalType": "uint256",
+              "name": "addedValue",
+              "type": "uint256"
             }
           ],
-          "stateMutability": "payable",
-          "type": "constructor"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": false,
-              "internalType": "address",
-              "name": "previousAdmin",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "address",
-              "name": "newAdmin",
-              "type": "address"
-            }
-          ],
-          "name": "AdminChanged",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "beacon",
-              "type": "address"
-            }
-          ],
-          "name": "BeaconUpgraded",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "implementation",
-              "type": "address"
-            }
-          ],
-          "name": "Upgraded",
-          "type": "event"
-        },
-        {
-          "stateMutability": "payable",
-          "type": "fallback"
-        },
-        {
-          "inputs": [],
-          "name": "admin",
+          "name": "increaseAllowance",
           "outputs": [
             {
-              "internalType": "address",
-              "name": "admin_",
-              "type": "address"
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
             }
           ],
           "stateMutability": "nonpayable",
@@ -9306,62 +9289,137 @@
           "inputs": [
             {
               "internalType": "address",
-              "name": "newAdmin",
+              "name": "_to",
               "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_amount",
+              "type": "uint256"
             }
           ],
-          "name": "changeAdmin",
+          "name": "mint",
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
         },
         {
           "inputs": [],
-          "name": "implementation",
+          "name": "name",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "",
+              "type": "string"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "operator",
           "outputs": [
             {
               "internalType": "address",
-              "name": "implementation_",
+              "name": "",
               "type": "address"
             }
           ],
-          "stateMutability": "nonpayable",
+          "stateMutability": "view",
           "type": "function"
         },
         {
           "inputs": [
             {
               "internalType": "address",
-              "name": "newImplementation",
+              "name": "_operator",
               "type": "address"
             }
           ],
-          "name": "upgradeTo",
+          "name": "setOperator",
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
         },
         {
+          "inputs": [],
+          "name": "symbol",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "",
+              "type": "string"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "totalSupply",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
           "inputs": [
             {
               "internalType": "address",
-              "name": "newImplementation",
+              "name": "recipient",
               "type": "address"
             },
             {
-              "internalType": "bytes",
-              "name": "data",
-              "type": "bytes"
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
             }
           ],
-          "name": "upgradeToAndCall",
-          "outputs": [],
-          "stateMutability": "payable",
+          "name": "transfer",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
           "type": "function"
         },
         {
-          "stateMutability": "payable",
-          "type": "receive"
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "recipient",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "transferFrom",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
         }
       ]
     },
@@ -9435,9 +9493,9 @@
           "name": "getProxyImplementation",
           "outputs": [
             {
-              "internalType": "address",
-              "name": "",
-              "type": "address"
+              "name": "delegation",
+              "type": "address",
+              "indexed": false
             }
           ],
           "stateMutability": "view",
@@ -9461,9 +9519,7 @@
           "name": "renounceOwnership",
           "outputs": [],
           "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
+          "type": "constructor",
           "inputs": [
             {
               "internalType": "address",
@@ -9477,6 +9533,9 @@
           "type": "function"
         },
         {
+          "stateMutability": "view",
+          "type": "function",
+          "name": "adjusted_balance_of",
           "inputs": [
             {
               "internalType": "contract TransparentUpgradeableProxy",
@@ -9495,6 +9554,9 @@
           "type": "function"
         },
         {
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "set_delegation",
           "inputs": [
             {
               "internalType": "contract TransparentUpgradeableProxy",
@@ -9924,7 +9986,7 @@
             },
             {
               "internalType": "address",
-              "name": "account",
+              "name": "newImplementation",
               "type": "address"
             }
           ],
@@ -10093,8 +10155,8 @@
               "type": "address"
             }
           ],
-          "stateMutability": "view",
-          "type": "function"
+          "anonymous": false,
+          "type": "event"
         },
         {
           "inputs": [],
@@ -10142,6 +10204,9 @@
           "type": "function"
         },
         {
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "commit_transfer_ownership",
           "inputs": [
             {
               "internalType": "address",
@@ -10161,8 +10226,7 @@
           ],
           "name": "recoverERC20",
           "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
+          "gas": 39572
         },
         {
           "inputs": [
@@ -10201,6 +10265,9 @@
           "type": "function"
         },
         {
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "apply_transfer_ownership",
           "inputs": [],
           "name": "rewardToken",
           "outputs": [
@@ -10214,6 +10281,9 @@
           "type": "function"
         },
         {
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "commit_smart_wallet_checker",
           "inputs": [
             {
               "internalType": "address",
@@ -10246,8 +10316,7 @@
           ],
           "name": "setDistribution",
           "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
+          "gas": 37665
         },
         {
           "inputs": [
@@ -10285,10 +10354,12 @@
               "type": "uint256"
             }
           ],
-          "stateMutability": "view",
-          "type": "function"
+          "gas": 5061
         },
         {
+          "stateMutability": "view",
+          "type": "function",
+          "name": "user_point_history__ts",
           "inputs": [
             {
               "internalType": "address",
@@ -10302,6 +10373,9 @@
           "type": "function"
         },
         {
+          "stateMutability": "view",
+          "type": "function",
+          "name": "locked__end",
           "inputs": [
             {
               "internalType": "address",
@@ -10403,6 +10477,9 @@
           "type": "function"
         },
         {
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "increase_amount",
           "inputs": [
             {
               "internalType": "address",
@@ -10429,6 +10506,9 @@
           "type": "function"
         },
         {
+          "stateMutability": "view",
+          "type": "function",
+          "name": "balanceOf",
           "inputs": [
             {
               "internalType": "address",
@@ -10514,9 +10594,7 @@
               "name": "",
               "type": "address"
             }
-          ],
-          "stateMutability": "view",
-          "type": "function"
+          ]
         },
         {
           "inputs": [],
@@ -10560,9 +10638,7 @@
               "name": "",
               "type": "bool"
             }
-          ],
-          "stateMutability": "view",
-          "type": "function"
+          ]
         },
         {
           "inputs": [],
@@ -10591,6 +10667,9 @@
           "type": "function"
         },
         {
+          "stateMutability": "view",
+          "type": "function",
+          "name": "totalSupplyAt",
           "inputs": [
             {
               "internalType": "address",
@@ -10617,6 +10696,9 @@
           "type": "function"
         },
         {
+          "stateMutability": "view",
+          "type": "function",
+          "name": "supply",
           "inputs": [],
           "name": "future_checker",
           "outputs": [
@@ -10626,10 +10708,12 @@
               "type": "address"
             }
           ],
-          "stateMutability": "view",
-          "type": "function"
+          "gas": 3048
         },
         {
+          "stateMutability": "view",
+          "type": "function",
+          "name": "locked",
           "inputs": [
             {
               "internalType": "address",
@@ -10643,6 +10727,9 @@
           "type": "function"
         },
         {
+          "stateMutability": "view",
+          "type": "function",
+          "name": "point_history",
           "inputs": [
             {
               "internalType": "address",
@@ -10800,7 +10887,11 @@
           "type": "function"
         },
         {
-          "inputs": [
+          "stateMutability": "view",
+          "type": "function",
+          "name": "future_admin",
+          "inputs": [],
+          "outputs": [
             {
               "internalType": "address",
               "name": "_from",
