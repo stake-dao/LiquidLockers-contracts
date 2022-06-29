@@ -70,7 +70,7 @@ describe("CRV Migration", function () {
   let crv3: Contract;
 
   before(async function () {
-    //this.enableTimeouts(false);
+    //this.timeout(0);
     [deployer] = await ethers.getSigners();
     await network.provider.request({
       method: "hardhat_impersonateAccount",

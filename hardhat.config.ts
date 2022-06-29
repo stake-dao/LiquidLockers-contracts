@@ -19,14 +19,13 @@ export default {
   networks: {
     hardhat: {
       forking: {
-        url: process.env.MAINNET
-        //blockNumber: 14133625
+        url: process.env.MAINNET,
+        blockNumber: 15033000
       }
     },
     mainnet: {
       url: process.env.MAINNET,
-      accounts: [`0x${process.env.DEPLOYER_PKEY}`],
-      gasPrice: 100000000000
+      accounts: [`0x${process.env.DEPLOYER_PKEY}`]
     }
   },
   namedAccounts: {
@@ -44,6 +43,11 @@ export default {
       }
     }
   },
+  gasReporter: {
+    enabled: true,
+    currency: "USD",
+    coinmarketcap: process.env.COINMARKETCAP_KEY
+  },
   etherscan: {
     apiKey: process.env.ETHERSCAN_KEY
   },
@@ -52,5 +56,8 @@ export default {
     disambiguatePaths: false,
     runOnCompile: false,
     strict: true
+  },
+  mocha: {
+    timeout: 100000000
   }
 } as HardhatUserConfig;

@@ -2,11 +2,14 @@
 pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../interfaces/ILiquidityGauge.sol";
-import "../interfaces/ILocker.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-/// @title A contract that defines the functions shared by all accumulators
+import "../interfaces/ILocker.sol";
+import "../interfaces/ILiquidityGauge.sol";
+import { ISDTDistributor } from "../interfaces/ISDTDistributor.sol";
+
+/// @title BaseAccumulator
+/// @notice A contract that defines the functions shared by all accumulators
 /// @author StakeDAO
 contract BaseAccumulator {
 	using SafeERC20 for IERC20;
@@ -15,8 +18,12 @@ contract BaseAccumulator {
 	address public locker;
 	address public tokenReward;
 	address public gauge;
+	address public sdtDistributor;
+	uint256 public claimerFee;
 
 	/* ========== EVENTS ========== */
+
+	event SdtDistributorUpdated(address oldDistributor, address newDistributor);
 	event GaugeSet(address oldGauge, address newGauge);
 	event RewardNotified(address gauge, address tokenReward, uint256 amount);
 	event LockerSet(address oldLocker, address newLocker);
@@ -26,8 +33,9 @@ contract BaseAccumulator {
 	event ERC20Rescued(address token, uint256 amount);
 
 	/* ========== CONSTRUCTOR ========== */
-	constructor(address _tokenReward) {
+	constructor(address _tokenReward, address _gauge) {
 		tokenReward = _tokenReward;
+		gauge = _gauge;
 		governance = msg.sender;
 	}
 
@@ -39,6 +47,7 @@ contract BaseAccumulator {
 	function notifyExtraReward(address _tokenReward, uint256 _amount) external {
 		require(msg.sender == governance, "!gov");
 		_notifyReward(_tokenReward, _amount);
+		_distributeSDT();
 	}
 
 	/// @notice Notify the reward using all balance of extra token
@@ -47,6 +56,41 @@ contract BaseAccumulator {
 		require(msg.sender == governance, "!gov");
 		uint256 amount = IERC20(_tokenReward).balanceOf(address(this));
 		_notifyReward(_tokenReward, amount);
+		_distributeSDT();
+	}
+
+	function notifyExtraReward(address[] calldata _tokens, uint256[] calldata amounts) external {
+		require(msg.sender == governance, "!gov");
+		_notifyExtraReward(_tokens, amounts);
+		_distributeSDT();
+	}
+
+	function _notifyExtraReward(address[] memory _tokens, uint256[] memory amounts) internal {
+		uint256 length = _tokens.length;
+		for (uint256 i; i < length; ++i) {
+			_notifyReward(_tokens[i], amounts[i]);
+		}
+	}
+
+	function notifyAllExtraReward(address[] calldata _tokens) external {
+		require(msg.sender == governance, "!gov");
+		_notifyAllExtraReward(_tokens);
+		_distributeSDT();
+	}
+
+	function _notifyAllExtraReward(address[] memory _tokens) internal {
+		uint256 amount;
+		uint256 length = _tokens.length;
+		for (uint256 i; i < length; ++i) {
+			amount = IERC20(_tokens[i]).balanceOf(address(this));
+			_notifyReward(_tokens[i], amount);
+		}
+	}
+
+	function _distributeSDT() internal {
+		if (sdtDistributor != address(0)) {
+			ISDTDistributor(sdtDistributor).distribute(gauge);
+		}
 	}
 
 	/// @notice Notify the new reward to the LGV4
@@ -54,14 +98,22 @@ contract BaseAccumulator {
 	/// @param _amount amount to notify
 	function _notifyReward(address _tokenReward, uint256 _amount) internal {
 		require(gauge != address(0), "gauge not set");
-		require(_amount > 0, "set an amount > 0");
+		if (_amount == 0) {
+			return;
+		}
 		uint256 balanceBefore = IERC20(_tokenReward).balanceOf(address(this));
 		require(balanceBefore >= _amount, "amount not enough");
 		if (ILiquidityGauge(gauge).reward_data(_tokenReward).distributor == address(this)) {
+			uint256 claimerReward = (_amount * claimerFee) / 10000;
+			IERC20(_tokenReward).transfer(msg.sender, claimerReward);
+			_amount -= claimerReward;
 			IERC20(_tokenReward).approve(gauge, _amount);
 			ILiquidityGauge(gauge).deposit_reward_token(_tokenReward, _amount);
+
 			uint256 balanceAfter = IERC20(_tokenReward).balanceOf(address(this));
-			require(balanceBefore - balanceAfter == _amount, "wrong amount notified");
+
+			require(balanceBefore - balanceAfter == _amount + claimerReward, "wrong amount notified");
+
 			emit RewardNotified(gauge, _tokenReward, _amount);
 		}
 	}
@@ -83,6 +135,17 @@ contract BaseAccumulator {
 		require(_gauge != address(0), "can't be zero address");
 		emit GaugeSet(gauge, _gauge);
 		gauge = _gauge;
+	}
+
+	/// @notice Sets SdtDistributor to distribute from the Accumulator SDT Rewards to Gauge.
+	/// @dev Can be called only by the governance
+	/// @param _sdtDistributor gauge address
+	function setSdtDistributor(address _sdtDistributor) external {
+		require(msg.sender == governance, "!gov");
+		require(_sdtDistributor != address(0), "can't be zero address");
+
+		emit SdtDistributorUpdated(sdtDistributor, _sdtDistributor);
+		sdtDistributor = _sdtDistributor;
 	}
 
 	/// @notice Allows the governance to set the new governance
@@ -113,6 +176,11 @@ contract BaseAccumulator {
 		require(_tokenReward != address(0), "can't be zero address");
 		emit TokenRewardSet(tokenReward, _tokenReward);
 		tokenReward = _tokenReward;
+	}
+
+	function setClaimerFee(uint256 _claimerFee) external {
+		require(msg.sender == governance, "!gov");
+		claimerFee = _claimerFee;
 	}
 
 	/// @notice A function that rescue any ERC20 token

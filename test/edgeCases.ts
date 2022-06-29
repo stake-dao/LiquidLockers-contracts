@@ -33,7 +33,7 @@ describe("Edge cases", () => {
   let walletChecker: Contract;
 
   before(async function () {
-    this.enableTimeouts(false);
+    this.timeout(0);
     await network.provider.send("evm_setAutomine", [true]);
     const temp = await ethers.getSigners();
 
