@@ -1,8 +1,23 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.8.7;
 
 interface IVeSDT {
-	function deposit_for(address account, uint256 amount) external;
+	struct LockedBalance {
+		int128 amount;
+		uint256 end;
+	}
 
-	function deposit_for_sd(address _addr, uint256 _value) external;
+	function create_lock(uint256 _value, uint256 _unlock_time) external;
+
+	function increase_amount(uint256 _value) external;
+
+	function increase_unlock_time(uint256 _unlock_time) external;
+
+	function withdraw() external;
+
+	function deposit_for(address, uint256) external;
+
+	function locked(address) external returns (LockedBalance memory);
+
+	function balanceOf(address) external returns (uint256);
 }

@@ -1,6 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity 0.6.12;
-pragma experimental ABIEncoderV2;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.7;
 
 interface IveFXS {
 	struct LockedBalance {

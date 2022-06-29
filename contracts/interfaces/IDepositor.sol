@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.8.7;
 
 interface IDepositor {
-	function depositFor(address account, uint256 amount) external;
+	function deposit(uint256 amount, bool lock, bool stake, address user) external;
+	function minter() external returns(address);
 }
