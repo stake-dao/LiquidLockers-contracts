@@ -28,6 +28,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   const gaugeImplementation = await deployments.get(`LiquidityGaugeV4-${tokenName}-implementation`);
+  const sdtDistributor = await deployments.get(`SdtDistributor`);
 
   const ABI = [
     "function initialize(address _staking_token, address _admin, address _SDT, address _voting_escrow, address _veBoost_proxy, address _distributor)"
@@ -41,7 +42,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     SDT,
     veSDT.address,
     veBoostProxy.address,
-    admin // after call set_reward_distributor for SDT from deployer passing new SdtDistributor
+    sdtDistributor.address
   ]);
 
   await deploy(`LiquidityGaugeV4-${tokenName}`, {
@@ -54,14 +55,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const lgv4_sdCRV = await deployments.get(`LiquidityGaugeV4-${tokenName}`);
 
   // Setting the rewards
-  var lgv4_sdCRVProxy = await hre.ethers.getContractAt("LiquidityGaugeV4", lgv4_sdCRV.address);
-  await lgv4_sdCRVProxy.add_reward(THREECRV, THREECRVDISTRIBUTOR);
-  await lgv4_sdCRVProxy.add_reward(CRV, CRVDISTRIBUTOR);
-  await lgv4_sdCRVProxy.add_reward(SDT, SDTDISTRIBUTOR);
+  // var lgv4_sdCRVProxy = await hre.ethers.getContractAt("LiquidityGaugeV4", lgv4_sdCRV.address);
+  // await lgv4_sdCRVProxy.add_reward(THREECRV, THREECRVDISTRIBUTOR);
+  // await lgv4_sdCRVProxy.add_reward(CRV, CRVDISTRIBUTOR);
+  // await lgv4_sdCRVProxy.add_reward(SDT, SDTDISTRIBUTOR);
 };
 
 export default func;
 
 func.skip = async () => true;
 func.tags = ["LiquidityGaugeV4"];
-func.dependencies = ["veSDT", tokenName, "ProxyAdmin"];
+func.dependencies = ["veSDT", tokenName, "ProxyAdmin", "SdtDistributor"];

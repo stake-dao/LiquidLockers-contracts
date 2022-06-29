@@ -78,7 +78,7 @@ contract CrvDepositor {
 	function setFees(uint256 _lockIncentive) external {
 		require(msg.sender == governance, "!auth");
 
-		if (_lockIncentive >= 0 && _lockIncentive <= 30) {
+		if (_lockIncentive <= 30) {
 			lockIncentive = _lockIncentive;
 			emit FeesChanged(_lockIncentive);
 		}
@@ -155,8 +155,7 @@ contract CrvDepositor {
 
 		if (_stake && gauge != address(0)) {
 			ITokenMinter(minter).mint(address(this), _amount);
-			IERC20(minter).safeApprove(gauge, 0);
-			IERC20(minter).safeApprove(gauge, _amount);
+			IERC20(minter).safeIncreaseAllowance(gauge, _amount);
 			ILiquidityGauge(gauge).deposit(_amount, _user);
 		} else {
 			ITokenMinter(minter).mint(_user, _amount);
@@ -184,7 +183,7 @@ contract CrvDepositor {
 	/// @param _amount amount to lock
 	function lockSdveCrvToSdCrv(uint256 _amount) external {
 		IERC20(SD_VE_CRV).transferFrom(msg.sender, address(this), _amount);
-		// mint new sdCrv
-		ITokenMinter(minter).mint(address(this), _amount);
+		// mint new sdCrv to the user
+		ITokenMinter(minter).mint(msg.sender, _amount);
 	}
 }
