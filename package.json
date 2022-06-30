@@ -42,9 +42,11 @@
   },
   "scripts": {
     "solhint": "solhint 'contracts/*.sol'",
+    "clean": "hardhat clean && forge clean",
     "test": "hardhat test",
-    "lint": "prettier --write **.{sol,js,ts}",
-    "compile": "hardhat compile",
+    "test:foundry": "forge test",
+    "lint": "prettier --write **.{sol,ts}",
+    "compile": "hardhat compile && forge build",
     "start:node": "npx hardhat node",
     "node:watch": "npx hardhat node --watch"
   }

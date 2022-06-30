@@ -20,13 +20,13 @@ import "../external/AccessControlUpgradeable.sol";
 /// @author StakeDAO Core Team
 /// @notice All the events used in `SdtDistributor` contract
 abstract contract SdtDistributorEvents {
-    event DelegateGaugeUpdated(address indexed _gaugeAddr, address indexed _delegateGauge);
-    event DistributionsToggled(bool _distributionsOn);
-    event GaugeControllerUpdated(address indexed _controller);
-    event GaugeToggled(address indexed gaugeAddr, bool newStatus);
-    event InterfaceKnownToggled(address indexed _delegateGauge, bool _isInterfaceKnown);
-    event RateUpdated(uint256 _newRate);
-    event Recovered(address indexed tokenAddress, address indexed to, uint256 amount);
-    event RewardDistributed(address indexed gaugeAddr, uint256 sdtDistributed, uint256 lastMasterchefPull);
-    event UpdateMiningParameters(uint256 time, uint256 rate, uint256 supply);
+	event DelegateGaugeUpdated(address indexed _gaugeAddr, address indexed _delegateGauge);
+	event DistributionsToggled(bool _distributionsOn);
+	event GaugeControllerUpdated(address indexed _controller);
+	event GaugeToggled(address indexed gaugeAddr, bool newStatus);
+	event InterfaceKnownToggled(address indexed _delegateGauge, bool _isInterfaceKnown);
+	event RateUpdated(uint256 _newRate);
+	event Recovered(address indexed tokenAddress, address indexed to, uint256 amount);
+	event RewardDistributed(address indexed gaugeAddr, uint256 sdtDistributed, uint256 lastMasterchefPull);
+	event UpdateMiningParameters(uint256 time, uint256 rate, uint256 supply);
 }
