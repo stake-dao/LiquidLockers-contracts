@@ -2,5 +2,5 @@
 pragma solidity ^0.8.7;
 
 interface ISdtMiddlemanGauge {
-	function notifyReward(address gauge, uint256 amount) external;
+    function notifyReward(address gauge, uint256 amount) external;
 }

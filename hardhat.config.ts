@@ -25,14 +25,14 @@ export default {
     },
     mainnet: {
       url: process.env.MAINNET,
-      accounts: [`0x${process.env.DEPLOYER_PKEY}`]
-    }
+      accounts: [`0x${process.env.DEPLOYER_PKEY}`],
+    },
   },
   namedAccounts: {
-    deployer: 0
+    deployer: 0,
   },
   vyper: {
-    version: "0.2.16"
+    version: "0.2.16",
   },
   solidity: {
     compilers: [
@@ -60,20 +60,20 @@ export default {
   gasReporter: {
     enabled: false,
     currency: "USD",
-    coinmarketcap: process.env.COINMARKETCAP_KEY
+    coinmarketcap: process.env.COINMARKETCAP_KEY,
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_KEY
+    apiKey: process.env.ETHERSCAN_KEY,
   },
   contractSizer: {
     alphaSort: true,
     disambiguatePaths: false,
     runOnCompile: false,
-    strict: true
+    strict: true,
   },
   mocha: {
-    timeout: 100000000
+    timeout: 100000000,
   },
-    // specify separate cache for hardhat, since it could possibly conflict with foundry's
-    paths: { cache: "hh-cache" },
+  // specify separate cache for hardhat, since it could possibly conflict with foundry's
+  paths: { cache: "hh-cache" },
 } as HardhatUserConfig;

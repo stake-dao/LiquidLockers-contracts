@@ -43,6 +43,7 @@
   "scripts": {
     "solhint": "solhint 'contracts/*.sol'",
     "test": "hardhat test",
+    "lint": "prettier --write **.{sol,js,ts}",
     "compile": "hardhat compile",
     "start:node": "npx hardhat node",
     "node:watch": "npx hardhat node --watch"
