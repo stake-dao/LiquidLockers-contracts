@@ -6,9 +6,10 @@ libs = ["node_modules", "lib"]
 test = 'test/foundry'
 remappings = [
     'ds-test=lib/ds-test/src/',
-    '@openzeppelin/=lib/openzeppelin-contracts/',
+    'openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/',
+    'openzeppelin/=lib/openzeppelin-contracts/',
     'forge-std=lib/forge-std/src/'
 ]
 fuzz_runs = 5000
 fuzz_max_global_rejects = 2_000_000
-optimizer_runs = 19_066
+optimizer_runs = 10_000

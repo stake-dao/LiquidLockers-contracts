@@ -1,7 +1,9 @@
 .env
+out/
 node_modules
 artifacts
 cache
+hh-cache
 deployments
 yarn.lock
 yarn-error.log
