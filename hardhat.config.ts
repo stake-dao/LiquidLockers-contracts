@@ -73,5 +73,7 @@ export default {
   },
   mocha: {
     timeout: 100000000
-  }
+  },
+    // specify separate cache for hardhat, since it could possibly conflict with foundry's
+    paths: { cache: "hh-cache" },
 } as HardhatUserConfig;
