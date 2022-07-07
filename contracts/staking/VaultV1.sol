@@ -563,7 +563,7 @@ contract StakingProxyBase is IProxyVault {
 				ILiquidityGaugeStratFrax(rewards).deposit(userLiq, owner, false);
 			}
 			ILiquidityGaugeStratFrax(rewards).claim_rewards(address(this), owner);
-		} else {}
+		}
 	}
 
 	//transfer other reward tokens besides fxs(which needs to have fees applied)

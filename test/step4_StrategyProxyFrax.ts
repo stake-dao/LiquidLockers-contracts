@@ -95,6 +95,7 @@ describe("StakeDAO <> FRAX", function () {
   let veSDTProxy: Contract;
   let poolRegistry: Contract;
   let booster: Contract;
+  let fraxStrategy: Contract;
   let fxsTempleGauge: Contract;
   let vaultV1Template: Contract;
   let personalVault1: Contract;
@@ -172,6 +173,8 @@ describe("StakeDAO <> FRAX", function () {
     const veSdtFxsProxyFactory = await ethers.getContractFactory("veSDTFeeFraxProxy");
     const poolRegistryContract = await ethers.getContractFactory("PoolRegistry");
     const boosterContract = await ethers.getContractFactory("Booster");
+    const FraxStrategyContract = await ethers.getContractFactory("FraxStrategy");
+
     const feeRegistryContract = await ethers.getContractFactory("FeeRegistry");
     LiquidityGaugeV4FraxContract = await ethers.getContractFactory("LiquidityGaugeV4StratFrax");
     LiquidityGaugeV4FraxContract2 = await ethers.getContractFactory("LiquidityGaugeV4StratFrax");
@@ -196,10 +199,14 @@ describe("StakeDAO <> FRAX", function () {
     liquidityGauge = await LiquidityGaugeV4FraxContract.connect(deployer).deploy();
     liquidityGauge2 = await LiquidityGaugeV4FraxContract2.connect(deployer).deploy(); // deploy second fake gauge for test
     vaultV1Template = await VaultV1Contract.connect(deployer).deploy();
-    booster = await boosterContract.connect(deployer).deploy(locker.address, poolRegistry.address);
+    fraxStrategy = await FraxStrategyContract.connect(deployer).deploy(locker.address, deployer._address, deployer._address, veSDTProxy.address, distributor.address, deployer._address);
+    booster = await boosterContract.connect(deployer).deploy(locker.address, poolRegistry.address, fraxStrategy.address);
+
+    // Approve Booster to use onlyApproved functions (execute).
+    fraxStrategy.connect(deployer).toggleVault(booster.address);
 
     // Liquid Locker give governance right to the Booster
-    await locker.connect(deployer).setGovernance(booster.address);
+    await locker.connect(deployer).setGovernance(fraxStrategy.address);
     // Set Liquid Locker as a valid veFXS Proxy
     await fxsTempleGauge.connect(govFrax).toggleValidVeFXSProxy(locker.address);
   });
@@ -613,7 +620,7 @@ describe("StakeDAO <> FRAX", function () {
       it("Should update the pool reward for the user personal vault, after new pool reward creation", async function () {
         await gaugeController
           .connect(veSdtHolder)
-          ["vote_for_gauge_weights(address,uint256)"](rewardsPID1.address, 10000);
+          ["vote_for_gauge_weights(address,uint256)"](rewardsPID1.address, 10_000);
         await fxsTemple.connect(lpHolder).approve(personalVault1.address, LOCKEDAMOUNTx2);
         await personalVault1.connect(lpHolder).stakeLocked(LOCKEDAMOUNTx2, LOCKDURATION);
 
@@ -654,7 +661,7 @@ describe("StakeDAO <> FRAX", function () {
         await gaugeController.connect(gcAdmin)["add_gauge(address,int128,uint256)"](rewardsPID1_New.address, 0, 0); // gauge - type - weight
         await gaugeController
           .connect(veSdtHolder2)
-          ["vote_for_gauge_weights(address,uint256)"](rewardsPID1_New.address, 10000);
+          ["vote_for_gauge_weights(address,uint256)"](rewardsPID1_New.address, 10_000);
         await distributor.connect(deployer_new)["approveGauge(address)"](rewardsPID1_New.address);
         const lockedStakesOfBefore = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
         await network.provider.send("evm_increaseTime", [WEEK]);

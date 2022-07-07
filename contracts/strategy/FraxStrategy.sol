@@ -1,0 +1,191 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.7;
+
+import "contracts/strategy/BaseStrategyV2.sol";
+import "contracts/interfaces/FeeDistro.sol";
+import "contracts/interfaces/FraxStaking.sol";
+import "contracts/interfaces/LiquidityGauge.sol";
+import "contracts/interfaces/SdtDistributorV2.sol";
+
+/// @notice Frax Staking Handler.
+///         Handle Staking and Withdraw to Frax Gauges through the Locker.
+/// @author Stake Dao
+contract FraxStrategy is BaseStrategyV2 {
+    using SafeERC20 for IERC20;
+
+    constructor(
+        ILocker locker,
+        address governance,
+        address accumulator,
+        address veSDTFeeProxy,
+        address sdtDistributor,
+        address receiver
+    ) BaseStrategyV2(locker, governance, accumulator, veSDTFeeProxy, sdtDistributor, receiver) {}
+
+    function deposit(
+        address _token,
+        uint256 _amount,
+        uint256 _secs
+    ) external override onlyApprovedVault {
+        require(gauges[_token] != address(0), "!gauge");
+        address gauge = gauges[_token];
+
+        IERC20(_token).transferFrom(msg.sender, address(LOCKER), _amount);
+
+        // Approve gauge through Locker.
+        LOCKER.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, 0));
+        LOCKER.execute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, _amount));
+
+        // Deposit through Locker.
+        (bool success, ) = LOCKER.execute(
+            gauge, // to
+            0, // value
+            abi.encodePacked(FraxStakingRewardsMultiGauge.stakeLocked.selector, _amount, _secs) // data
+        );
+
+        if (!success) {
+            revert DepositFailed();
+        }
+
+        emit Deposited(gauge, _token, _amount);
+    }
+
+    // Withdrawing implies to get claim rewards also.
+    function withdraw(address _token, bytes32 kek_id) external override onlyApprovedVault {
+        require(gauges[_token] != address(0), "!gauge");
+        address gauge = gauges[_token];
+
+        uint256 before = IERC20(_token).balanceOf(address(LOCKER));
+
+        (bool success, ) = LOCKER.execute(
+            gauge,
+            0,
+            abi.encodePacked(FraxStakingRewardsMultiGauge.withdrawLocked.selector, kek_id)
+        );
+
+        if (!success) {
+            revert WithdrawalFailed();
+        }
+
+        uint256 _after = IERC20(_token).balanceOf(address(LOCKER));
+        uint256 net = _after - before;
+
+        _transferFromLocker(_token, msg.sender, net);
+        _distributeRewards(gauge);
+
+        emit Withdrawn(gauge, _token, net);
+    }
+
+    // TODO: Claim FXS from FeeDistributor
+    // Need to take into account _getReward() from withdraw.
+    function claim(address _token) external override {
+        address gauge = gauges[_token];
+        require(gauge != address(0), "!gauge");
+
+        (bool success, ) = LOCKER.execute(gauge, 0, abi.encode(FraxStakingRewardsMultiGauge.getReward.selector));
+        require(success, "Claim failed!");
+
+        _distributeRewards(gauge);
+    }
+
+    function _distributeRewards(address _gauge) internal {
+        address[] memory rewardsToken = FraxStakingRewardsMultiGauge(_gauge).getAllRewardTokens();
+        uint256 lenght = rewardsToken.length;
+
+        // SdtDistributorV2(sdtDistributor).distribute(multiGauges[_gauge]);
+
+        for (uint256 i; i < lenght; ) {
+            address rewardToken = rewardsToken[i];
+            if (rewardToken == address(0)) {
+                continue;
+            }
+
+            uint256 rewardBalance = IERC20(rewardToken).balanceOf(address(LOCKER));
+            uint256 netBalance = _distributeFees(_gauge, rewardToken, rewardBalance);
+
+            // Distribute net rewards to gauge.
+            IERC20(rewardToken).approve(multiGauges[_gauge], netBalance);
+            LiquidityGauge(multiGauges[_gauge]).deposit_reward_token(rewardToken, netBalance);
+
+            emit Claimed(_gauge, rewardToken, rewardBalance);
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function _distributeFees(
+        address _gauge,
+        address _rewardToken,
+        uint256 rewardBalance
+    ) internal returns (uint256 netRewards) {
+        uint256 multisigFee = (rewardBalance * perfFee[_gauge]) / BASE_FEE;
+        uint256 accumulatorPart = (rewardBalance * accumulatorFee[_gauge]) / BASE_FEE;
+        uint256 veSDTPart = (rewardBalance * veSDTFee[_gauge]) / BASE_FEE;
+        uint256 claimerPart = (rewardBalance * claimerRewardFee[_gauge]) / BASE_FEE;
+
+        // Distribute fees.
+        _transferFromLocker(_rewardToken, msg.sender, claimerPart);
+        _transferFromLocker(_rewardToken, veSDTFeeProxy, veSDTPart);
+        _transferFromLocker(_rewardToken, accumulator, accumulatorPart);
+        _transferFromLocker(_rewardToken, rewardsReceiver, multisigFee);
+
+        // Update rewardAmount.
+        netRewards = IERC20(_rewardToken).balanceOf(address(LOCKER));
+        _transferFromLocker(_rewardToken, address(this), netRewards);
+    }
+
+    function _transferFromLocker(
+        address token,
+        address recipient,
+        uint256 amount
+    ) internal {
+        (bool success, ) = LOCKER.execute(
+            token,
+            0,
+            abi.encodeWithSignature("transfer(address,uint256)", recipient, amount)
+        );
+        if (!success) {
+            revert TransferFromLockerFailed();
+        }
+    }
+
+    function proxyCall(address _to, bytes memory _data) external onlyApprovedVault {
+        (bool success,) = LOCKER.execute(_to, uint256(0),_data);
+        require(success, "Proxy Call Fail");
+    }
+
+    // BaseStrategy Function
+    function deposit(address, uint256) external view override onlyApprovedVault {
+        revert NotImplemented();
+    }
+
+    function withdraw(address, uint256) external view override onlyApprovedVault {
+        revert NotImplemented();
+    }
+
+    /// @notice function to toggle a vault
+    /// @param _vault vault address
+    function toggleVault(address _vault) external override onlyGovernanceOrFactory {
+        require(_vault != address(0), "zero address");
+        vaults[_vault] = !vaults[_vault];
+        emit VaultToggled(_vault, vaults[_vault]);
+    }
+
+    /// @notice function to set a new gauge
+    /// It permits to set it as  address(0), for disabling it
+    /// in case of migration
+    /// @param _token token address
+    /// @param _gauge gauge address
+    function setGauge(address _token, address _gauge) external override onlyGovernanceOrFactory {
+        require(_token != address(0), "zero address");
+        // Set new gauge
+        gauges[_token] = _gauge;
+        emit GaugeSet(_gauge, _token);
+    }
+
+    function setMultiGauge(address _gauge, address _multiGauge) external override onlyGovernanceOrFactory {
+        multiGauges[_gauge] = _multiGauge;
+    }
+}
