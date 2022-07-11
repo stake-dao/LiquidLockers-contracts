@@ -19,7 +19,7 @@
     "hardhat-gas-reporter": "1.0.6",
     "prettier-plugin-solidity": "^1.0.0-beta.10",
     "solidity-coverage": "0.7.17",
-    "ts-node": "^9.1.1",
+    "ts-node": "^10.8.1",
     "typescript": "^4.2.4"
   },
   "dependencies": {
