@@ -32,7 +32,7 @@ const RAND3 = "0x0000000000000000000000000000000000000003";
 
 // ---- DAO Management ---- //
 const MULTISIG = "0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063";
-const STDDEPLOYER = "0xb36a0671b3d49587236d7833b01e79798175875f";
+const STDDEPLOYER = "0x0dE5199779b43E13B3Bec21e91117E18736BC1A8";
 const DEPLOYER_NEW = "0x0dE5199779b43E13B3Bec21e91117E18736BC1A8";
 const MASTERCHEF = "0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c";
 const TIMELOCK = "0xD3cFc4E65a73BB6C482383EB38f5C3E1d1411616";
@@ -48,7 +48,8 @@ const VE_SDT = "0x0C30476f66034E11782938DF8e4384970B6c9e8a";
 const VEBOOST = "0xD67bdBefF01Fc492f1864E61756E5FBB3f173506";
 const SDT_HOLDER = "0x957fFde35b2d84F01d9BCaEb7528A2BCC268b9C1";
 const VESDT_HOLDER = "0xdceb0bb3311342e3ce9e49f57affce9deac40ba1";
-const VESDT_HOLDER2 = "0x5919b3d42bd84e816533c2dd6a7dff7d02303e87";
+//const VESDT_HOLDER2 = "0x5919b3d42bd84e816533c2dd6a7dff7d02303e87"; 
+const VESDT_HOLDER2 = "0x9f5e6af744a137c9fefeedfb6b706b0640a57673";
 const SDFRAX3CRV = "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7";
 
 // ---- DAO Gauge ---- //
@@ -65,7 +66,7 @@ const FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0";
 
 const FXS_TEMPLE = "0x6021444f1706f15465bEe85463BCc7d7cC17Fc03";
 const FXS_TEMPLE_GAUGE = "0x10460d02226d6ef7B2419aE150E6377BdbB7Ef16";
-const FXS_TEMPLE_HOLDER = "0xc00674553a6E3Bf232E09852510F5feC90A519f9";
+const FXS_TEMPLE_HOLDER = "0x36aFCc3F7403A7059bA034EEE01688859880Cd0b";
 
 const ETH_100 = BigNumber.from(10).mul(BigNumber.from(10).pow(18)).toHexString();
 
@@ -735,27 +736,27 @@ describe("StakeDAO <> FRAX", function () {
         ).to.be.revertedWith("Stake is still locked!");
       });
     });
-
+    
     describe("Booster Management tests : ", function () {
       it("Should setPendingOwner to new ower", async function () {
         const pendingOwnerBefore = await booster.pendingOwner();
         const ownerBefore = await booster.owner();
-        await booster.connect(deployer).setPendingOwner(deployer_new._address);
+        await booster.connect(deployer).setPendingOwner(lpHolder._address);
         const pendingOwnerAfter = await booster.pendingOwner();
         const ownerAfter = await booster.owner();
 
         expect(pendingOwnerBefore).eq(NULL);
-        expect(pendingOwnerAfter).eq(deployer_new._address);
+        expect(pendingOwnerAfter).eq(lpHolder._address);
         expect(ownerBefore).eq(deployer._address);
         expect(ownerAfter).eq(ownerBefore);
       });
       it("Should acceptPendingOwner", async function () {
-        await booster.connect(deployer_new).acceptPendingOwner();
+        await booster.connect(lpHolder).acceptPendingOwner();
         const pendingOwner = await booster.pendingOwner();
         const owner = await booster.owner();
 
         expect(pendingOwner).eq(NULL);
-        expect(owner).eq(deployer_new._address);
+        expect(owner).eq(lpHolder._address);
       });
 
       it("Should revert on acceptPendingOwner, because setPendingOnwer not trigger", async function () {
@@ -763,20 +764,21 @@ describe("StakeDAO <> FRAX", function () {
       });
 
       it("Should revert on acceptPendingOwner, because caller is not the next owner", async function () {
-        await booster.connect(deployer_new).setPendingOwner(deployer._address);
+        await booster.connect(lpHolder).setPendingOwner(deployer._address);
         await expect(booster.connect(noob).acceptPendingOwner()).to.be.revertedWith("!p_owner");
       });
 
       it("Should setPoolManager", async function () {
         const poolManagerBefore = await booster.poolManager();
-        await booster.connect(deployer_new).setPoolManager(deployer_new._address);
+        await booster.connect(lpHolder).setPoolManager(lpHolder._address);
         const poolManagerAfter = await booster.poolManager();
 
         expect(poolManagerBefore).not.eq(poolManagerAfter);
-        expect(poolManagerAfter).eq(deployer_new._address);
+        expect(poolManagerAfter).eq(lpHolder._address);
       });
     });
   });
+  
   describe("### Testing FeeRegistry contract ###", function () {
     it("Should set news fees", async function () {
       await feeRegistry.connect(deployer).setFees(100, 200, 400);

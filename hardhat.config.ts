@@ -53,6 +53,10 @@ export default {
     runOnCompile: false,
     strict: true
   },
+  gasReporter: {
+    enabled: false,
+    currency: "USD",
+},
   mocha: {
     timeout: 100000000
   }
