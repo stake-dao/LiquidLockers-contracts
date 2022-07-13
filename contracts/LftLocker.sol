@@ -14,6 +14,10 @@ interface IRewardPool {
 	function rewardToken() external returns(address);
 }
 
+interface IWETH {
+	function deposit() external payable;
+}
+
 /// @title LftLocker
 /// @author StakeDAO
 /// @notice Locks the LFT token into the LendFlare voting escrow
@@ -28,6 +32,7 @@ contract LftLocker {
 	address public constant LEND_FLARE_PROXY = address(0x77Be80a3c5706973a925C468Bdc8eAcCD187D1Ba);
 	address public constant VE_LFT = address(0x19ac8E582A9E6F059E56Ce77015C46e250c711D2);
 	address public constant LFT = address(0xB620Be8a1949AA9532e6a3510132864EF9Bc3F82);
+	address public constant WETH = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
 	/* ========== EVENTS ========== */
 	event LockCreated(address indexed user, uint256 value, uint256 duration);
@@ -92,14 +97,13 @@ contract LftLocker {
 		for (uint256 i; i < _pids.length;) {
 			address rewardPool = IVeLFT(VE_LFT).rewardPools(_pids[i]);
 			address token = IRewardPool(rewardPool).rewardToken();
-			if (token == address(0)) { // Eth
-				emit TokenClaimed(_recipient, token, address(this).balance);
-				payable(_recipient).transfer(address(this).balance);
-			} else { // ERC20
-				uint256 balance = IERC20(token).balanceOf(address(this));
-				IERC20(token).safeTransfer(_recipient, balance);
-				emit TokenClaimed(_recipient, token, balance);
+			if (token == address(0)) { // wrap ETH <-> WETH
+				IWETH(WETH).deposit{value: address(this).balance}();
+				token = WETH;
 			}
+			uint256 balance = IERC20(token).balanceOf(address(this));
+			IERC20(token).safeTransfer(_recipient, balance);
+			emit TokenClaimed(_recipient, token, balance);
 			unchecked{++i;}
 		}		
 	}
