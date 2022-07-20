@@ -3,6 +3,7 @@
 ///////////////////////////////////////////////////////////////
 
 export const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+export const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 export const STAKE_DAO_MULTISIG = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0";
 
@@ -72,4 +73,11 @@ export const HOLDER = "0xBA12222222228d8Ba445958a75a0704d566BF2C8"; // Balancer 
 export const BALANCER_LOCKER = "0xea79d1A83Da6DB43a85942767C389fE0ACf336A5";
 export const BALANCER_ACCUMULATOR = "0x9A211c972AebF2aE70F1ec14845848baAB79d6Af";
 
+////////////////////////////////////////////////////////////////
+/// --- LENDFLARE PROTOCOL
+///////////////////////////////////////////////////////////////
 
+export const LFT = "0xB620Be8a1949AA9532e6a3510132864EF9Bc3F82";
+export const VE_LFT = "0x19ac8E582A9E6F059E56Ce77015C46e250c711D2";
+export const LFT_HOLDER = "0xb586f5e09ABABdb5be00c0EcfCC69F354c64Aee8";
+export const LENDFLARE_FEE_DISTRIBUTOR = "0x77Be80a3c5706973a925C468Bdc8eAcCD187D1Ba"; // proxy

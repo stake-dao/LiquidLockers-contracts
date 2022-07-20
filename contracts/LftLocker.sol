@@ -152,4 +152,8 @@ contract LftLocker {
 		(bool success, bytes memory result) = to.call{ value: value }(data);
 		return (success, result);
 	}
+	
+	// solhint-disable no-empty-blocks
+	receive() external payable {
+	}
 }
