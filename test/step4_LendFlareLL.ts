@@ -369,6 +369,14 @@ describe("LendFlare Depositor", function () {
             expect(daiAfter).gt(daiBefore);
             expect(wethAfter).gt(wethBefore);
             expect(wbtcAfter).gt(wbtcBefore);
+            const lockerUsdcBalance = await usdc.balanceOf(locker.address);
+            const lockerDaiBalance = await dai.balanceOf(locker.address);
+            const lockerWethBalance = await weth.balanceOf(locker.address);
+            const lockerWbtcBalance = await wbtc.balanceOf(locker.address);
+            expect(lockerUsdcBalance).eq(0);
+            expect(lockerDaiBalance).eq(0);
+            expect(lockerWethBalance).eq(0);
+            expect(lockerWbtcBalance).eq(0);
         });
     });
 });

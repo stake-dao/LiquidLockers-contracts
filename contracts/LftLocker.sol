@@ -37,7 +37,6 @@ contract LftLocker {
 	/* ========== EVENTS ========== */
 	event LockCreated(address indexed user, uint256 value, uint256 duration);
 	event TokenClaimed(address indexed user, address token, uint256 value);
-	event TokensClaimed(address indexed user, address[] tokens, uint256[] value);
 	event Released(address indexed user, uint256 value);
 	event GovernanceChanged(address indexed newGovernance);
 	event LftDepositorChanged(address indexed newDepositor);
@@ -102,8 +101,10 @@ contract LftLocker {
 				token = WETH;
 			}
 			uint256 balance = IERC20(token).balanceOf(address(this));
-			IERC20(token).safeTransfer(_recipient, balance);
-			emit TokenClaimed(_recipient, token, balance);
+			if (balance > 0) {
+				IERC20(token).safeTransfer(_recipient, balance);
+				emit TokenClaimed(_recipient, token, balance);
+			}
 			unchecked{++i;}
 		}		
 	}
