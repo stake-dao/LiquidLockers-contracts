@@ -10,6 +10,11 @@ interface ILftLocker {
 	function claimRewards(uint256[] calldata, address) external;
 }
 
+interface ISushiSwapRouter {
+	function getAmountsOut(uint256, address[] memory) external returns(uint256[] memory);
+	function swapExactTokensForTokens(uint256, uint256, address[] memory, address, uint256) external;
+}
+
 /// @title A contract that accumulates rewards and notifies them to the LGV4
 /// @author StakeDAO
 contract LftAccumulator {
@@ -20,7 +25,12 @@ contract LftAccumulator {
 	address public gauge;
 	address public sdtDistributor;
 	uint256 public claimerFee;
+	uint256 public maxSlippage;
+	address[] public tokensReward;
+	mapping (uint256 => address[]) public swapPaths;
 
+	address constant public SUSHI_ROUTER = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
+	
 	/* ========== EVENTS ========== */
 	event SdtDistributorUpdated(address oldDistributor, address newDistributor);
 	event GaugeSet(address oldGauge, address newGauge);
@@ -37,37 +47,69 @@ contract LftAccumulator {
     }
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
-
-	/// @notice Claims rewards from the locker passing pids
+	/// @notice Claims and notify rewards from the locker giving pids
 	/// @param _pids lendflare pids to claim reward
-	function claim(uint256[] calldata _pids) external {
+	function claimAndNotify(uint256[] memory _pids) external {
 		ILftLocker(locker).claimRewards(_pids, address(this));
+		_swaps(_pids);
+		notifyAll();
+	}
+
+	/// @notice swaps pids's token reward with a swap path stored
+	/// @param _pids lendflare pids to swap the token received as reward
+	function _swaps(uint256[] memory _pids) internal {
+		uint256 pidsLength = _pids.length;
+		for (uint256 i; i < pidsLength;) {
+			address[] memory path = swapPaths[_pids[i]];
+			if (path.length > 0) {
+				uint256 amount = IERC20(path[0]).balanceOf(address(this));
+				if(amount == 0) {
+					return;
+				} 
+				IERC20(path[0]).safeIncreaseAllowance(SUSHI_ROUTER, amount);
+				
+				uint256[] memory amounts = ISushiSwapRouter(SUSHI_ROUTER).getAmountsOut(amount, path);
+				uint256 minAmount = amounts[path.length - 1] * (10000 - maxSlippage) / 10000;
+				
+				ISushiSwapRouter(SUSHI_ROUTER).swapExactTokensForTokens(
+					amount,
+					minAmount,
+					path,
+					address(this),
+					block.timestamp + 1800
+				);
+			}
+			unchecked{++i;}
+		}
 	}
 
 	/// @notice Notifies tokens to the LGV4, they needs to be added before as reward
-    /// @param _tokens tokens to notify
-	/// @param _amounts amounts to notify
-	function notify(address[] calldata _tokens, uint256[] calldata _amounts) external {
-		require(_tokens.length == _amounts.length, "different lenght");
-		uint256 tokensLenght = _tokens.length;
+	function notifyAll() public {
+		uint256 tokensLenght = tokensReward.length;
 		for (uint256 i; i < tokensLenght;) {
-            _notifyReward(_tokens[i], _amounts[i]);
+            _notifyAllReward(tokensReward[i]);
             unchecked{++i;}
         }
 		_distributeSDT();
 	}
 
-	// function zap(address[] calldata _path) external {
-	// 	require(msg.sender == governance, "!gov");
-	// }
+	/// @notice Notify the new reward to the LGV4
+	/// @param _tokenReward token to notify
+	function _notifyAllReward(address _tokenReward) internal {
+		require(gauge != address(0), "gauge not set");
+		uint256 amount = IERC20(_tokenReward).balanceOf(address(this));
+		if (amount == 0) {
+			return;
+		}
+		if (ILiquidityGauge(gauge).reward_data(_tokenReward).distributor == address(this)) {
+			uint256 claimerReward = (amount * claimerFee) / 10000;
+			IERC20(_tokenReward).transfer(msg.sender, claimerReward);
+			uint256 amountToNotify = amount - claimerReward;
+			IERC20(_tokenReward).approve(gauge, amountToNotify);
+			ILiquidityGauge(gauge).deposit_reward_token(_tokenReward, amountToNotify);
 
-    /// @notice Deposit token into the accumulator
-	/// @param _token token to deposit
-	/// @param _amount amount to deposit
-	function depositToken(address _token, uint256 _amount) external {
-		require(_amount > 0, "set an amount > 0");
-		IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
-		emit TokenDeposited(_token, _amount);
+			emit RewardNotified(gauge, _tokenReward, amountToNotify);
+		}
 	}
 
 	/// @notice Internal function to distribute SDT to the gauge
@@ -77,29 +119,13 @@ contract LftAccumulator {
 		}
 	}
 
-    /// @notice Notify the new reward to the LGV4
-	/// @param _tokenReward token to notify
-	/// @param _amount amount to notify
-	function _notifyReward(address _tokenReward, uint256 _amount) internal {
-		require(gauge != address(0), "gauge not set");
-		if (_amount == 0) {
-			return;
-		}
-		uint256 balanceBefore = IERC20(_tokenReward).balanceOf(address(this));
-		require(balanceBefore >= _amount, "amount not enough");
-		if (ILiquidityGauge(gauge).reward_data(_tokenReward).distributor == address(this)) {
-			uint256 claimerReward = (_amount * claimerFee) / 10000;
-			IERC20(_tokenReward).transfer(msg.sender, claimerReward);
-			_amount -= claimerReward;
-			IERC20(_tokenReward).approve(gauge, _amount);
-			ILiquidityGauge(gauge).deposit_reward_token(_tokenReward, _amount);
-
-			uint256 balanceAfter = IERC20(_tokenReward).balanceOf(address(this));
-
-			require(balanceBefore - balanceAfter == _amount + claimerReward, "wrong amount notified");
-
-			emit RewardNotified(gauge, _tokenReward, _amount);
-		}
+	/// @notice Deposit token into the accumulator
+	/// @param _token token to deposit
+	/// @param _amount amount to deposit
+	function depositToken(address _token, uint256 _amount) external {
+		require(_amount > 0, "set an amount > 0");
+		IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+		emit TokenDeposited(_token, _amount);
 	}
 
     /// @notice Sets gauge for the accumulator which will receive and distribute the rewards
@@ -151,6 +177,23 @@ contract LftAccumulator {
 		require(msg.sender == governance, "!gov");
 		require(_claimerFee <= 10000, ">100%");
 		claimerFee = _claimerFee;
+	}
+
+	/// @notice Allows the governance to set the swap path for each pid
+	/// @dev Can be called only by the governance
+	/// @param _pid pid to set the swap path
+	/// @param _swapPath swap path
+	function setPidSwapPath(uint256 _pid, address[] memory _swapPath) external {
+		require(msg.sender == governance, "!gov");
+		swapPaths[_pid] = _swapPath;
+	}
+
+	/// @notice Allows the governance to set tokens to notify
+	/// @dev Can be called only by the governance
+	/// @param _tokens tokens to notify as rewards to the LGV4
+	function setTokensToNotify(address[] memory _tokens) external {
+		require(msg.sender == governance, "!gov");
+		tokensReward = _tokens;
 	}
 
     /// @notice A function that rescue any ERC20 token

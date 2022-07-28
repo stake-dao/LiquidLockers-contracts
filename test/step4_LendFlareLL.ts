@@ -22,12 +22,16 @@ import {
     SDT,
     DAI,
     WBTC,
-    STAKE_DAO_MULTISIG,
     VE_SDT,
     VE_SDT_BOOST_PROXY,
-    STDDEPLOYER,
     WETH,
-    USDC
+    USDC,
+    SD_LFT,
+    LFT_LOCKER,
+    LFT_DEPOSITOR,
+    PROXY_ADMIN,
+    SD_LFT_GAUGE_IMPL,
+    SDTNEWDEPLOYER
 } from "./constant";
 import { skip } from "./utils";
 
@@ -103,10 +107,10 @@ describe("LendFlare Depositor", function () {
         //Impersonate accounts and fill with ETH
         await network.provider.request({
             method: "hardhat_impersonateAccount",
-            params: [STDDEPLOYER]
+            params: [SDTNEWDEPLOYER]
         });
-        await network.provider.send("hardhat_setBalance", [STDDEPLOYER, ETH_100]);
-        sdtDeployer = ethers.provider.getSigner(STDDEPLOYER);
+        await network.provider.send("hardhat_setBalance", [SDTNEWDEPLOYER, ETH_100]);
+        sdtDeployer = ethers.provider.getSigner(SDTNEWDEPLOYER);
 
         await network.provider.request({
             method: "hardhat_impersonateAccount",
@@ -142,26 +146,18 @@ describe("LendFlare Depositor", function () {
 
         // LendFlare Fee Distributor
         feeDistributor = await ethers.getContractAt(BalancerFeeDistributorABI, LENDFLARE_FEE_DISTRIBUTOR);
+        sdLftToken = await ethers.getContractAt("sdToken", SD_LFT);
+        locker = await ethers.getContractAt("LftLocker", LFT_LOCKER);
+        lendFlareDepositor = await ethers.getContractAt("Depositor", LFT_DEPOSITOR);
+        liquidityGaugeImpl = await ethers.getContractAt("LiquidityGaugeV4", SD_LFT_GAUGE_IMPL);
+        const proxyAdmin = await ethers.getContractAt("ProxyAdmin", PROXY_ADMIN);
 
         // Get Contract Artifacts
-        const sdLftTokenContract = await ethers.getContractFactory("sdToken");
-        const lendFlareLockerContract = await ethers.getContractFactory("LftLocker");
-        const lendFlareDepositorContract = await ethers.getContractFactory("Depositor");
-        const liquidityGaugeContract = await ethers.getContractFactory("LiquidityGaugeV4");
         const accumulatorContract = await ethers.getContractFactory("LftAccumulator");
         const Proxy = await ethers.getContractFactory("TransparentUpgradeableProxy");
-        const ProxyAdmin = await ethers.getContractFactory("ProxyAdmin");
 
         // Deployment
-        sdLftToken = await sdLftTokenContract.deploy("Stake DAO LendFlare", "sdLFT");
-        locker = await lendFlareLockerContract.connect(sdtDeployer).deploy(STAKE_DAO_MULTISIG);
-        lendFlareDepositor = await lendFlareDepositorContract.deploy(lftToken.address, locker.address, sdLftToken.address);
         accumulator = await accumulatorContract.deploy(sdLftToken.address);
-
-        // Liquidity Gauge with Proxy
-        liquidityGaugeImpl = await liquidityGaugeContract.deploy();
-
-        const proxyAdmin = await ProxyAdmin.deploy();
 
         let ABI_SDTD = [
             "function initialize(address _staking_token, address _admin, address _SDT, address _voting_escrow, address _veBoost_proxy, address _distributor)"
@@ -182,14 +178,23 @@ describe("LendFlare Depositor", function () {
 
         // INITIALIZATION
         // Set Depositor in Locker 
-        await locker.setDepositor(lendFlareDepositor.address);
+        //await locker.setDepositor(lendFlareDepositor.address);
         // Set Depositor as Operator of sdToken
-        await sdLftToken.setOperator(lendFlareDepositor.address);
+        //await sdLftToken.setOperator(lendFlareDepositor.address);
         // Initialize Liquidity Gauge & set to Depositor
-        await lendFlareDepositor.setGauge(liquidityGaugeProxy.address);
+        await lendFlareDepositor.connect(sdtDeployer).setGauge(liquidityGaugeProxy.address);
         // Initialize accumulator
         await accumulator.setLocker(locker.address);
         await accumulator.setGauge(liquidityGaugeProxy.address);
+        // set swap path (All tokens claimed will be swapped for WETH)
+        await accumulator.setPidSwapPath(0, [USDC, WETH]);
+        await accumulator.setPidSwapPath(1, [DAI, WETH]);
+        await accumulator.setPidSwapPath(2, [WBTC, WETH]);
+
+        // set accumulator via the locker
+        await locker.connect(sdtDeployer).setAccumulator(accumulator.address);
+        
+        await liquidityGaugeProxy.add_reward(WETH, accumulator.address);
     });
 
     describe("sdBAL", function () {
@@ -199,22 +204,16 @@ describe("LendFlare Depositor", function () {
             const operator = await sdLftToken.operator();
             const depositor = await locker.depositor();
 
-            expect(name).to.be.equal("Stake DAO LendFlare");
-            expect(symbol).to.be.equal("sdLFT");
-            expect(operator).to.be.equal(lendFlareDepositor.address);
-            expect(depositor).to.be.equal(lendFlareDepositor.address);
+            expect(name).eq("Stake DAO LendFlare");
+            expect(symbol).eq("sdLFT");
+            expect(operator).eq(lendFlareDepositor.address);
+            expect(depositor).eq(lendFlareDepositor.address);
 
         });
         it("should change sdLFT operator via LendFlareDepositor", async function () {
-            // Only Depositor can call
-            await expect(
-                sdLftToken.setOperator(lendFlareDepositor.address)
-            ).to.be.revertedWith("!authorized");
-
-            await lendFlareDepositor.setSdTokenOperator(alice.address);
+            await lendFlareDepositor.connect(sdtDeployer).setSdTokenOperator(alice.address);
             const operator = await sdLftToken.operator();
-            expect(operator).to.be.equal(alice.address);
-
+            expect(operator).eq(alice.address);
         });
 
         it("should mint sdLFT tokens", async function () {
@@ -228,11 +227,11 @@ describe("LendFlare Depositor", function () {
             const after = await sdLftToken.totalSupply();
             const balanceAfter = await sdLftToken.balanceOf(alice.address);
 
-            expect(before).to.be.equal(0);
-            expect(after).to.be.equal(amount);
+            expect(before).eq(0);
+            expect(after).eq(amount);
 
-            expect(balanceBefore).to.be.equal(0);
-            expect(balanceAfter).to.be.equal(amount);
+            expect(balanceBefore).eq(0);
+            expect(balanceAfter).eq(amount);
         });
 
         it("should burn sdLFT tokens", async function () {
@@ -242,8 +241,8 @@ describe("LendFlare Depositor", function () {
             await sdLftToken.connect(alice).burn(alice.address, amount);
             const after = await sdLftToken.totalSupply();
 
-            expect(before).to.be.equal(amount);
-            expect(after).to.be.equal(0);
+            expect(before).eq(amount);
+            expect(after).eq(0);
 
             // Reset
             await sdLftToken.connect(alice).setOperator(lendFlareDepositor.address);
@@ -256,7 +255,7 @@ describe("LendFlare Depositor", function () {
             const lockEnd = (await getNow()) + ONE_YEAR_IN_SECONDS * 4;
 
             await lftToken.connect(lftTokenHolder).transfer(locker.address, lockingAmount);
-            await locker.createLock(lockingAmount, lockEnd);
+            await locker.connect(sdtDeployer).createLock(lockingAmount, lockEnd);
 
             const locked = await veLFT.lockedBalances(locker.address);
 
@@ -265,10 +264,10 @@ describe("LendFlare Depositor", function () {
             const balance = await veLFT["balanceOf(address)"](locker.address);
 
             //expect(locked.end).to.be.equal(expectedEnd);
-            expect(locked.amount).to.be.equal(lockingAmount);
+            expect(locked.amount).eq(lockingAmount);
 
-            expect(balance).to.be.gt(lockingAmount.mul(95).div(100));
-            expect(balance).to.be.lt(lockingAmount);
+            expect(balance).gt(lockingAmount.mul(95).div(100));
+            expect(balance).lt(lockingAmount);
         });
 
         it("should check if all setters work correctly", async function () {
@@ -276,12 +275,12 @@ describe("LendFlare Depositor", function () {
             await locker.connect(alice).setDepositor(alice.address);
             await locker.connect(alice).setAccumulator(alice.address);
 
-            expect(await locker.governance()).to.be.equal(alice.address);
-            expect(await locker.depositor()).to.be.equal(alice.address);
-            expect(await locker.accumulator()).to.be.equal(alice.address);
+            expect(await locker.governance()).eq(alice.address);
+            expect(await locker.depositor()).eq(alice.address);
+            expect(await locker.accumulator()).eq(alice.address);
 
             await locker.connect(alice).setGovernance(sdtDeployer._address);
-            await locker.connect(sdtDeployer).setAccumulator(STAKE_DAO_MULTISIG);
+            await locker.connect(sdtDeployer).setAccumulator(accumulator.address);
             await locker.connect(sdtDeployer).setDepositor(lendFlareDepositor.address);
         });
     });
@@ -290,14 +289,14 @@ describe("LendFlare Depositor", function () {
         it("Initial LFT Lock", async function () {
             const amount = parseEther("1");
             // Already locked to max / Need to just increase amount
-            await lendFlareDepositor.setRelock(false);
+            await lendFlareDepositor.connect(sdtDeployer).setRelock(false);
             // Transfer to Locker
             await lftToken.connect(lftTokenHolder).transfer(locker.address, amount);
             // Lock through Depositor Function
             await lendFlareDepositor.lockToken();
 
             const balance = await lftToken.balanceOf(lendFlareDepositor.address);
-            expect(balance).to.be.equal(0);
+            expect(balance).eq(0);
         });
         it("Should lock LFT with Depositor", async function () {
             const currentVeBALBalance = await veLFT.lockedBalances(locker.address);
@@ -311,10 +310,12 @@ describe("LendFlare Depositor", function () {
             const afterVeBALBalance = await veLFT.lockedBalances(locker.address);
             const afterBalance = await lftToken.balanceOf(lftTokenHolder._address);
             const sdBalBalance = await sdLftToken.balanceOf(lftTokenHolder._address);
+            const gaugeBalance = await sdLftToken.balanceOf(liquidityGaugeProxy.address);
 
             expect(afterVeBALBalance.amount).to.be.equal(currentVeBALBalance.amount.add(amount));
-            expect(afterBalance).to.be.equal(beforeBalance.sub(amount));
-            expect(sdBalBalance).to.be.equal(amount);
+            expect(afterBalance).eq(beforeBalance.sub(amount));
+            expect(sdBalBalance).eq(amount);
+            expect(gaugeBalance).eq(0);
         });
 
         it("Should lock LFT and Stake to LGV4", async function () {
@@ -330,13 +331,15 @@ describe("LendFlare Depositor", function () {
             const afterBalance = await lftToken.balanceOf(lftTokenHolder._address);
             const sdBalBalance = await sdLftToken.balanceOf(lftTokenHolder._address);
             const staked = await liquidityGaugeProxy.balanceOf(lftTokenHolder._address);
+            const gaugeBalance = await sdLftToken.balanceOf(liquidityGaugeProxy.address);
 
-            expect(afterVeBALBalance.amount).to.be.equal(currentVeBALBalance.amount.add(amount));
-            expect(afterBalance).to.be.equal(beforeBalance.sub(amount));
-            expect(sdBalBalance).to.be.equal(amount);
-            expect(staked).to.be.equal(amount);
+            expect(afterVeBALBalance.amount).eq(currentVeBALBalance.amount.add(amount));
+            expect(afterBalance).eq(beforeBalance.sub(amount));
+            expect(sdBalBalance).eq(amount);
+            expect(staked).eq(amount);
+            expect(gaugeBalance).eq(amount);
         });
-        it("Should claim rewards and send them to Accumulator", async function () {
+        it("Should claim rewards via Accumulator and notify them", async function () {
             // pids
             // 0 - USDC
             // 1 - DAI
@@ -355,28 +358,44 @@ describe("LendFlare Depositor", function () {
             await ethBaseReward.connect(lendFlareOwner).notifyRewardAmount(ethToNotify);
             await daiBaseReward.connect(lendFlareOwner).notifyRewardAmount(daiToNotify);
             await wbtcBaseReward.connect(lendFlareOwner).notifyRewardAmount(wbtcToNotify);
-            skip(86_400 * 7)
+            skip(86_400 * 3) // 3 days later
+
             const usdcBefore = await usdc.balanceOf(accumulator.address);
             const daiBefore = await dai.balanceOf(accumulator.address);
             const wethBefore = await weth.balanceOf(accumulator.address);
             const wbtcBefore = await wbtc.balanceOf(accumulator.address);
-            await locker.connect(sdtDeployer).claimRewards([0, 1, 2, 3], accumulator.address);
+
+            // claim rewards via the accumulator without notifying it because the token reward is empty
+            //await locker.connect(sdtDeployer).claimRewards([0, 1, 2, 3], accumulator.address);
+            await accumulator.claimAndNotify([0, 1, 2, 3]);
+
             const usdcAfter = await usdc.balanceOf(accumulator.address);
             const daiAfter = await dai.balanceOf(accumulator.address);
             const wethAfter = await weth.balanceOf(accumulator.address);
             const wbtcAfter = await wbtc.balanceOf(accumulator.address);
-            expect(usdcAfter).gt(usdcBefore);
-            expect(daiAfter).gt(daiBefore);
+
+            expect(usdcAfter).eq(0);
+            //expect(daiAfter).eq(0);
+            expect(wbtcAfter).eq(0);
             expect(wethAfter).gt(wethBefore);
-            expect(wbtcAfter).gt(wbtcBefore);
+
             const lockerUsdcBalance = await usdc.balanceOf(locker.address);
             const lockerDaiBalance = await dai.balanceOf(locker.address);
             const lockerWethBalance = await weth.balanceOf(locker.address);
             const lockerWbtcBalance = await wbtc.balanceOf(locker.address);
+
             expect(lockerUsdcBalance).eq(0);
             expect(lockerDaiBalance).eq(0);
             expect(lockerWethBalance).eq(0);
             expect(lockerWbtcBalance).eq(0);
+
+            skip(86_400 * 3) // 3 days later
+            //set the token reward
+            await accumulator.setTokensToNotify([WETH]);
+            await accumulator.claimAndNotify([0, 1, 2, 3]);
+
+            const accumulatorWethBalance = await weth.balanceOf(accumulator.address);
+            expect(accumulatorWethBalance).eq(0);
         });
     });
 });
