@@ -15,6 +15,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const GAUGE_IMPL = "0x93c951D3281Cc79e9FE1B1C87e50693D202F4C17"; // sdAngle LGV4 impl
   const sdtDistributor = "0x8Dc551B4f5203b51b5366578F42060666D42AB5E"; // LL SdtDistributorV2
 
+  const ABI = [
+    "function initialize(address _staking_token, address _admin, address _SDT, address _voting_escrow, address _veBoost_proxy, address _distributor)"
+  ];
+
   const iface = new hre.ethers.utils.Interface(ABI);
 
   const data = iface.encodeFunctionData("initialize", [stakingToken, admin, SDT, veSDT, veBoostProxy, sdtDistributor]);
