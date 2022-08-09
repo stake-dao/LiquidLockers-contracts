@@ -25,7 +25,7 @@ contract BaseAccumulator {
 
 	event SdtDistributorUpdated(address oldDistributor, address newDistributor);
 	event GaugeSet(address oldGauge, address newGauge);
-	event RewardNotified(address gauge, address tokenReward, uint256 amount);
+	event RewardNotified(address gauge, address tokenReward, uint256 amountNotified, uint256 claimerFee);
 	event LockerSet(address oldLocker, address newLocker);
 	event GovernanceSet(address oldGov, address newGov);
 	event TokenRewardSet(address oldTr, address newTr);
@@ -114,7 +114,7 @@ contract BaseAccumulator {
 
 			require(balanceBefore - balanceAfter == _amount + claimerReward, "wrong amount notified");
 
-			emit RewardNotified(gauge, _tokenReward, _amount);
+			emit RewardNotified(gauge, _tokenReward, _amount, claimerReward);
 		}
 	}
 

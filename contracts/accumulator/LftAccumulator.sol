@@ -34,7 +34,7 @@ contract LftAccumulator {
 	/* ========== EVENTS ========== */
 	event SdtDistributorUpdated(address oldDistributor, address newDistributor);
 	event GaugeSet(address oldGauge, address newGauge);
-	event RewardNotified(address gauge, address tokenReward, uint256 amount);
+	event RewardNotified(address gauge, address tokenReward, uint256 amountNotified, uint256 claimerFee);
 	event LockerSet(address oldLocker, address newLocker);
 	event GovernanceSet(address oldGov, address newGov);
 	event TokenDeposited(address token, uint256 amount);
@@ -108,7 +108,7 @@ contract LftAccumulator {
 			IERC20(_tokenReward).approve(gauge, amountToNotify);
 			ILiquidityGauge(gauge).deposit_reward_token(_tokenReward, amountToNotify);
 
-			emit RewardNotified(gauge, _tokenReward, amountToNotify);
+			emit RewardNotified(gauge, _tokenReward, amountToNotify, claimerReward);
 		}
 	}
 
