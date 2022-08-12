@@ -343,4 +343,4 @@ contract SdtDistributorV2 is ReentrancyGuardUpgradeable, AccessControlUpgradeabl
 		IERC20(tokenAddress).safeTransfer(to, amount);
 		emit Recovered(tokenAddress, to, amount);
 	}
-} 
+}

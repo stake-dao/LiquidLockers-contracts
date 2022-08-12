@@ -46,7 +46,7 @@ contract FxsDepositor {
 	event FeesChanged(uint256 newFee);
 
   /* ========== CONSTRUCTOR ========== */
-	constructor(address _locker, address _minter) {
+	constructor(address _locker, address _minter) public {
 		governance = msg.sender;
 		locker = _locker;
 		minter = _minter;

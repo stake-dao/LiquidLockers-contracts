@@ -424,7 +424,7 @@ def deposit(_value: uint256, _addr: address = msg.sender, _claim_rewards: bool =
         self.totalSupply = total_supply
 
         self._update_liquidity_limit(_addr, new_balance, total_supply)
-        
+
         ERC20(self.staking_token).transferFrom(msg.sender, self, _value)
     else:
         self._checkpoint_rewards(_addr, total_supply, False, ZERO_ADDRESS, True)
