@@ -130,6 +130,7 @@ def __init__():
 def initialize(_staking_token: address, _admin: address, _SDT: address, _voting_escrow: address, _veBoost_proxy: address, _distributor: address,_vault:address,symbol:String[26]):
     """
     @notice Contract initializer
+    @param _staking_token Liquidity Pool contract address
     @param _admin Admin who can kill the gauge
     @param _SDT Address of the SDT token
     @param _voting_escrow Address of the veSDT contract
@@ -419,11 +420,11 @@ def deposit(_value: uint256, _addr: address = msg.sender, _claim_rewards: bool =
 
         total_supply += _value
         new_balance: uint256 = self.balanceOf[_addr] + _value
-        # define my own balance of and so on 
         self.balanceOf[_addr] = new_balance
         self.totalSupply = total_supply
 
         self._update_liquidity_limit(_addr, new_balance, total_supply)
+        
         ERC20(self.staking_token).transferFrom(msg.sender, self, _value)
     else:
         self._checkpoint_rewards(_addr, total_supply, False, ZERO_ADDRESS, True)

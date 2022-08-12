@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.7;
+pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "../interfaces/ITokenMinter.sol";
 import "../interfaces/ILocker.sol";
-import "../interfaces/IMultiRewards.sol";
+import "../interfaces/IGaugeMultiRewards.sol";
 import "../interfaces/ISdFXS.sol";
 
 /// @title Contract that accepts FXS token and locks or stakes them
@@ -170,7 +170,7 @@ contract FxsDepositor {
 			ITokenMinter(minter).mint(address(this), _amount);
 			IERC20(minter).safeApprove(gauge, 0);
 			IERC20(minter).safeApprove(gauge, _amount);
-			IMultiRewards(gauge).stakeFor(msg.sender, _amount);
+			IGaugeMultiRewards(gauge).stakeFor(msg.sender, _amount);
 		}
 		emit Deposited(msg.sender, _amount, _stake, _lock);
 	}
@@ -196,7 +196,7 @@ contract FxsDepositor {
 		// Approve the sdFXS to the gaugemultireward and then stake
 		IERC20(minter).safeApprove(gauge, 0);
 		IERC20(minter).safeApprove(gauge, _amount);
-		IMultiRewards(gauge).stakeFor(_account, _amount);
+		IGaugeMultiRewards(gauge).stakeFor(_account, _amount);
 
 		emit DepositedFor(_account, _amount);
 	}

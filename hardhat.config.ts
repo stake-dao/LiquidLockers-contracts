@@ -1,3 +1,5 @@
+import { HardhatUserConfig } from "hardhat/config";
+
 import "@nomiclabs/hardhat-waffle";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-vyper";
@@ -9,8 +11,6 @@ import "hardhat-contract-sizer";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "@typechain/hardhat";
-import "hardhat-gas-reporter";
-import { HardhatUserConfig, task } from "hardhat/config";
 
 require("dotenv").config();
 
@@ -22,12 +22,11 @@ export default {
         url: process.env.MAINNET,
         blockNumber: 15346196
       }
-    } /*
+    },
     mainnet: {
       url: process.env.MAINNET,
-      accounts: [`0x${process.env.DEPLOYER_PKEY}`],
-      gasPrice: 100000000000
-    }*/
+      accounts: [`0x${process.env.DEPLOYER_PKEY}`]
+    }
   },
   namedAccounts: {
     deployer: 0
@@ -44,6 +43,11 @@ export default {
       }
     }
   },
+  gasReporter: {
+    enabled: true,
+    currency: "USD",
+    coinmarketcap: process.env.COINMARKETCAP_KEY
+  },
   etherscan: {
     apiKey: process.env.ETHERSCAN_KEY
   },
@@ -53,10 +57,6 @@ export default {
     runOnCompile: false,
     strict: true
   },
-  gasReporter: {
-    enabled: false,
-    currency: "USD",
-},
   mocha: {
     timeout: 100000000
   }
