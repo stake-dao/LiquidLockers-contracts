@@ -44,7 +44,6 @@ contract FxsDepositor {
 	event GaugeChanged(address indexed newGauge);
 	event SdFXSOperatorChanged(address indexed newSdFXS);
 	event FeesChanged(uint256 newFee);
-
   /* ========== CONSTRUCTOR ========== */
 	constructor(address _locker, address _minter) public {
 		governance = msg.sender;
