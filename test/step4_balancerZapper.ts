@@ -13,6 +13,7 @@ import {
     BAL_HOLDER,
     SD_BAL,
 } from "./constant";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 const ETH_100 = BigNumber.from(10).mul(BigNumber.from(10).pow(18)).toHexString();
 
@@ -27,8 +28,10 @@ describe("Balancer Depositor", function () {
 
     // Helper Signers
     let balHolder: JsonRpcSigner;
+    let alice: SignerWithAddress
 
     before(async function () {
+        [alice] = await ethers.getSigners();
         // tokens
         bal = await ethers.getContractAt(ERC20ABI, BAL);
         sdBalToken = await ethers.getContractAt("sdToken", SD_BAL);
@@ -78,6 +81,34 @@ describe("Balancer Depositor", function () {
             expect(balanceAfterZapZapZap).eq(balanceAfterZapZap);
 
             const gaugeBalanceAfter = await sdBalGauge.balanceOf(balHolder._address);
+            expect(gaugeBalanceAfter.sub(gaugeBalanceBefore)).gt(0);
+
+            const zapperBalBalance = await bal.balanceOf(balancerZapper.address);
+            expect(zapperBalBalance).eq(0);
+
+        });
+
+        it("Should zap for another user", async function () {
+            const amountToLock = parseEther("100");
+            const minAmount = 0;
+            await bal.connect(balHolder).approve(balancerZapper.address, amountToLock.mul(2));
+            const balanceBeforeZap = await sdBalToken.balanceOf(alice.address);
+
+            // Zap BAL to obtain sdBAL, staking but not locking sdBal, for another user
+            await balancerZapper.connect(balHolder).zapFromBal(amountToLock, true, false, minAmount, alice.address);
+
+            const balanceAfterZap = await sdBalToken.balanceOf(alice.address);
+            expect(balanceAfterZap.sub(balanceBeforeZap)).gt(0);
+
+            const gaugeBalanceBefore = await sdBalGauge.balanceOf(alice.address);
+
+            // Zap BAL to obtain sdBAL, staking and locking sdBal to the LGV4, for another user
+            await balancerZapper.connect(balHolder).zapFromBal(amountToLock, true, true, minAmount, alice.address);
+
+            const balanceAfterZapZap = await sdBalToken.balanceOf(alice.address);
+            expect(balanceAfterZapZap).eq(balanceAfterZap);
+
+            const gaugeBalanceAfter = await sdBalGauge.balanceOf(alice.address);
             expect(gaugeBalanceAfter.sub(gaugeBalanceBefore)).gt(0);
 
             const zapperBalBalance = await bal.balanceOf(balancerZapper.address);
