@@ -7,6 +7,7 @@ import "../interfaces/ITokenMinter.sol";
 import "../interfaces/ILocker.sol";
 import "../interfaces/ISdToken.sol";
 import "../interfaces/ILiquidityGauge.sol";
+import "../interfaces/VeToken.sol";
 
 /// @title Contract that accepts tokens and locks them
 /// @author StakeDAO
@@ -41,12 +42,14 @@ contract ApwineDepositor {
 	constructor(
 		address _token,
 		address _locker,
-		address _minter
+		address _minter,
+		address _veToken
 	) {
 		governance = msg.sender;
 		token = _token;
 		locker = _locker;
 		minter = _minter;
+		unlockTime = VeToken(_veToken).locked__end(_locker); // should create lock before deploy this contract
 	}
 
 	/* ========== RESTRICTED FUNCTIONS ========== */

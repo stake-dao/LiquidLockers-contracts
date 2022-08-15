@@ -9,7 +9,7 @@ import "./interfaces/IFeeDistributor.sol";
 /// @title ApwLocker
 /// @author StakeDAO
 /// @notice Locks the APW tokens to veAPW contract
-contract ApwLocker {
+contract ApwineLocker {
 	using SafeERC20 for IERC20;
 
 	/* ========== STATE VARIABLES ========== */
@@ -50,7 +50,7 @@ contract ApwLocker {
 	}
 
 	modifier onlyGovernanceOrDepositor() {
-		require(msg.sender == governance || msg.sender == apwDepositor, "!(gov||ApwDepositor)");
+		require(msg.sender == governance || msg.sender == apwDepositor, "!(gov||ApwineDepositor)");
 		_;
 	}
 
