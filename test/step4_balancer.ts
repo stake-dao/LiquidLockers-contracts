@@ -450,17 +450,4 @@ describe("Balancer Depositor", function () {
             ).to.be.revertedWith("!gov");
         });
     });
-
-    describe("Balancer Zapper", function () {
-        it("Should zap from BAL token", async function () {
-            const amountToLock = parseEther("100");
-            const minAmount = 0;
-            await bal.connect(balHolder).approve(balancerZapper.address, amountToLock);
-            const balanceBeforeZap = await sdBalToken.balanceOf(balHolder._address);
-            expect(balanceBeforeZap).eq(0);
-            await balancerZapper.connect(balHolder).zapFromBal(amountToLock, false, false, minAmount, balHolder._address)
-            const balanceAfterZap = await sdBalToken.balanceOf(balHolder._address);
-            expect(balanceAfterZap).gt(0);
-        });
-    });
 });

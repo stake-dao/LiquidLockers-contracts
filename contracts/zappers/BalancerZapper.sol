@@ -3,6 +3,7 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "../interfaces/IDepositor.sol";
 
 interface IBalancerVault {
 	struct JoinPoolRequest {
@@ -25,9 +26,6 @@ interface IBalancerVault {
     }
 }
 
-interface IBalancerDepositor {
-    function deposit(uint256, bool, bool, address) external;
-}
 interface IAsset {
     // solhint-disable-previous-line no-empty-blocks
 }
@@ -42,7 +40,6 @@ contract BalancerZapper {
     address public constant DEPOSITOR = 0x3e0d44542972859de3CAdaF856B1a4FD351B4D2E; 
 
     constructor() {
-        IERC20(WETH).safeApprove(BALANCER_VAULT, type(uint256).max);
         IERC20(BAL).safeApprove(BALANCER_VAULT, type(uint256).max);
         IERC20(BPT).safeApprove(DEPOSITOR, type(uint256).max);
     }
@@ -82,11 +79,6 @@ contract BalancerZapper {
 			address(this),
 			pr
 		);
-        //require(IERC20(BPT).balanceOf(address(this)) > 0);
-        IBalancerDepositor(DEPOSITOR).deposit(IERC20(BPT).balanceOf(address(this)), _lock, _stake, _user);
-    }
-
-    function zapFromAny() external {
-
+        IDepositor(DEPOSITOR).deposit(IERC20(BPT).balanceOf(address(this)), _lock, _stake, _user);
     }
 }
