@@ -48,14 +48,16 @@ const VE_SDT = "0x0C30476f66034E11782938DF8e4384970B6c9e8a";
 const VEBOOST = "0xD67bdBefF01Fc492f1864E61756E5FBB3f173506";
 const SDT_HOLDER = "0x957fFde35b2d84F01d9BCaEb7528A2BCC268b9C1";
 const VESDT_HOLDER = "0xdceb0bb3311342e3ce9e49f57affce9deac40ba1";
-//const VESDT_HOLDER2 = "0x5919b3d42bd84e816533c2dd6a7dff7d02303e87"; 
 const VESDT_HOLDER2 = "0x9f5e6af744a137c9fefeedfb6b706b0640a57673";
+const VESDT_HOLDER3 = "0x7132b5edc9ee267c58d3562d3e621384b18da7f3"; 
 const SDFRAX3CRV = "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7";
 
 // ---- DAO Gauge ---- //
 const DISTRIBUTOR = "0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C";
+const DISTRIBUTOR_OLD = "0x8Dc551B4f5203b51b5366578F42060666D42AB5E";
 const GAUGECONTROLLER = "0x3F3F0776D411eb97Cfa4E3eb25F33c01ca4e7Ca8";
-const GCADMIN = "0x0dE5199779b43E13B3Bec21e91117E18736BC1A8";
+const GCADMIN_OLD = "0x0dE5199779b43E13B3Bec21e91117E18736BC1A8";
+const GCADMIN = "0x30f9fFF0f55d21D666E28E650d0Eb989cA44e339";
 
 const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 const TEMPLE = "0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7";
@@ -66,7 +68,7 @@ const FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0";
 
 const FXS_TEMPLE = "0x6021444f1706f15465bEe85463BCc7d7cC17Fc03";
 const FXS_TEMPLE_GAUGE = "0x10460d02226d6ef7B2419aE150E6377BdbB7Ef16";
-const FXS_TEMPLE_HOLDER = "0x36aFCc3F7403A7059bA034EEE01688859880Cd0b";
+const FXS_TEMPLE_HOLDER = "0xf6C75d85Ef66d57339f859247C38f8F47133BD39";
 
 const ETH_100 = BigNumber.from(10).mul(BigNumber.from(10).pow(18)).toHexString();
 
@@ -81,6 +83,7 @@ describe("StakeDAO <> FRAX", function () {
   let timelock: JsonRpcSigner;
   let veSdtHolder: JsonRpcSigner;
   let veSdtHolder2: JsonRpcSigner;
+  let veSdtHolder3: JsonRpcSigner;
   let govFrax: JsonRpcSigner;
   let sdtHolder: JsonRpcSigner;
   let deployer_new: JsonRpcSigner;
@@ -139,6 +142,10 @@ describe("StakeDAO <> FRAX", function () {
     });
     await network.provider.request({
       method: "hardhat_impersonateAccount",
+      params: [VESDT_HOLDER3]
+    });
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
       params: [GOVFRAX]
     });
     await network.provider.request({
@@ -159,6 +166,7 @@ describe("StakeDAO <> FRAX", function () {
     timelock = ethers.provider.getSigner(TIMELOCK);
     veSdtHolder = ethers.provider.getSigner(VESDT_HOLDER);
     veSdtHolder2 = ethers.provider.getSigner(VESDT_HOLDER2);
+    veSdtHolder3 = ethers.provider.getSigner(VESDT_HOLDER3);
     govFrax = ethers.provider.getSigner(GOVFRAX);
     sdtHolder = ethers.provider.getSigner(SDT_HOLDER);
     deployer_new = ethers.provider.getSigner(DEPLOYER_NEW);
@@ -169,6 +177,7 @@ describe("StakeDAO <> FRAX", function () {
     await network.provider.send("hardhat_setBalance", [FXS_TEMPLE_HOLDER, ETH_100]);
     await network.provider.send("hardhat_setBalance", [VESDT_HOLDER, ETH_100]);
     await network.provider.send("hardhat_setBalance", [TIMELOCK, ETH_100]);
+    await network.provider.send("hardhat_setBalance", [GCADMIN, ETH_100]);
 
     /* ==== Get Contract Factory ==== */
     const veSdtFxsProxyFactory = await ethers.getContractFactory("veSDTFeeFraxProxy");
@@ -204,17 +213,18 @@ describe("StakeDAO <> FRAX", function () {
     booster = await boosterContract.connect(deployer).deploy(locker.address, poolRegistry.address, fraxStrategy.address);
 
     // Approve Booster to use onlyApproved functions (execute).
-    fraxStrategy.connect(deployer).toggleVault(booster.address);
+    await fraxStrategy.connect(deployer).toggleVault(booster.address);
 
     // Liquid Locker give governance right to the Booster
     await locker.connect(deployer).setGovernance(fraxStrategy.address);
+
     // Set Liquid Locker as a valid veFXS Proxy
     await fxsTempleGauge.connect(govFrax).toggleValidVeFXSProxy(locker.address);
   });
 
   describe("### Testing Frax Strategies, boosted by Stake DAO Liquid Lockers 🐘💧🔒 ###", function () {
     const LOCKDURATION = 2 * WEEK;
-    const AMOUNT = 150;
+    const AMOUNT = 400;
     const LOCKEDAMOUNT = parseUnits(AMOUNT.toString(), 18);
     const LOCKEDAMOUNTx2 = parseUnits((AMOUNT * 2).toString(), 18);
 
@@ -337,7 +347,7 @@ describe("StakeDAO <> FRAX", function () {
         await booster.connect(deployer).setPoolRewardImplementation(liquidityGauge.address);
         await booster.connect(deployer).setDistributor(distributor.address);
         await booster.connect(deployer).addPool(vaultV1Template.address, FXS_TEMPLE_GAUGE, FXS_TEMPLE);
-
+        
         const NbrsOfPool = await poolRegistry.poolLength();
         const PoolInfo1 = await poolRegistry.poolInfo(NbrsOfPool - 1);
 
@@ -661,7 +671,7 @@ describe("StakeDAO <> FRAX", function () {
       it("Should time jump and withdraw locked, after new pool reward creation ", async function () {
         await gaugeController.connect(gcAdmin)["add_gauge(address,int128,uint256)"](rewardsPID1_New.address, 0, 0); // gauge - type - weight
         await gaugeController
-          .connect(veSdtHolder2)
+          .connect(veSdtHolder3)
           ["vote_for_gauge_weights(address,uint256)"](rewardsPID1_New.address, 10_000);
         await distributor.connect(deployer_new)["approveGauge(address)"](rewardsPID1_New.address);
         const lockedStakesOfBefore = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
@@ -736,6 +746,7 @@ describe("StakeDAO <> FRAX", function () {
         ).to.be.revertedWith("Stake is still locked!");
       });
     });
+    
     
     describe("Booster Management tests : ", function () {
       it("Should setPendingOwner to new ower", async function () {
