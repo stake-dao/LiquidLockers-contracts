@@ -6,8 +6,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy("curveVOTER", {
-    contract: "CurveVoterV2",
+  await deploy("veSDTFeeBalancerPROXY", {
+    contract: "VeSDTFeeBalancerProxy",
     from: deployer,
     args: [],
     log: true
@@ -16,4 +16,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 export default func;
 
 func.skip = async () => true;
-func.tags = ["CurveVoter"];
+func.tags = ["VeSDTFeeBalancerProxy"];

@@ -25,7 +25,7 @@ contract BaseAccumulator {
 
 	event SdtDistributorUpdated(address oldDistributor, address newDistributor);
 	event GaugeSet(address oldGauge, address newGauge);
-	event RewardNotified(address gauge, address tokenReward, uint256 amount);
+	event RewardNotified(address gauge, address tokenReward, uint256 amountNotified, uint256 claimerFee);
 	event LockerSet(address oldLocker, address newLocker);
 	event GovernanceSet(address oldGov, address newGov);
 	event TokenRewardSet(address oldTr, address newTr);
@@ -103,7 +103,7 @@ contract BaseAccumulator {
 		}
 		uint256 balanceBefore = IERC20(_tokenReward).balanceOf(address(this));
 		require(balanceBefore >= _amount, "amount not enough");
-		if (ILiquidityGauge(gauge).reward_data(_tokenReward).distributor != address(0)) {
+		if (ILiquidityGauge(gauge).reward_data(_tokenReward).distributor == address(this)) {
 			uint256 claimerReward = (_amount * claimerFee) / 10000;
 			IERC20(_tokenReward).transfer(msg.sender, claimerReward);
 			_amount -= claimerReward;
@@ -112,9 +112,9 @@ contract BaseAccumulator {
 
 			uint256 balanceAfter = IERC20(_tokenReward).balanceOf(address(this));
 
-			require(balanceBefore - balanceAfter == _amount, "wrong amount notified");
+			require(balanceBefore - balanceAfter == _amount + claimerReward, "wrong amount notified");
 
-			emit RewardNotified(gauge, _tokenReward, _amount);
+			emit RewardNotified(gauge, _tokenReward, _amount, claimerReward);
 		}
 	}
 
