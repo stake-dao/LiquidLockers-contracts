@@ -20,7 +20,7 @@ contract ApwineAccumulator is BaseAccumulator {
 		require(locker != address(0), "locker not set");
 		ILocker(locker).claimRewards(tokenReward, address(this));
 		uint256 fee = (_amount * lockerFee) / 10000;
-		IERC20(tokenReward).transfer(feeReceiver, fee);
+		if (fee > 0) IERC20(tokenReward).transfer(feeReceiver, fee);
 		_notifyReward(tokenReward, _amount - fee);
 		_distributeSDT();
 	}
@@ -31,7 +31,7 @@ contract ApwineAccumulator is BaseAccumulator {
 		ILocker(locker).claimRewards(tokenReward, address(this));
 		uint256 amount = IERC20(tokenReward).balanceOf(address(this));
 		uint256 fee = (amount * lockerFee) / 10000;
-		IERC20(tokenReward).transfer(feeReceiver, fee);
+		if (fee > 0) IERC20(tokenReward).transfer(feeReceiver, fee);
 		_notifyReward(tokenReward, amount - fee);
 		_distributeSDT();
 	}
