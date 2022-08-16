@@ -29,6 +29,8 @@ export const PROXY_ADMIN = "0xfE612c237A81527a86f2Cac1FD19939CF4F91B9B";
 
 export const VESDT_HOLDER = "0xdceb0bb3311342e3ce9e49f57affce9deac40ba1";
 
+export const SDT_DEPLOYER_NEW = "0x0dE5199779b43E13B3Bec21e91117E18736BC1A8";
+
 ////////////////////////////////////////////////////////////////
 /// --- FRAX PROTOCOL
 ///////////////////////////////////////////////////////////////
@@ -61,6 +63,7 @@ export const SMART_WALLET_CHECKER = "0x7869296Efd0a76872fEE62A058C8fBca5c1c826C"
 export const SMAT_WALLET_CHECKER_AUTHORIZER = "0xA331D84eC860Bf466b4CdCcFb4aC09a1B43F3aE6";
 
 export const BAL = "0xba100000625a3754423978a60c9317c58a424e3d";
+export const BAL_HOLDER = "0x91B9E59614995E13a32e36440Ac524825F7AE39E";
 export const VE_BAL = "0xC128a9954e6c874eA3d62ce62B468bA073093F25";
 export const BALANCER_POOL_TOKEN = "0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56";
 export const BALANCER_FEE_DISTRIBUTOR = "0x26743984e3357eFC59f2fd6C1aFDC310335a61c9";
@@ -76,6 +79,10 @@ export const HOLDER = "0xBA12222222228d8Ba445958a75a0704d566BF2C8"; // Balancer 
 export const BALANCER_LOCKER = "0xea79d1A83Da6DB43a85942767C389fE0ACf336A5";
 export const BALANCER_ACCUMULATOR = "0x9A211c972AebF2aE70F1ec14845848baAB79d6Af";
 
+export const BAL_LOCKER = "0xea79d1A83Da6DB43a85942767C389fE0ACf336A5";
+export const SD_BAL = "0xF24d8651578a55b0C119B9910759a351A3458895";
+export const BAL_DEPOSITOR = "0x3e0d44542972859de3CAdaF856B1a4FD351B4D2E";
+
 ////////////////////////////////////////////////////////////////
 /// --- LENDFLARE PROTOCOL
 ///////////////////////////////////////////////////////////////
@@ -88,3 +95,4 @@ export const SD_LFT = "0x0879c1a344910c2944C29b892A1CF0c216122C66";
 export const LFT_LOCKER = "0xD059575A78508B02e89ef9Ae0c1b409b07853d37";
 export const LFT_DEPOSITOR = "0xd9Ec4616D0Bf42b2f7CaF01939F2c476954e861F";
 export const SD_LFT_GAUGE_IMPL = "0x93c951D3281Cc79e9FE1B1C87e50693D202F4C17"; // sdAngle LGV4 impl
+
