@@ -28,6 +28,9 @@ const getNow = async function () {
   var time = block.timestamp;
   return time;
 };
+const toBytes32 = (bn: BigNumber) => {
+  return ethers.utils.hexlify(ethers.utils.zeroPad(bn.toHexString(), 32));
+};
 describe("Apwine Locker tests", () => {
   let apwineLocker: Contract;
   let apwineDepositor: Contract;
@@ -81,6 +84,15 @@ describe("Apwine Locker tests", () => {
     apwineSmartWalletChecker = await ethers.getContractAt("SmartWalletWhitelist", APWINE_SMART_WALLET_CHECKER);
     await apwineSmartWalletChecker.connect(apwineDao).approveWallet(apwineLocker.address);
     await writeBalance(APW, "1000000", depositor.address);
+    const index = ethers.utils.solidityKeccak256(
+      ["uint256", "uint256"],
+      [depositor.address, 101] // key, slot
+    );
+    await network.provider.send("hardhat_setStorageAt", [
+      APW,
+      index.toString(),
+      toBytes32(ethers.utils.parseEther("100000")).toString()
+    ]);
     apw = await ethers.getContractAt(ERC20ABI, APW);
     apw.connect(depositor).transfer(apwineLocker.address, ethers.utils.parseEther("10"));
 
