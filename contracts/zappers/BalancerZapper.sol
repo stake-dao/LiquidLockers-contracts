@@ -45,11 +45,11 @@ contract BalancerZapper {
     }
 
     /// @notice Zap token from BAL to the StakeDAO sdBal
-	/// @dev User needs to approve the contract to transfer Token tokens
-	/// @param _lock Whether to lock the token
-	/// @param _stake Whether to stake the token
+	/// @dev User needs to approve the contract to transfer BAL tokens
+	/// @param _lock Whether to lock the BPT directly to the locker
+	/// @param _stake Whether to stake sdBal to the related gauge
 	/// @param _minAmount min amount of BPT to obtain providing liquidity in BAL
-    /// @param _user User to deposit for 
+    /// @param _user User to deposit for into the balancer depositor
     function zapFromBal(
         uint256 _amount, 
         bool _lock, 
@@ -57,6 +57,7 @@ contract BalancerZapper {
         uint256 _minAmount,
         address _user
     ) external {
+        // transfer BAL here
         IERC20(BAL).safeTransferFrom(msg.sender, address(this), _amount);
 
         address[] memory assets = new address[](2);
@@ -65,7 +66,7 @@ contract BalancerZapper {
 
         uint256[] memory maxAmountsIn = new uint256[](2);
         maxAmountsIn[0] = _amount;
-        maxAmountsIn[1] = 0;
+        maxAmountsIn[1] = 0; // 0 WETH
 
 		IBalancerVault.JoinPoolRequest memory pr = IBalancerVault.JoinPoolRequest(
 			assets,
@@ -79,6 +80,7 @@ contract BalancerZapper {
 			address(this),
 			pr
 		);
+        // transfer BTP obtained to the Stake DAO balancer depositor and choose if lock/stake
         IDepositor(DEPOSITOR).deposit(IERC20(BPT).balanceOf(address(this)), _lock, _stake, _user);
     }
 }
