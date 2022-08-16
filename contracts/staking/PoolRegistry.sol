@@ -9,7 +9,7 @@ interface IProxyFactory {
 
 contract PoolRegistry {
 	address public owner;
-	address public constant PROXY_FACTORY = address(0x66807B5598A848602734B82E432dD88DBE13fC8f);
+	address public constant PROXY_FACTORY = address(0x66807B5598A848602734B82E432dD88DBE13fC8f); // Need to be change with Stake DAO deployed proxy
 	address public constant SDT = address(0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F);
 	address public constant VE_SDT = address(0x0C30476f66034E11782938DF8e4384970B6c9e8a);
 	address public constant VEBOOST = address(0xD67bdBefF01Fc492f1864E61756E5FBB3f173506);

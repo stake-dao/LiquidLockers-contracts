@@ -13,7 +13,7 @@ contract FeeRegistry {
 	uint256 public constant FEE_DENOMINATOR = 10000;
 
 	address public multiSig = address(0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063);
-	address public accumulator = address(0x1CC16bEdaaCD15848bcA5eB80188e0931bC59fB2);
+	address public accumulator = address(0xF980B8A714Ce0cCB049f2890494b068CeC715c3f);
 	address public veSDTFeeProxy; //
 
 	constructor(address _veSDTFeeProxy) {

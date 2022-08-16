@@ -39,7 +39,7 @@ const TIMELOCK = "0xD3cFc4E65a73BB6C482383EB38f5C3E1d1411616";
 const FEED = "0x29f3dd38dB24d3935CF1bf841e6b2B461A3E5D92";
 
 // ---- Liquid Locker ---- //
-const FXSACCUMULATOR = "0x1CC16bEdaaCD15848bcA5eB80188e0931bC59fB2";
+const FXSACCUMULATOR = "0xF980B8A714Ce0cCB049f2890494b068CeC715c3f";
 const FXSLOCKER = "0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f";
 
 // ---- SDT ---- //
@@ -116,6 +116,32 @@ describe("StakeDAO <> FRAX", function () {
   let VaultV1Contract: any;
   let LiquidityGaugeV4FraxContract: any;
   let LiquidityGaugeV4FraxContract2: any;
+
+  /**
+   * @notice list of all setter to call
+   * 
+   * Approve Booster to use onlyApproved functions (execute) :
+   *  FraxStrategy -> toggleVault(booster.address)
+   * 
+   * Liquid Locker give governance right to the frax strategy :
+   *  Locker -> setGovernance(fraxStrategy.address)
+   * 
+   * Should set Booster contract as operator on poolRegistry :
+   *  PoolRegistry -> setOperator(booster.address);
+   * 
+   * Should set pool reward implementation to the liquidity gauge contract :
+   *  Booster -> setPoolRewardImplementation(liquidityGauge.address)
+   * 
+   * Should set distributor :
+   *  Booster -> setDistributor(DISTRIBUTOR)
+   * 
+   * Set Liquid Locker as a valid veFXS Proxy (ask frax team to do it) :
+   * This is needed for creating a personal Vault for users, but not needed
+   * for creating a pool
+   *  For each gauge we implement : 
+   *  tokenGauge -> toggleValidVeFXSProxy(locker.address) (only callable 
+   *  by this address : 0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27) 
+   */
 
   before(async function () {
     /* ==== Get Signer ====*/
@@ -209,13 +235,13 @@ describe("StakeDAO <> FRAX", function () {
     liquidityGauge = await LiquidityGaugeV4FraxContract.connect(deployer).deploy();
     liquidityGauge2 = await LiquidityGaugeV4FraxContract2.connect(deployer).deploy(); // deploy second fake gauge for test
     vaultV1Template = await VaultV1Contract.connect(deployer).deploy();
-    fraxStrategy = await FraxStrategyContract.connect(deployer).deploy(locker.address, deployer._address, deployer._address, veSDTProxy.address, distributor.address, deployer._address);
+    fraxStrategy = await FraxStrategyContract.connect(deployer).deploy(locker.address, deployer._address, FXSACCUMULATOR, veSDTProxy.address, distributor.address, deployer._address);
     booster = await boosterContract.connect(deployer).deploy(locker.address, poolRegistry.address, fraxStrategy.address);
 
     // Approve Booster to use onlyApproved functions (execute).
     await fraxStrategy.connect(deployer).toggleVault(booster.address);
 
-    // Liquid Locker give governance right to the Booster
+    // Liquid Locker give governance right to the frax strategy
     await locker.connect(deployer).setGovernance(fraxStrategy.address);
 
     // Set Liquid Locker as a valid veFXS Proxy
@@ -227,7 +253,6 @@ describe("StakeDAO <> FRAX", function () {
     const AMOUNT = 400;
     const LOCKEDAMOUNT = parseUnits(AMOUNT.toString(), 18);
     const LOCKEDAMOUNTx2 = parseUnits((AMOUNT * 2).toString(), 18);
-
     describe("Pool registry contract tests : ", function () {
       it("Should set Booster contract as operator on poolRegistry", async function () {
         const opBefore = await poolRegistry.operator();
@@ -237,7 +262,6 @@ describe("StakeDAO <> FRAX", function () {
         expect(opBefore).eq(NULL);
         expect(opAfter).eq(booster.address);
       });
-
       it("Should set pool reward implementation to the liquidity gauge contract", async function () {
         const rewardImpBefore = await poolRegistry.rewardImplementation();
         await booster.connect(deployer).setPoolRewardImplementation(liquidityGauge.address);
@@ -247,14 +271,12 @@ describe("StakeDAO <> FRAX", function () {
         expect(rewardImpBefore).eq(NULL);
         expect(rewardImpAfter).eq(liquidityGauge.address);
       });
-
       it("Should set distributor", async function () {
         await booster.connect(deployer).setDistributor(DISTRIBUTOR);
         const distributor = await poolRegistry.distributor();
 
         expect(distributor).eq(DISTRIBUTOR);
       });
-
       it("Should create a new pool", async function () {
         await booster.connect(deployer).addPool(vaultV1Template.address, FXS_TEMPLE_GAUGE, FXS_TEMPLE);
         const NbrsOfPool = await poolRegistry.poolLength();
@@ -288,7 +310,6 @@ describe("StakeDAO <> FRAX", function () {
         expect(lgRewardToken0).eq(SDT);
         expect(lgRewardCount).eq(1);
       });
-
       it("Should create a personal vault", async function () {
         const poolVaultLengthBefore = await poolRegistry.poolVaultLength(0);
 
@@ -312,7 +333,6 @@ describe("StakeDAO <> FRAX", function () {
         expect(owner).eq(lpHolder._address);
         expect(proxy).eq(FXSLOCKER);
       });
-
       it("Should create a new pool reward for an existing pool", async function () {
         const pid_old = await rewardsPID0.pid();
         await booster.connect(deployer).setPoolRewardImplementation(liquidityGauge2.address);
@@ -330,7 +350,6 @@ describe("StakeDAO <> FRAX", function () {
         expect(PoolInfo0.active).eq(1);
         expect(pid_old).eq(pid_new);
       });
-
       it("Should desactivate a pool", async function () {
         const PoolInfo0Before = await poolRegistry.poolInfo(0);
         await booster.connect(deployer).deactivatePool(0);
@@ -341,7 +360,6 @@ describe("StakeDAO <> FRAX", function () {
         expect(PoolInfo0Before.active).eq(1);
         expect(PoolInfo0After.active).eq(0);
       });
-
       it("Should add gauge to gauge controller and send reward to it", async function () {
         // Creating a new pool, previous has been desactivated for testing
         await booster.connect(deployer).setPoolRewardImplementation(liquidityGauge.address);
@@ -392,7 +410,6 @@ describe("StakeDAO <> FRAX", function () {
         expect(gauge_relative_weight).gt(0);
         expect(Number(after_LGV4) - Number(before_LGV4)).gt(0);
       });
-
       // ---- Reverting cases ---- //
       it("Should revert on setting operator", async function () {
         await expect(poolRegistry.connect(noob).setOperator(booster.address)).to.be.revertedWith("!auth");
@@ -423,7 +440,6 @@ describe("StakeDAO <> FRAX", function () {
         await expect(booster.connect(noob).createVault(0)).to.be.revertedWith("!active");
       });
     });
-
     describe("Personal Vault contract tests : ", function () {
       it("Should stake locked lp token", async function () {
         const NbrsOfPool = await poolRegistry.poolLength();
@@ -458,7 +474,6 @@ describe("StakeDAO <> FRAX", function () {
         expect(lockedStakesOf[lockedStakesOfLength - 1]["kek_id"]).not.eq(0);
         expect(lockedStakesOf[lockedStakesOfLength - 1]["liquidity"]).eq(LOCKEDAMOUNT);
       });
-
       it("Should add liquidity to a previous deposit", async function () {
         const lockedStakesOfBefore = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
 
@@ -474,7 +489,6 @@ describe("StakeDAO <> FRAX", function () {
         expect(balanceOf).eq(LOCKEDAMOUNTx2);
         expect(totalSupply).eq(LOCKEDAMOUNTx2);
       });
-
       it("Should get reward", async function () {
         const before_Temple = await temple.balanceOf(lpHolder._address);
         const before_Fxs = await fxs.balanceOf(lpHolder._address);
@@ -515,7 +529,6 @@ describe("StakeDAO <> FRAX", function () {
         expect(after_Temple - before_Temple).gt(0);
         expect(after_Sdt - before_Sdt).gt(0);
       });
-
       it("Should get reward without claiming", async function () {
         const before_Temple = await temple.balanceOf(lpHolder._address);
         const before_Fxs = await fxs.balanceOf(lpHolder._address);
@@ -549,7 +562,6 @@ describe("StakeDAO <> FRAX", function () {
         expect(after_Temple - before_Temple).eq(0);
         expect(after_Sdt - before_Sdt).gt(0);
       });
-
       it("Should get reward for just specific token", async function () {
         const before_Temple = await temple.balanceOf(lpHolder._address);
         const before_Fxs = await fxs.balanceOf(lpHolder._address);
@@ -583,7 +595,6 @@ describe("StakeDAO <> FRAX", function () {
         expect(after_Temple - before_Temple).eq(0);
         expect(after_Sdt - before_Sdt).gt(0);
       });
-
       it("Should time jump and withdraw locked", async function () {
         const lockedStakesOfBefore = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
         await network.provider.send("evm_increaseTime", [LOCKDURATION]);
@@ -627,7 +638,6 @@ describe("StakeDAO <> FRAX", function () {
         expect(totalSupplyBefore).eq(LOCKEDAMOUNTx2);
         expect(totalSupplyAfter).eq(0);
       });
-
       it("Should update the pool reward for the user personal vault, after new pool reward creation", async function () {
         await gaugeController
           .connect(veSdtHolder)
@@ -667,7 +677,6 @@ describe("StakeDAO <> FRAX", function () {
         expect(old_lg_supply).eq(0);
         expect(new_lg_supply).eq(LOCKEDAMOUNTx2);
       });
-
       it("Should time jump and withdraw locked, after new pool reward creation ", async function () {
         await gaugeController.connect(gcAdmin)["add_gauge(address,int128,uint256)"](rewardsPID1_New.address, 0, 0); // gauge - type - weight
         await gaugeController
@@ -721,13 +730,11 @@ describe("StakeDAO <> FRAX", function () {
         expect(totalSupplyBefore).eq(LOCKEDAMOUNTx2);
         expect(totalSupplyAfter).eq(0);
       });
-
       // ---- Reverting cases ---- //
       it("Should revert on stakeLocked because not owner", async function () {
         await expect(personalVault1.connect(noob).stakeLocked(LOCKDURATION, LOCKDURATION)).to.be.revertedWith("!auth");
         await expect(feeRegistry.connect(deployer).setMultisig(NULL)).to.be.revertedWith("!address(0)");
       });
-
       it("Should revert on lockAdditional because kekid doesn't match", async function () {
         await fxsTemple.connect(lpHolder).approve(personalVault1.address, LOCKEDAMOUNTx2);
         await personalVault1.connect(lpHolder).stakeLocked(LOCKEDAMOUNT, LOCKDURATION);
@@ -736,7 +743,6 @@ describe("StakeDAO <> FRAX", function () {
           "Stake not found"
         );
       });
-
       it("Should revert on withdrawLocked because not enough time waited", async function () {
         const lockedStakesOfBefore = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
         await expect(
@@ -745,9 +751,7 @@ describe("StakeDAO <> FRAX", function () {
             .withdrawLocked(lockedStakesOfBefore[lockedStakesOfBefore.length - 1]["kek_id"], true)
         ).to.be.revertedWith("Stake is still locked!");
       });
-    });
-    
-    
+    });    
     describe("Booster Management tests : ", function () {
       it("Should setPendingOwner to new ower", async function () {
         const pendingOwnerBefore = await booster.pendingOwner();
@@ -769,16 +773,13 @@ describe("StakeDAO <> FRAX", function () {
         expect(pendingOwner).eq(NULL);
         expect(owner).eq(lpHolder._address);
       });
-
       it("Should revert on acceptPendingOwner, because setPendingOnwer not trigger", async function () {
         await expect(booster.connect(deployer).acceptPendingOwner()).to.be.revertedWith("!p_owner");
       });
-
       it("Should revert on acceptPendingOwner, because caller is not the next owner", async function () {
         await booster.connect(lpHolder).setPendingOwner(deployer._address);
         await expect(booster.connect(noob).acceptPendingOwner()).to.be.revertedWith("!p_owner");
       });
-
       it("Should setPoolManager", async function () {
         const poolManagerBefore = await booster.poolManager();
         await booster.connect(lpHolder).setPoolManager(lpHolder._address);
@@ -789,7 +790,6 @@ describe("StakeDAO <> FRAX", function () {
       });
     });
   });
-  
   describe("### Testing FeeRegistry contract ###", function () {
     it("Should set news fees", async function () {
       await feeRegistry.connect(deployer).setFees(100, 200, 400);
@@ -803,7 +803,6 @@ describe("StakeDAO <> FRAX", function () {
       expect(veSDT).eq(400);
       expect(total).eq(100 + 200 + 400);
     });
-
     it("Should set new addresses for multiSig", async function () {
       await feeRegistry.connect(deployer).setMultisig(RAND1);
       const multi = await feeRegistry.multiSig();
@@ -830,7 +829,7 @@ describe("StakeDAO <> FRAX", function () {
     });
   });
   describe("### Testing veSDTFeeFraxProxy contract ###", function () {
-    it("Should run", async function () {
+    it("Should test using veSDTFeeFraxProxy", async function () {
       await fxs.connect(lpHolder).transfer(veSDTProxy.address, parseUnits("20", 18));
       const fxsBalanceBefore = await fxs.balanceOf(veSDTProxy.address);
       const claimerBefore = await frax.balanceOf(noob._address);

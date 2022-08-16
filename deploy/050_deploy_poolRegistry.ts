@@ -6,18 +6,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const FRAX = "0x853d955aCEf822Db058eb8505911ED77F175b99e";
-  const FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0";
+  // Warning
+  // The proxy address should be changed with the new proxy 
+  // deployed by Stake DAO with deploy 047
+  // Changes need to be done on PoolRegistry.sol line 12
 
-  const dep = await deploy("veSDTFeeFraxPROXY", {
-    contract: "veSDTFeeFraxProxy",
+  await deploy("PoolREGISTRY", {
+    contract: "PoolRegistry",
     from: deployer,
-    args: [[FXS, FRAX]],
+    args: [],
     log: true
   });
-  console.log(dep)
 };
 export default func;
 
-func.skip = async () => true;
-func.tags = ["veSDTFeeFraxProxy"];
+func.skip = async () => false;
+func.tags = ["PoolRegistry"];
