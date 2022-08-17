@@ -114,7 +114,7 @@ contract BaseAccumulator {
 
 			require(balanceBefore - balanceAfter == _amount + claimerReward, "wrong amount notified");
 
-			emit RewardNotified(gauge, _tokenReward, _amount);
+			emit RewardNotified(gauge, _tokenReward, _amount, claimerReward);
 		}
 	}
 
