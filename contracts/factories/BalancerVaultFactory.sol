@@ -30,12 +30,13 @@ contract BalancerVaultFactory {
 	address public constant CLAIM_REWARDS = 0x633120100e108F03aCe79d6C78Aac9a56db1be0F; // v2
 	address public constant BALANCER_STRATEGY = 0x873b031Ea6E4236E44d933Aae5a66AF6d4DA419d;
 	address public constant SDT_DISTRIBUTOR = 0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C;
+
 	event VaultDeployed(address proxy, address lpToken, address impl);
 	event GaugeDeployed(address proxy, address stakeToken, address impl);
 
 	/**
-	@dev Function to clone Balancer Vault and its gauge contracts 
-	@param _balGaugeAddress balancer liquidity gauge address
+	 * @dev Function to clone Balancer Vault and its gauge contracts
+	 * @param _balGaugeAddress balancer liquidity gauge address
 	 */
 	function cloneAndInit(address _balGaugeAddress) public {
 		uint256 weight = IGaugeController(GAUGE_CONTROLLER).get_gauge_weight(_balGaugeAddress);
@@ -63,10 +64,10 @@ contract BalancerVaultFactory {
 	}
 
 	/**
-	@dev Internal function to clone the vault 
-	@param _lpToken balancer BPT token address 
-	@param _name vault name
-	@param _symbol vault symbol
+	 * @dev Internal function to clone the vault
+	 * @param _lpToken balancer BPT token address
+	 * @param _name vault name
+	 * @param _symbol vault symbol
 	 */
 	function _cloneAndInitVault(
 		ERC20Upgradeable _lpToken,
@@ -82,9 +83,9 @@ contract BalancerVaultFactory {
 	}
 
 	/**
-	@dev Internal function to clone the gauge multi rewards
-	@param _stakingToken sd LP token address 
-	@param _symbol gauge symbol
+	 * @dev Internal function to clone the gauge multi rewards
+	 * @param _stakingToken sd LP token address
+	 * @param _symbol gauge symbol
 	 */
 	function _cloneAndInitGauge(address _stakingToken, string memory _symbol) internal returns (address) {
 		ILiquidityGaugeStrat deployed = cloneGauge(_stakingToken, keccak256(abi.encodePacked(GOVERNANCE, _symbol)));
@@ -93,9 +94,9 @@ contract BalancerVaultFactory {
 	}
 
 	/**
-	@dev Internal function that deploy and returns a clone of vault impl
-	@param _lpToken balancer BPT token address
-	@param _paramsHash governance+name+symbol+strategy parameters hash
+	 * @dev Internal function that deploy and returns a clone of vault impl
+	 * @param _lpToken balancer BPT token address
+	 * @param _paramsHash governance+name+symbol+strategy parameters hash
 	 */
 	function cloneVault(ERC20Upgradeable _lpToken, bytes32 _paramsHash) internal returns (BalancerVault) {
 		address deployed = address(vaultImpl).cloneDeterministic(
@@ -106,9 +107,9 @@ contract BalancerVaultFactory {
 	}
 
 	/**
-	@dev Internal function that deploy and returns a clone of gauge impl
-	@param _stakingToken sd LP token address
-	@param _paramsHash governance+name+symbol parameters hash
+	 * @dev Internal function that deploy and returns a clone of gauge impl
+	 * @param _stakingToken sd LP token address
+	 * @param _paramsHash governance+name+symbol parameters hash
 	 */
 	function cloneGauge(address _stakingToken, bytes32 _paramsHash) internal returns (ILiquidityGaugeStrat) {
 		address deployed = address(GAUGE_IMPL).cloneDeterministic(
@@ -119,10 +120,10 @@ contract BalancerVaultFactory {
 	}
 
 	/**
-	@dev Function that predicts the future address passing the parameters
-	@param _impl address of contract to clone
-	@param _token token (LP or sdLP)
-	@param _paramsHash parameters hash
+	 * @dev Function that predicts the future address passing the parameters
+	 * @param _impl address of contract to clone
+	 * @param _token token (LP or sdLP)
+	 * @param _paramsHash parameters hash
 	 */
 	function predictAddress(
 		address _impl,

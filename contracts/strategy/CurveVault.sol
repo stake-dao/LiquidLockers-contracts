@@ -21,6 +21,7 @@ contract CurveVault is ERC20Upgradeable {
 	CurveStrategy public curveStrategy;
 	uint256 public min;
 	uint256 public constant MAX = 10000;
+
 	event Earn(address _token, uint256 _amount);
 	event Deposit(address _depositor, uint256 _amount);
 	event Withdraw(address _depositor, uint256 _amount);

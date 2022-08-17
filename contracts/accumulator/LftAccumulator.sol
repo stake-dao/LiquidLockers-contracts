@@ -11,15 +11,23 @@ interface ILftLocker {
 }
 
 interface ISushiSwapRouter {
-	function getAmountsOut(uint256, address[] memory) external returns(uint256[] memory);
-	function swapExactTokensForTokens(uint256, uint256, address[] memory, address, uint256) external;
+	function getAmountsOut(uint256, address[] memory) external returns (uint256[] memory);
+
+	function swapExactTokensForTokens(
+		uint256,
+		uint256,
+		address[] memory,
+		address,
+		uint256
+	) external;
 }
 
 /// @title A contract that accumulates rewards and notifies them to the LGV4
 /// @author StakeDAO
 contract LftAccumulator {
-    using SafeERC20 for IERC20;
+	using SafeERC20 for IERC20;
 	/* ========== STATE VARIABLES ========== */
+
 	address public governance;
 	address public locker;
 	address public gauge;
@@ -27,10 +35,10 @@ contract LftAccumulator {
 	uint256 public claimerFee;
 	uint256 public maxSlippage;
 	address[] public tokensReward;
-	mapping (uint256 => address[]) public swapPaths;
+	mapping(uint256 => address[]) public swapPaths;
 
-	address constant public SUSHI_ROUTER = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
-	
+	address public constant SUSHI_ROUTER = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
+
 	/* ========== EVENTS ========== */
 	event SdtDistributorUpdated(address oldDistributor, address newDistributor);
 	event GaugeSet(address oldGauge, address newGauge);
@@ -42,9 +50,9 @@ contract LftAccumulator {
 
 	/* ========== CONSTRUCTOR ========== */
 	constructor(address _gauge) {
-        gauge = _gauge;
-        governance = msg.sender;
-    }
+		gauge = _gauge;
+		governance = msg.sender;
+	}
 
 	/* ========== MUTATIVE FUNCTIONS ========== */
 	/// @notice Claims and notify rewards from the locker giving pids
@@ -59,18 +67,18 @@ contract LftAccumulator {
 	/// @param _pids lendflare pids to swap the token received as reward
 	function _swaps(uint256[] memory _pids) internal {
 		uint256 pidsLength = _pids.length;
-		for (uint256 i; i < pidsLength;) {
+		for (uint256 i; i < pidsLength; ) {
 			address[] memory path = swapPaths[_pids[i]];
 			if (path.length > 0) {
 				uint256 amount = IERC20(path[0]).balanceOf(address(this));
-				if(amount == 0) {
+				if (amount == 0) {
 					return;
-				} 
+				}
 				IERC20(path[0]).safeIncreaseAllowance(SUSHI_ROUTER, amount);
-				
+
 				uint256[] memory amounts = ISushiSwapRouter(SUSHI_ROUTER).getAmountsOut(amount, path);
-				uint256 minAmount = amounts[path.length - 1] * (10000 - maxSlippage) / 10000;
-				
+				uint256 minAmount = (amounts[path.length - 1] * (10000 - maxSlippage)) / 10000;
+
 				ISushiSwapRouter(SUSHI_ROUTER).swapExactTokensForTokens(
 					amount,
 					minAmount,
@@ -79,17 +87,21 @@ contract LftAccumulator {
 					block.timestamp + 1800
 				);
 			}
-			unchecked{++i;}
+			unchecked {
+				++i;
+			}
 		}
 	}
 
 	/// @notice Notifies tokens to the LGV4, they needs to be added before as reward
 	function notifyAll() public {
 		uint256 tokensLenght = tokensReward.length;
-		for (uint256 i; i < tokensLenght;) {
-            _notifyAllReward(tokensReward[i]);
-            unchecked{++i;}
-        }
+		for (uint256 i; i < tokensLenght; ) {
+			_notifyAllReward(tokensReward[i]);
+			unchecked {
+				++i;
+			}
+		}
 		_distributeSDT();
 	}
 
@@ -113,7 +125,7 @@ contract LftAccumulator {
 	}
 
 	/// @notice Internal function to distribute SDT to the gauge
-    function _distributeSDT() internal {
+	function _distributeSDT() internal {
 		if (sdtDistributor != address(0)) {
 			ISDTDistributor(sdtDistributor).distribute(gauge);
 		}
@@ -128,7 +140,7 @@ contract LftAccumulator {
 		emit TokenDeposited(_token, _amount);
 	}
 
-    /// @notice Sets gauge for the accumulator which will receive and distribute the rewards
+	/// @notice Sets gauge for the accumulator which will receive and distribute the rewards
 	/// @dev Can be called only by the governance
 	/// @param _gauge gauge address
 	function setGauge(address _gauge) external {
@@ -138,7 +150,7 @@ contract LftAccumulator {
 		gauge = _gauge;
 	}
 
-    /// @notice Sets SdtDistributor to distribute from the Accumulator SDT Rewards to Gauge.
+	/// @notice Sets SdtDistributor to distribute from the Accumulator SDT Rewards to Gauge.
 	/// @dev Can be called only by the governance
 	/// @param _sdtDistributor gauge address
 	function setSdtDistributor(address _sdtDistributor) external {
@@ -148,7 +160,6 @@ contract LftAccumulator {
 		emit SdtDistributorUpdated(sdtDistributor, _sdtDistributor);
 		sdtDistributor = _sdtDistributor;
 	}
-
 
 	/// @notice Allows the governance to set the new governance
 	/// @dev Can be called only by the governance
@@ -160,7 +171,7 @@ contract LftAccumulator {
 		governance = _governance;
 	}
 
-    /// @notice Allows the governance to set the locker
+	/// @notice Allows the governance to set the locker
 	/// @dev Can be called only by the governance
 	/// @param _locker locker address
 	function setLocker(address _locker) external {
@@ -173,7 +184,7 @@ contract LftAccumulator {
 	/// @notice Allows the governance to set the claimer fee
 	/// @dev Can be called only by the governance
 	/// @param _claimerFee claimer fee (10000 is 100%)
-    function setClaimerFee(uint256 _claimerFee) external {
+	function setClaimerFee(uint256 _claimerFee) external {
 		require(msg.sender == governance, "!gov");
 		require(_claimerFee <= 10000, ">100%");
 		claimerFee = _claimerFee;
@@ -196,7 +207,7 @@ contract LftAccumulator {
 		tokensReward = _tokens;
 	}
 
-    /// @notice A function that rescue any ERC20 token
+	/// @notice A function that rescue any ERC20 token
 	/// @param _token token address
 	/// @param _amount amount to rescue
 	/// @param _recipient address to send token rescued

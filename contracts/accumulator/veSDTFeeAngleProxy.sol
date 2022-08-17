@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
+
 import "../interfaces/IFeeDistributor.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -10,6 +11,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract veSDTFeeAngleProxy is Ownable {
 	using SafeERC20 for IERC20;
+
 	address public constant sdFrax3Crv = 0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7;
 	address public constant frax3Crv = 0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B;
 	address public constant angle = 0x31429d1856aD1377A8A0079410B297e1a9e214c2;

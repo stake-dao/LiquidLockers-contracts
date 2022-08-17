@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
+
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../interfaces/ISdFraxVault.sol";
@@ -10,12 +11,14 @@ interface IBalancerVault {
 		GIVEN_IN,
 		GIVEN_OUT
 	}
+
 	struct FundManagement {
 		address sender;
 		bool fromInternalBalance;
 		address payable recipient;
 		bool toInternalBalance;
 	}
+
 	struct BatchSwapStep {
 		bytes32 poolId;
 		uint256 assetInIndex;
@@ -48,6 +51,7 @@ interface I3PoolZap {
 
 contract VeSDTFeeBalancerProxy is Ownable {
 	using SafeERC20 for IERC20;
+
 	address public constant SD_FRAX_3CRV = 0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7;
 	address public constant FRAX_3CRV = 0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B;
 	address public constant POOL3_DEPOSIT_ZAP = 0xA79828DF1850E8a3A3064576f380D90aECDD3359;

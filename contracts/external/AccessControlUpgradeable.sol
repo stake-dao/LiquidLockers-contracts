@@ -31,8 +31,8 @@ import "../interfaces/IAccessControl.sol";
  *
  * ```
  * function foo() public {
- *     require(hasRole(MY_ROLE, msg.sender));
- *     ...
+ * require(hasRole(MY_ROLE, msg.sender));
+ * ...
  * }
  * ```
  *
@@ -87,8 +87,8 @@ abstract contract AccessControlUpgradeable is Initializable, IAccessControl {
 	 * @dev Emitted when `account` is revoked `role`.
 	 *
 	 * `sender` is the account that originated the contract call:
-	 *   - if using `revokeRole`, it is the admin role bearer
-	 *   - if using `renounceRole`, it is the role bearer (i.e. `account`)
+	 * - if using `revokeRole`, it is the admin role bearer
+	 * - if using `renounceRole`, it is the role bearer (i.e. `account`)
 	 */
 	event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender);
 
@@ -98,7 +98,7 @@ abstract contract AccessControlUpgradeable is Initializable, IAccessControl {
 	 *
 	 * The format of the revert reason is given by the following regular expression:
 	 *
-	 *  /^AccessControl: account (0x[0-9a-f]{20}) is missing role (0x[0-9a-f]{32})$/
+	 * /^AccessControl: account (0x[0-9a-f]{20}) is missing role (0x[0-9a-f]{32})$/
 	 *
 	 * _Available since v4.1._
 	 */
@@ -119,7 +119,7 @@ abstract contract AccessControlUpgradeable is Initializable, IAccessControl {
 	 *
 	 * The format of the revert reason is given by the following regular expression:
 	 *
-	 *  /^AccessControl: account (0x[0-9a-f]{20}) is missing role (0x[0-9a-f]{32})$/
+	 * /^AccessControl: account (0x[0-9a-f]{20}) is missing role (0x[0-9a-f]{32})$/
 	 */
 	function _checkRole(bytes32 role, address account) internal view {
 		if (!hasRole(role, account)) {

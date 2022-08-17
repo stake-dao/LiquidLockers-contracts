@@ -29,6 +29,7 @@ contract CrvDepositor {
 
 	address public constant SD_VE_CRV = 0x478bBC744811eE8310B461514BDc29D03739084D;
 	/* ========== EVENTS ========== */
+
 	event Deposited(address indexed caller, address indexed user, uint256 amount, bool lock, bool stake);
 	event IncentiveReceived(address indexed caller, uint256 amount);
 	event TokenLocked(address indexed user, uint256 amount);

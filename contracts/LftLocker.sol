@@ -7,11 +7,11 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IVeLFT.sol";
 
 interface ILFProxy {
-	function getVeLFTUserRewards(uint256[] calldata _pids) external; 
+	function getVeLFTUserRewards(uint256[] calldata _pids) external;
 }
 
 interface IRewardPool {
-	function rewardToken() external returns(address);
+	function rewardToken() external returns (address);
 }
 
 interface IWETH {
@@ -93,11 +93,12 @@ contract LftLocker {
 	/// @param _recipient The address which will receive the claimed tokens rewarded
 	function claimRewards(uint256[] calldata _pids, address _recipient) external onlyGovernanceOrAcc {
 		ILFProxy(LEND_FLARE_PROXY).getVeLFTUserRewards(_pids);
-		for (uint256 i; i < _pids.length;) {
+		for (uint256 i; i < _pids.length; ) {
 			address rewardPool = IVeLFT(VE_LFT).rewardPools(_pids[i]);
 			address token = IRewardPool(rewardPool).rewardToken();
-			if (token == address(0)) { // wrap ETH <-> WETH
-				IWETH(WETH).deposit{value: address(this).balance}();
+			if (token == address(0)) {
+				// wrap ETH <-> WETH
+				IWETH(WETH).deposit{ value: address(this).balance }();
 				token = WETH;
 			}
 			uint256 balance = IERC20(token).balanceOf(address(this));
@@ -105,8 +106,10 @@ contract LftLocker {
 				IERC20(token).safeTransfer(_recipient, balance);
 				emit TokenClaimed(_recipient, token, balance);
 			}
-			unchecked{++i;}
-		}		
+			unchecked {
+				++i;
+			}
+		}
 	}
 
 	/// @notice Withdraw the LFT from veLFT
@@ -153,8 +156,7 @@ contract LftLocker {
 		(bool success, bytes memory result) = to.call{ value: value }(data);
 		return (success, result);
 	}
-	
+
 	// solhint-disable no-empty-blocks
-	receive() external payable {
-	}
+	receive() external payable {}
 }
