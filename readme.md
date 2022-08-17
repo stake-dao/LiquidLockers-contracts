@@ -2,6 +2,30 @@
 
 _Contracts marked **[Risky]** are either freshly developed contracts from scratch or have been made a lot of changes to, from their originally sourced contracts, and hence need to be paid special attention to while auditing and  need to be tested thoroughly_
 
+
+## Installation
+
+Install Foundry:
+```bash
+   # This will install Foundryup
+   curl -L https://foundry.paradigm.xyz | bash
+   # Then Run
+   foundryup
+```
+
+Install Dependencies:
+```bash
+   forge install
+   yarn
+```
+
+Build:
+```bash
+   yarn build
+```
+
+See package.json for more commands.
+
 ## State of Continuous Auditing
 
 Since the first version of audit on commit hash [`7e702aba329d5780ef5841f44ad699385b8b428f`](https://github.com/StakeDAO/sd-frax-veSDT/tree/7e702aba329d5780ef5841f44ad699385b8b428f), AngleLocker.sol (in Step1), Step 2, Step 3 and Step 3.5 as described in detail below, have been developed which need to be audited. 
