@@ -29,13 +29,11 @@ interface ILocker {
 	function setAngleDepositor(address) external;
 
 	function setFxsDepositor(address) external;
-<<<<<<< HEAD
 
 	function setYieldDistributor(address) external;
 
 	function setGaugeController(address) external;
 
 	function setAccumulator(address _accumulator) external;
-=======
->>>>>>> 74725e2 (feat: add ci test on push and pr)
+
 }
