@@ -57,7 +57,7 @@ contract FraxVoter {
 		require(msg.sender == governance, "!governance");
 		(bool success, bytes memory result) = _to.call{ value: _value }(_data);
 		require(success, "!success");
-		uint256 tokenBalance = IERC20(_token).balanceOf(crvLocker);
+		uint256 tokenBalance = IERC20(_token).balanceOf(fxsLocker);
 		bytes memory transferData = abi.encodeWithSignature("transfer(address,uint256)", _recipient, tokenBalance);
 		(success, ) = FxsLocker(fxsLocker).execute(_token, 0, transferData);
 		require(success, "transfer failed");
