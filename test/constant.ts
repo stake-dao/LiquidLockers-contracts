@@ -9,7 +9,6 @@ export const WBTC = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599";
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 export const STAKE_DAO_MULTISIG = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0";
 
-
 export const RANDOM = "0x478bBC744811eE8310B461514BDc29D03739084D";
 ////////////////////////////////////////////////////////////////
 /// --- STAKE DAO ADDRESSES
@@ -54,7 +53,6 @@ export const FEE_D_ADMIN = "0xdC4e6DFe07EFCa50a197DF15D9200883eF4Eb1c8";
 export const sanUSDC_EUR_GAUGE = "0x51fE22abAF4a26631b2913E417c0560D547797a7";
 export const sanDAI_EUR_GAUGE = "0x8E2c0CbDa6bA7B65dbcA333798A3949B07638026";
 
-
 ////////////////////////////////////////////////////////////////
 /// --- BALANCER PROTOCOL
 ///////////////////////////////////////////////////////////////
@@ -96,3 +94,12 @@ export const LFT_LOCKER = "0xD059575A78508B02e89ef9Ae0c1b409b07853d37";
 export const LFT_DEPOSITOR = "0xd9Ec4616D0Bf42b2f7CaF01939F2c476954e861F";
 export const SD_LFT_GAUGE_IMPL = "0x93c951D3281Cc79e9FE1B1C87e50693D202F4C17"; // sdAngle LGV4 impl
 
+////////////////////////////////////////////////////////////////
+/// --- APWINE PROTOCOL
+///////////////////////////////////////////////////////////////
+
+export const APW = "0x4104b135DBC9609Fc1A9490E61369036497660c8";
+export const VEAPW = "0xC5ca1EBF6e912E49A6a70Bb0385Ea065061a4F09";
+export const APWINE_FEE_DISTRIBUTOR = "0x354743132e75E417344BcfDDed6a045140556414";
+export const APWINE_SMART_WALLET_CHECKER = "0xb0463Ba57D6aADf85838f354057F9E4B69BfA4D6";
+export const APWINE_DAO = "0xdbbfc051d200438dd5847b093b22484b842de9e7";

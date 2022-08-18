@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-interface VeToken {
+interface IVeApw {
 	struct LockedBalance {
 		int128 amount;
 		uint256 end;
@@ -14,6 +14,4 @@ interface VeToken {
 	function increase_unlock_time(uint256 _unlock_time) external;
 
 	function withdraw() external;
-
-	function locked__end(address) external view returns (uint256);
 }
