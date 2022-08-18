@@ -5,7 +5,7 @@
 // File: contracts\ProxyFactory.sol
 
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity ^0.6.12;
 
 // original code
 // https://github.com/optionality/clone-factory/blob/master/contracts/CloneFactory.sol

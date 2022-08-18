@@ -39,13 +39,27 @@ export default {
     version: "0.2.16"
   },
   solidity: {
-    version: "0.8.7",
-    settings: {
+    compilers: [
+    {
+      version: "0.8.7",
+      settings: {
       optimizer: {
         enabled: true,
         runs: 200
       }
+    }},
+    {
+      version: "0.6.12",
+      settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
+      }
     }
+
+  ]
+
   },
   gasReporter: {
     enabled: true,
