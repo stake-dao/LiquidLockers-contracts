@@ -84,10 +84,8 @@ contract FraxStrategy is BaseStrategyV2 {
 		emit Withdrawn(gauge, _token, net);
 	}
 
-	// TODO: Claim FXS from FeeDistributor
-	// Need to take into account _getReward() from withdraw.
 	/// @notice function to claim the reward and distribute it
-	/// @param _token BPT token address
+	/// @param _token token address
 	function claim(address _token) external override {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
