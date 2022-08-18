@@ -58,8 +58,8 @@ contract FraxStrategy is BaseStrategyV2 {
 	// Withdrawing implies to get claim rewards also.
 	/// @notice function to withdraw from a gauge
 	/// @param _token token address
-	/// @param kek_id deposit id to withdraw
-	function withdraw(address _token, bytes32 kek_id) external override onlyApprovedVault {
+	/// @param _kek_id deposit id to withdraw
+	function withdraw(address _token, bytes32 _kek_id) external override onlyApprovedVault {
 		require(gauges[_token] != address(0), "!gauge");
 		address gauge = gauges[_token];
 
@@ -68,7 +68,7 @@ contract FraxStrategy is BaseStrategyV2 {
 		(bool success, ) = LOCKER.execute(
 			gauge,
 			0,
-			abi.encodePacked(FraxStakingRewardsMultiGauge.withdrawLocked.selector, kek_id)
+			abi.encodePacked(FraxStakingRewardsMultiGauge.withdrawLocked.selector, _kek_id)
 		);
 
 		if (!success) {
@@ -128,16 +128,16 @@ contract FraxStrategy is BaseStrategyV2 {
 	/// @notice internal function used for distributing fees
 	/// @param _gauge gauge address
 	/// @param _rewardToken reward token address
-	/// @param rewardBalance amount of reward
+	/// @param _rewardBalance amount of reward
 	function _distributeFees(
 		address _gauge,
 		address _rewardToken,
-		uint256 rewardBalance
+		uint256 _rewardBalance
 	) internal returns (uint256 netRewards) {
-		uint256 multisigFee = (rewardBalance * perfFee[_gauge]) / BASE_FEE;
-		uint256 accumulatorPart = (rewardBalance * accumulatorFee[_gauge]) / BASE_FEE;
-		uint256 veSDTPart = (rewardBalance * veSDTFee[_gauge]) / BASE_FEE;
-		uint256 claimerPart = (rewardBalance * claimerRewardFee[_gauge]) / BASE_FEE;
+		uint256 multisigFee = (_rewardBalance * perfFee[_gauge]) / BASE_FEE;
+		uint256 accumulatorPart = (_rewardBalance * accumulatorFee[_gauge]) / BASE_FEE;
+		uint256 veSDTPart = (_rewardBalance * veSDTFee[_gauge]) / BASE_FEE;
+		uint256 claimerPart = (_rewardBalance * claimerRewardFee[_gauge]) / BASE_FEE;
 
 		// Distribute fees.
 		_transferFromLocker(_rewardToken, msg.sender, claimerPart);
@@ -151,18 +151,18 @@ contract FraxStrategy is BaseStrategyV2 {
 	}
 
 	/// @notice internal function used for transfering token from locker
-	/// @param token token address
-	/// @param recipient receipient address
-	/// @param amount amount to transfert
+	/// @param _token token address
+	/// @param _recipient receipient address
+	/// @param _amount amount to transfert
 	function _transferFromLocker(
-		address token,
-		address recipient,
-		uint256 amount
+		address _token,
+		address _recipient,
+		uint256 _amount
 	) internal {
 		(bool success, ) = LOCKER.execute(
-			token,
+			_token,
 			0,
-			abi.encodeWithSignature("transfer(address,uint256)", recipient, amount)
+			abi.encodeWithSignature("transfer(address,uint256)", _recipient, _amount)
 		);
 		if (!success) {
 			revert TransferFromLockerFailed();

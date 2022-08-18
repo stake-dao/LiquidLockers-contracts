@@ -70,20 +70,20 @@ contract veSDTFeeFraxProxy is Ownable {
 
 	/// @notice function to set a new max slippage
 	/// @param _newSlippage new slippage to set
-	function setSlippage(uint256 newSlippage) external onlyOwner {
-		maxSlippage = newSlippage;
+	function setSlippage(uint256 _newSlippage) external onlyOwner {
+		maxSlippage = _newSlippage;
 	}
 
     /// @notice function to set a new claier fee 
 	/// @param _newClaimerFee claimer fee
-	function setClaimerFe(uint256 newClaimerFee) external onlyOwner {
-		claimerFee = newClaimerFee;
+	function setClaimerFe(uint256 _newClaimerFee) external onlyOwner {
+		claimerFee = _newClaimerFee;
 	}
 
     /// @notice function to set the sushiswap swap path  (FXS <-> .. <-> FRAX)
 	/// @param _newPath swap path
-	function setSwapPath(address[] memory newPath) external onlyOwner {
-		fxsToFraxPath = newPath;
+	function setSwapPath(address[] memory _newPath) external onlyOwner {
+		fxsToFraxPath = _newPath;
 	}
 
     /// @notice function to recover any ERC20 and send them to the owner

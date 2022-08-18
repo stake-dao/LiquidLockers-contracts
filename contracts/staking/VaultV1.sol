@@ -811,7 +811,7 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 	}
 
 	/// @notice helper function to combine earned tokens on staking contract and any tokens that are on this vault
-	function earned() external view override returns (address[] memory token_addresses, uint256[] memory total_earned) {
+	function earned() external view override returns (address[] memory _token_addresses, uint256[] memory _total_earned) {
 		//get list of reward tokens
 
 		address[] memory rewardTokens = IFraxFarmERC20(stakingAddress).getAllRewardTokens();
@@ -819,19 +819,19 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 
 		uint256 extraRewardsLength = ILiquidityGaugeStratFrax(rewards).reward_count();
 
-		token_addresses = new address[](rewardTokens.length + extraRewardsLength);
-		total_earned = new uint256[](rewardTokens.length + extraRewardsLength);
+		_token_addresses = new address[](rewardTokens.length + extraRewardsLength);
+		_total_earned = new uint256[](rewardTokens.length + extraRewardsLength);
 		//add any tokens that happen to be already claimed but sitting on the vault
 		//(ex. withdraw claiming rewards)
 		for (uint256 i = 0; i < rewardTokens.length; i++) {
-			token_addresses[i] = rewardTokens[i];
-			total_earned[i] = stakedearned[i] + IERC20(rewardTokens[i]).balanceOf(address(this));
+			_token_addresses[i] = rewardTokens[i];
+			_total_earned[i] = stakedearned[i] + IERC20(rewardTokens[i]).balanceOf(address(this));
 		}
 
 		for (uint256 i = 0; i < extraRewardsLength; i++) {
 			address token = ILiquidityGaugeStratFrax(rewards).reward_tokens(i);
-			token_addresses[i + rewardTokens.length] = token;
-			total_earned[i + rewardTokens.length] = ILiquidityGaugeStratFrax(rewards).claimable_reward(address(this), token);
+			_token_addresses[i + rewardTokens.length] = token;
+			_total_earned[i + rewardTokens.length] = ILiquidityGaugeStratFrax(rewards).claimable_reward(address(this), token);
 		}
 	}
 
