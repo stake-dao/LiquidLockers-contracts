@@ -43,7 +43,8 @@ contract Booster {
 	// ########################### Public function ######################### //
 	// #=#=#=#=#=#=#=#=#=#=# Personal Vault Section  #=#=#=#=#=#=#=#=#=#=#=# //
 
-	//create a vault for a user
+	/// @notice create a vault for a user
+	/// @param _pid pool id 
 	function createVault(uint256 _pid) external {
 		//create minimal proxy vault for specified pool
 		(address vault, address stakeAddress, address stakeToken, address rewards) = IPoolRegistry(poolRegistry)
@@ -65,13 +66,14 @@ contract Booster {
 	// ######################## Restricted function ######################## //
 	// #=#=#=#=#=#=#=#=#=#  Booster Management Section #=#=#=#=#=#=#=#=#=#=# //
 
-	//set pending owner
+	/// @notice set pending owner
+	/// @param _po pending owner address
 	function setPendingOwner(address _po) external onlyOwner {
 		pendingOwner = _po;
 		emit SetPendingOwner(_po);
 	}
 
-	//claim ownership
+	/// @notice claim ownership
 	function acceptPendingOwner() external {
 		require(pendingOwner != address(0) && msg.sender == pendingOwner, "!p_owner");
 
@@ -80,13 +82,17 @@ contract Booster {
 		emit OwnerChanged(owner);
 	}
 
-	//set pool manager
+	/// @notice set pool manager
+	/// @param _pmanager new pool manager address
 	function setPoolManager(address _pmanager) external onlyOwner {
 		poolManager = _pmanager;
 		emit PoolManagerChanged(_pmanager);
 	}
 
-	//recover tokens on this contract
+	/// @notice recover tokens on this contract
+	/// @param _tokenAddress token address to rescue
+	/// @param _tokenAmount amount of token to rescue
+	/// @param _withdrawTo address to transfer rescued token
 	function recoverERC20(
 		address _tokenAddress,
 		uint256 _tokenAmount,
@@ -101,21 +107,29 @@ contract Booster {
 	// #=#=#=#=#=#=#=# Start Pool Registry Management Section #=#=#=#=#=#=#=# //
 
 	/* ---- Setter ---- */
+	/// @notice set new operator on pool registry
+	/// @param _op new operator address
 	function setOperator(address _op) external onlyPoolManager {
 		IPoolRegistry(poolRegistry).setOperator(_op);
 	}
 
+	/// @notice set new distributor on pool registry
+	/// @param _distributor new distributor address
 	function setDistributor(address _distributor) external onlyPoolManager {
 		IPoolRegistry(poolRegistry).setDistributor(_distributor);
 	}
 
-	//set a new reward pool implementation for future pools
+	/// @notice set a new reward pool implementation for future pools on pool registry 
+	/// @param _impl new reward pool address
 	function setPoolRewardImplementation(address _impl) external onlyPoolManager {
 		IPoolRegistry(poolRegistry).setRewardImplementation(_impl);
 	}
 
 	/* ---- Pool management ---- */
-	//add pool on registry
+	/// @notice add a new pool and implementation on pool registry
+	/// @param _implementation personal vault contract model address
+	/// @param _stakingAddress Frax gauge stacking LP token address
+	/// @param _stakingToken LP token address for Frax gauge
 	function addPool(
 		address _implementation,
 		address _stakingAddress,
@@ -124,12 +138,16 @@ contract Booster {
 		IPoolRegistry(poolRegistry).addPool(_implementation, _stakingAddress, _stakingToken);
 	}
 
-	//replace rewards contract on a specific pool
+	/// @notice update rewards contract on a specific pool, when updated with setRewardImplementation().
+	/// @dev each user must call changeRewards on vault to update to new contract
+	/// @param _pid pool id for the new rewards contract
 	function createNewPoolRewards(uint256 _pid) external onlyPoolManager {
 		IPoolRegistry(poolRegistry).createNewPoolRewards(_pid);
 	}
 
-	//deactivate a pool
+	/// @notice deactivates pool so that new vaults can not be made on pool registry.
+	/// @dev can not force shutdown/withdraw user funds
+	/// @param _pid pool id to desactivate
 	function deactivatePool(uint256 _pid) external onlyPoolManager {
 		IPoolRegistry(poolRegistry).deactivatePool(_pid);
 	}

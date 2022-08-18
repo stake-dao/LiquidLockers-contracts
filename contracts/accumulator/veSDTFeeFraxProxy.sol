@@ -26,6 +26,7 @@ contract veSDTFeeFraxProxy is Ownable {
 		IERC20(fxs).safeApprove(sushiRouter, type(uint256).max);
 	}
 
+	/// @notice function to send reward
 	function sendRewards() external {
 		uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
 		_swapOnSushi(fxsBalance);
@@ -40,7 +41,9 @@ contract veSDTFeeFraxProxy is Ownable {
 		IERC20(sdFrax3Crv).transfer(feeD, IERC20(sdFrax3Crv).balanceOf(address(this)));
 	}
 
-	// slippageCRV = 100 for 1% max slippage
+	/// @notice internal function to swap CRV to FRAX
+	/// @dev slippageCRV = 100 for 1% max slippage
+	/// @param _amount amount to swap
 	function _swapOnSushi(uint256 _amount) internal returns (uint256) {
 		uint256[] memory amounts = IUniswapRouter(sushiRouter).getAmountsOut(_amount, fxsToFraxPath);
 
@@ -57,6 +60,7 @@ contract veSDTFeeFraxProxy is Ownable {
 		return outputs[1];
 	}
 
+	/// @notice function to calculate the amount reserved for keepers
 	function claimableByKeeper() public view returns (uint256) {
 		uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
 		uint256[] memory amounts = IUniswapRouter(sushiRouter).getAmountsOut(fxsBalance, fxsToFraxPath);
@@ -64,18 +68,27 @@ contract veSDTFeeFraxProxy is Ownable {
 		return (minAmount * claimerFee) / BASE_FEE;
 	}
 
+	/// @notice function to set a new max slippage
+	/// @param _newSlippage new slippage to set
 	function setSlippage(uint256 newSlippage) external onlyOwner {
 		maxSlippage = newSlippage;
 	}
 
+    /// @notice function to set a new claier fee 
+	/// @param _newClaimerFee claimer fee
 	function setClaimerFe(uint256 newClaimerFee) external onlyOwner {
 		claimerFee = newClaimerFee;
 	}
 
+    /// @notice function to set the sushiswap swap path  (FXS <-> .. <-> FRAX)
+	/// @param _newPath swap path
 	function setSwapPath(address[] memory newPath) external onlyOwner {
 		fxsToFraxPath = newPath;
 	}
 
+    /// @notice function to recover any ERC20 and send them to the owner
+	/// @param _token token address
+	/// @param _amount amount to recover
 	function recoverERC20(address _token, uint256 _amount) external onlyOwner {
 		IERC20(_token).transfer(owner(), _amount);
 	}

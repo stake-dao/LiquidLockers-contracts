@@ -26,11 +26,16 @@ contract FeeRegistry {
 		_;
 	}
 
+	/// @notice set new owner
+	/// @param _owner new owner address
 	function setOwner(address _owner) external onlyOwner {
 		owner = _owner;
 	}
 
-	//set platform fees
+	/// @notice set platform fees
+	/// @param _multi fees for mutlisig part
+	/// @param _accumulator fees for accumulator part
+	/// @param _veSDT fees for veSDT part
 	function setFees(
 		uint256 _multi,
 		uint256 _accumulator,
@@ -44,16 +49,22 @@ contract FeeRegistry {
 		veSDTPart = _veSDT;
 	}
 
+	/// @notice set new address for multisig
+	/// @param _multi new multisig address
 	function setMultisig(address _multi) external onlyOwner {
 		require(_multi != address(0), "!address(0)");
 		multiSig = _multi;
 	}
 
+	/// @notice set new address for accumulator
+	/// @param _accumulator new accumulator address
 	function setAccumulator(address _accumulator) external onlyOwner {
 		require(_accumulator != address(0), "!address(0)");
 		accumulator = _accumulator;
 	}
 
+	/// @notice set new address for feeProxy
+	/// @param _feeProxy new feeProxy address
 	function setVeSDTFeeProxy(address _feeProxy) external onlyOwner {
 		require(_feeProxy != address(0), "!address(0)");
 		veSDTFeeProxy = _feeProxy;
