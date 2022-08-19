@@ -4,10 +4,10 @@ pragma solidity ^0.8.7;
 contract FeeRegistry {
 	address public owner;
 
-	uint256 public totalFees = 900;
-	uint256 public veSDTPart = 300;
-	uint256 public multisigPart = 300;
-	uint256 public accumulatorPart = 300;
+	uint256 public totalFees = 1500;
+	uint256 public veSDTPart = 500;
+	uint256 public multisigPart = 200;
+	uint256 public accumulatorPart = 800;
 
 	uint256 public constant MAX_FEES = 2000;
 	uint256 public constant FEE_DENOMINATOR = 10000;
