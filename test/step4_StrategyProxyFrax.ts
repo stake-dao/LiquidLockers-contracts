@@ -206,7 +206,7 @@ describe("StakeDAO <> FRAX", function () {
     await network.provider.send("hardhat_setBalance", [GCADMIN, ETH_100]);
 
     /* ==== Get Contract Factory ==== */
-    const veSdtFxsProxyFactory = await ethers.getContractFactory("veSDTFeeFraxProxy");
+    const veSdtFxsProxyFactory = await ethers.getContractFactory("VeSDTFeeFraxProxy");
     const poolRegistryContract = await ethers.getContractFactory("PoolRegistry");
     const boosterContract = await ethers.getContractFactory("Booster");
     const FraxStrategyContract = await ethers.getContractFactory("FraxStrategy");
@@ -813,7 +813,7 @@ describe("StakeDAO <> FRAX", function () {
       const accum = await feeRegistry.accumulator();
       expect(accum).eq(RAND2);
     });
-    it("Should set new addresses for veSDTFeeFraxProxy", async function () {
+    it("Should set new addresses for VeSDTFeeFraxProxy", async function () {
       await feeRegistry.connect(deployer).setVeSDTFeeProxy(RAND3);
       const proxy = await feeRegistry.veSDTFeeProxy();
       expect(proxy).eq(RAND3);
@@ -828,8 +828,8 @@ describe("StakeDAO <> FRAX", function () {
       await expect(feeRegistry.connect(deployer).setMultisig(NULL)).to.be.revertedWith("!address(0)");
     });
   });
-  describe("### Testing veSDTFeeFraxProxy contract ###", function () {
-    it("Should test using veSDTFeeFraxProxy", async function () {
+  describe("### Testing VeSDTFeeFraxProxy contract ###", function () {
+    it("Should test using VeSDTFeeFraxProxy", async function () {
       await fxs.connect(lpHolder).transfer(veSDTProxy.address, parseUnits("20", 18));
       const fxsBalanceBefore = await fxs.balanceOf(veSDTProxy.address);
       const claimerBefore = await frax.balanceOf(noob._address);

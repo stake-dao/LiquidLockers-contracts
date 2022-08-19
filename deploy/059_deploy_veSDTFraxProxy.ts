@@ -9,8 +9,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0";
   const FRAX = "0x853d955aCEf822Db058eb8505911ED77F175b99e";
 
-  await deploy("veSDTFeeFraxPROXY", {
-    contract: "veSDTFeeFraxProxy",
+  await deploy("VeSDTFeeFraxProxy", {
+    contract: "VeSDTFeeFraxProxy",
     from: deployer,
     args: [[FXS, FRAX]],
     log: true
@@ -19,4 +19,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 export default func;
 
 func.skip = async () => true;
-func.tags = ["veSDTFeeFraxProxy"];
+func.tags = ["VeSDTFeeFraxProxy"];
