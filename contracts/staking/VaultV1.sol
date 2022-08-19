@@ -405,9 +405,9 @@ library SafeERC20 {
 contract StakingProxyBase is IProxyVault {
 	using SafeERC20 for IERC20;
 
-	address public constant fxs = address(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
-	address public constant vefxsProxy = address(0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f);
-	address public feeRegistry; // Need to be hardcoded when contract is deployed
+	address public constant FXS = address(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
+	address public constant VE_FXS_PROXY = address(0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f);
+	address public constant FEE_REGISTRY = address(0x0f1dc3Bd5fE8a3034d6Df0A411Efc7916830d19c);
 
 	address public owner; //owner of the vault
 	address public stakingAddress; //LP staking contract address
@@ -433,7 +433,7 @@ contract StakingProxyBase is IProxyVault {
 	}
 
 	modifier onlyAdmin() {
-		require(vefxsProxy == msg.sender, "!auth_admin_here");
+		require(VE_FXS_PROXY == msg.sender, "!auth_admin_here");
 		_;
 	}
 
@@ -522,30 +522,30 @@ contract StakingProxyBase is IProxyVault {
 	/// @notice internal function to apply fees to fxs and send remaining to owner
 	function _processFxs() internal {
 		//get fee rate from booster
-		uint256 multisigFee = IFeeRegistry(feeRegistry).multisigPart();
-		uint256 accumulatorFee = IFeeRegistry(feeRegistry).accumulatorPart();
-		uint256 veSDTFee = IFeeRegistry(feeRegistry).veSDTPart();
-
+		uint256 multisigFee = IFeeRegistry(FEE_REGISTRY).multisigPart();
+		uint256 accumulatorFee = IFeeRegistry(FEE_REGISTRY).accumulatorPart();
+		uint256 veSDTFee = IFeeRegistry(FEE_REGISTRY).veSDTPart();
+		
 		//send fxs fees to fee deposit
-		uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
+		uint256 fxsBalance = IERC20(FXS).balanceOf(address(this));
 		uint256 sendMulti = (fxsBalance * multisigFee) / FEE_DENOMINATOR;
 		uint256 sendAccum = (fxsBalance * accumulatorFee) / FEE_DENOMINATOR;
 		uint256 sendveSDT = (fxsBalance * veSDTFee) / FEE_DENOMINATOR;
-
+		
 		if (sendMulti > 0) {
-			IERC20(fxs).transfer(IFeeRegistry(feeRegistry).multiSig(), sendMulti);
+			IERC20(FXS).transfer(IFeeRegistry(FEE_REGISTRY).multiSig(), sendMulti);
 		}
 		if (sendveSDT > 0) {
-			IERC20(fxs).transfer(IFeeRegistry(feeRegistry).veSDTFeeProxy(), sendveSDT);
+			IERC20(FXS).transfer(IFeeRegistry(FEE_REGISTRY).veSDTFeeProxy(), sendveSDT);
 		}
 		if (sendAccum > 0) {
-			IERC20(fxs).transfer(IFeeRegistry(feeRegistry).accumulator(), sendAccum);
+			IERC20(FXS).transfer(IFeeRegistry(FEE_REGISTRY).accumulator(), sendAccum);
 		}
-
+		
 		//transfer remaining fxs to owner
-		uint256 sendAmount = IERC20(fxs).balanceOf(address(this));
+		uint256 sendAmount = IERC20(FXS).balanceOf(address(this));
 		if (sendAmount > 0) {
-			IERC20(fxs).transfer(owner, sendAmount);
+			IERC20(FXS).transfer(owner, sendAmount);
 		}
 	}
 
@@ -569,7 +569,7 @@ contract StakingProxyBase is IProxyVault {
 	function _transferTokens(address[] memory _tokens) internal {
 		//transfer all tokens
 		for (uint256 i = 0; i < _tokens.length; i++) {
-			if (_tokens[i] != fxs) {
+			if (_tokens[i] != FXS) {
 				uint256 bal = IERC20(_tokens[i]).balanceOf(address(this));
 				if (bal > 0) {
 					IERC20(_tokens[i]).safeTransfer(owner, bal);
@@ -797,7 +797,7 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 	/// @param _claim bool for claim reward or not
 	function withdrawLocked(bytes32 _kek_id, bool _claim) external onlyOwner nonReentrant {
 		getReward(_claim);
-
+		
 		//withdraw directly to owner(msg.sender)
 		IFraxFarmERC20(stakingAddress).withdrawLocked(_kek_id, msg.sender);
 
@@ -856,7 +856,7 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 		if (_claim) {
 			IFraxFarmERC20(stakingAddress).getReward(address(this));
 		}
-
+		
 		//process fxs fees
 		_processFxs();
 

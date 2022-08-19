@@ -14,11 +14,10 @@ contract FeeRegistry {
 
 	address public multiSig = address(0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063);
 	address public accumulator = address(0xF980B8A714Ce0cCB049f2890494b068CeC715c3f);
-	address public veSDTFeeProxy; //
+	address public veSDTFeeProxy = address(0x86Ebcd1bC876782670FE0B9ea23d8504569B9ffc);
 
-	constructor(address _veSDTFeeProxy) {
+	constructor() {
 		owner = msg.sender;
-		veSDTFeeProxy = _veSDTFeeProxy;
 	}
 
 	modifier onlyOwner() {
