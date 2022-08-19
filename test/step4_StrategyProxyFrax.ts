@@ -63,10 +63,12 @@ const GCADMIN = "0x30f9fFF0f55d21D666E28E650d0Eb989cA44e339";
 
 const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 const TEMPLE = "0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7";
+const TEMPLE_HOLDER = "0x758e83c114E36a28CA1f31C4d2ADB5Ec7c04C578";
 
 const GOVFRAX = "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27";
 const FRAX = "0x853d955aCEf822Db058eb8505911ED77F175b99e";
 const FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0";
+const FXS_HOLDER = "0xd53E50c63B0D549f142A2dCfc454501aaA5B7f3F";
 
 const FXS_TEMPLE = "0x6021444f1706f15465bEe85463BCc7d7cC17Fc03";
 const FXS_TEMPLE_GAUGE = "0x10460d02226d6ef7B2419aE150E6377BdbB7Ef16";
@@ -90,6 +92,8 @@ describe("StakeDAO <> FRAX", function () {
   let sdtHolder: JsonRpcSigner;
   let deployer_new: JsonRpcSigner;
   let gcAdmin: JsonRpcSigner;
+  let templeHolder: JsonRpcSigner;
+  let fxsHolder: JsonRpcSigner;
 
   let locker: Contract;
   let fxsTemple: Contract;
@@ -188,6 +192,14 @@ describe("StakeDAO <> FRAX", function () {
       method: "hardhat_impersonateAccount",
       params: [GCADMIN]
     });
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [TEMPLE_HOLDER]
+    });
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [FXS_HOLDER]
+    });
     deployer = ethers.provider.getSigner(STDDEPLOYER);
     lpHolder = ethers.provider.getSigner(FXS_TEMPLE_HOLDER);
     noob = ethers.provider.getSigner(nooby.address);
@@ -199,6 +211,8 @@ describe("StakeDAO <> FRAX", function () {
     sdtHolder = ethers.provider.getSigner(SDT_HOLDER);
     deployer_new = ethers.provider.getSigner(DEPLOYER_NEW);
     gcAdmin = ethers.provider.getSigner(GCADMIN);
+    templeHolder = ethers.provider.getSigner(TEMPLE_HOLDER);
+    fxsHolder = ethers.provider.getSigner(FXS_HOLDER);
 
     /* ==== Set Balance Address ====  */
     await network.provider.send("hardhat_setBalance", [STDDEPLOYER, ETH_100]);
@@ -600,6 +614,15 @@ describe("StakeDAO <> FRAX", function () {
         await network.provider.send("evm_increaseTime", [LOCKDURATION]);
         await network.provider.send("evm_mine", []);
 
+
+        await fxs.connect(fxsHolder).transfer(fxsTempleGauge.address, LOCKEDAMOUNT)
+        await temple.connect(templeHolder).transfer(fxsTempleGauge.address, LOCKEDAMOUNT)
+
+        const pf1 = await fxsTempleGauge.periodFinish()
+        await fxsTempleGauge.connect(lpHolder).sync()
+        const pf2 = await fxsTempleGauge.periodFinish()
+        console.log(pf1.toString(),pf2.toString())
+
         const before_Temple = await temple.balanceOf(lpHolder._address);
         const before_Fxs = await fxs.balanceOf(lpHolder._address);
         const before_Sdt = await sdt.balanceOf(lpHolder._address);
@@ -619,14 +642,15 @@ describe("StakeDAO <> FRAX", function () {
         const balanceOfAfter = await rewardsPID1.balanceOf(personalVault1.address);
         const totalSupplyAfter = await rewardsPID1.totalSupply();
 
-        //console.log(" ---- Reward Estimation    ----")
-        //console.log("Earned FXS :\t",(earned[1][0]/10**18).toString());
-        //console.log("Earned TEM:\t",(earned[1][1]/10**18).toString());
-        //console.log("Earned SDT:\t",(earned[1][2]/10**18).toString());
-        //console.log(" ---- User Reward Received ----")
-        //console.log("FXS gain :\t",(after_Fxs - before_Fxs)/10**18)
-        //console.log("Temple gain :\t",(after_Temple - before_Temple)/10**18)
-        //console.log("SDT gain:\t",(after_Sdt - before_Sdt)/10**18)
+        console.log(" ---- Reward Estimation    ----")
+        console.log("Earned FXS :\t",(earned[1][0]/10**18).toString());
+        console.log("Earned TEM:\t",(earned[1][1]/10**18).toString());
+        console.log("Earned SDT:\t",(earned[1][2]/10**18).toString());
+        console.log(" ---- User Reward Received ----")
+        console.log("FXS gain :\t",(after_Fxs - before_Fxs)/10**18)
+        console.log("Temple gain :\t",(after_Temple - before_Temple)/10**18)
+        console.log("SDT gain:\t",(after_Sdt - before_Sdt)/10**18)
+
 
         expect(after_Fxs - before_Fxs).gt(0);
         expect(after_Temple - before_Temple).gt(0);
