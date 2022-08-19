@@ -1,11 +1,5 @@
-/**
- *Submitted for verification at Etherscan.io on 2021-09-08
- */
-
-// File: contracts\ProxyFactory.sol
-
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.8.7;
 
 // original code
 // https://github.com/optionality/clone-factory/blob/master/contracts/CloneFactory.sol
