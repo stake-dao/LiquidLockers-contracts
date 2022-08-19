@@ -446,7 +446,7 @@ contract StakingProxyBase is IProxyVault {
 	) external virtual override {}
 
 	/// @notice help to change stake dao liquidity gauge address for reward
-	/// @param _rewardsAddress address for new liquity gauge 
+	/// @param _rewardsAddress address for new liquity gauge
 	/// @dev need to be called by each user for each personal vault
 	/// @dev when a pool change the Liquidity gauge reward address
 	function changeRewards(address _rewardsAddress) external onlyOwner {
@@ -485,12 +485,6 @@ contract StakingProxyBase is IProxyVault {
 	function _setVeFXSProxy(address _proxyAddress) internal {
 		IFraxFarmBase(stakingAddress).stakerSetVeFXSProxy(_proxyAddress);
 		usingProxy = _proxyAddress;
-	}
-
-	// Alternative solution until the feeRegistry is really deployed
-	// Todo : Remove it before the deployement
-	function setFeeRegistry(address _feeRegistry) external {
-		feeRegistry = _feeRegistry;
 	}
 
 	function getReward() external virtual override {}
@@ -571,6 +565,7 @@ contract StakingProxyBase is IProxyVault {
 	}
 
 	/// @notice internal function to transfer other reward tokens besides fxs(which needs to have fees applied)
+	/// @param _tokens list of token to transfer addresses
 	function _transferTokens(address[] memory _tokens) internal {
 		//transfer all tokens
 		for (uint256 i = 0; i < _tokens.length; i++) {

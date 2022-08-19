@@ -82,6 +82,7 @@ contract PoolRegistry {
 	}
 
 	/// @notice get number of vaults made for a specific pool
+	/// @param _pid pool id 
 	function poolVaultLength(uint256 _pid) external view returns (uint256) {
 		return poolVaultList[_pid].length;
 	}
