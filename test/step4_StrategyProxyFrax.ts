@@ -43,6 +43,8 @@ const FXSACCUMULATOR = "0xF980B8A714Ce0cCB049f2890494b068CeC715c3f";
 const FXSLOCKER = "0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f";
 const VE_SDT_FEE_FRAX_PROXY = "0x86Ebcd1bC876782670FE0B9ea23d8504569B9ffc";
 const FEE_REGISTRY = "0x0f1dc3Bd5fE8a3034d6Df0A411Efc7916830d19c"
+const POOL_REGISTRY = "0x3051Cc7114C07365C99cF82DE13CD9d10e603a4A";
+const LGV4_MODEL = "0xbCbBa9F1B479aC12087dA21721Ac9df22B924535";
 
 // ---- SDT ---- //
 const SDT = "0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F";
@@ -69,6 +71,7 @@ const GOVFRAX = "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27";
 const FRAX = "0x853d955aCEf822Db058eb8505911ED77F175b99e";
 const FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0";
 const FXS_HOLDER = "0xd53E50c63B0D549f142A2dCfc454501aaA5B7f3F";
+const FRAX_GAUGE_FXS_REWARDS_DISTRIBUTOR = "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34";
 
 const FXS_TEMPLE = "0x6021444f1706f15465bEe85463BCc7d7cC17Fc03";
 const FXS_TEMPLE_GAUGE = "0x10460d02226d6ef7B2419aE150E6377BdbB7Ef16";
@@ -244,12 +247,12 @@ describe("StakeDAO <> FRAX", function () {
     distributor = await ethers.getContractAt(DISTRIBUTORABI, DISTRIBUTOR);
     gaugeController = await ethers.getContractAt(GAUGECONTROLLERABI, GAUGECONTROLLER);
     veSDTProxy = await ethers.getContractAt("VeSDTFeeFraxProxy", VE_SDT_FEE_FRAX_PROXY);
-    feeRegistry = await ethers.getContractAt("FeeRegistry", FEE_REGISTRY)
+    feeRegistry = await ethers.getContractAt("FeeRegistry", FEE_REGISTRY);
+    poolRegistry = await ethers.getContractAt("PoolRegistry", POOL_REGISTRY);
+    liquidityGauge = await ethers.getContractAt("LiquidityGaugeV4StratFrax", LGV4_MODEL)
+    liquidityGauge2 = await ethers.getContractAt("LiquidityGaugeV4StratFrax", LGV4_MODEL)
 
     /* ==== Deployement Section ==== */
-    poolRegistry = await poolRegistryContract.connect(deployer).deploy();
-    liquidityGauge = await LiquidityGaugeV4FraxContract.connect(deployer).deploy();
-    liquidityGauge2 = await LiquidityGaugeV4FraxContract2.connect(deployer).deploy(); // deploy second fake gauge for test
     vaultV1Template = await VaultV1Contract.connect(deployer).deploy();
     fraxStrategy = await FraxStrategyContract.connect(deployer).deploy(locker.address, deployer._address, FXSACCUMULATOR, VE_SDT_FEE_FRAX_PROXY, distributor.address, deployer._address);
     booster = await boosterContract.connect(deployer).deploy(locker.address, poolRegistry.address, fraxStrategy.address);
@@ -265,7 +268,7 @@ describe("StakeDAO <> FRAX", function () {
   });
 
   describe("### Testing Frax Strategies, boosted by Stake DAO Liquid Lockers 🐘💧🔒 ###", function () {
-    const LOCKDURATION = 1 * WEEK;
+    const LOCKDURATION = 52 * WEEK;
     const AMOUNT = 400;
     const LOCKEDAMOUNT = parseUnits(AMOUNT.toString(), 18);
     const LOCKEDAMOUNTx2 = parseUnits((AMOUNT * 2).toString(), 18);
@@ -512,6 +515,8 @@ describe("StakeDAO <> FRAX", function () {
 
         await network.provider.send("evm_increaseTime", [DAY]);
         await network.provider.send("evm_mine", []);
+
+        await fxsTempleGauge.connect(lpHolder).sync()
         const earned = await personalVault1.connect(lpHolder).earned();
         await personalVault1.connect(lpHolder)["getReward()"]();
 
@@ -614,15 +619,6 @@ describe("StakeDAO <> FRAX", function () {
         await network.provider.send("evm_increaseTime", [LOCKDURATION]);
         await network.provider.send("evm_mine", []);
 
-
-        await fxs.connect(fxsHolder).transfer(fxsTempleGauge.address, LOCKEDAMOUNT)
-        await temple.connect(templeHolder).transfer(fxsTempleGauge.address, LOCKEDAMOUNT)
-
-        const pf1 = await fxsTempleGauge.periodFinish()
-        await fxsTempleGauge.connect(lpHolder).sync()
-        const pf2 = await fxsTempleGauge.periodFinish()
-        console.log(pf1.toString(),pf2.toString())
-
         const before_Temple = await temple.balanceOf(lpHolder._address);
         const before_Fxs = await fxs.balanceOf(lpHolder._address);
         const before_Sdt = await sdt.balanceOf(lpHolder._address);
@@ -631,9 +627,14 @@ describe("StakeDAO <> FRAX", function () {
         const balanceOfBefore = await rewardsPID1.balanceOf(personalVault1.address);
         const totalSupplyBefore = await rewardsPID1.totalSupply();
 
+        await fxs.connect(fxsHolder).transfer(FRAX_GAUGE_FXS_REWARDS_DISTRIBUTOR, parseUnits((1_000_000).toString(), 18))
+        const pf1 = await fxsTempleGauge.periodFinish()
+
+        await fxsTempleGauge.connect(lpHolder).sync()
         const earned = await personalVault1.earned();
         await personalVault1.connect(lpHolder).withdrawLocked(lockedStakesOfBefore[0]["kek_id"], true);
         
+        const pf2 = await fxsTempleGauge.periodFinish()
         const after_Temple = await temple.balanceOf(lpHolder._address);
         const after_Fxs = await fxs.balanceOf(lpHolder._address);
         const after_Sdt = await sdt.balanceOf(lpHolder._address);
@@ -642,14 +643,16 @@ describe("StakeDAO <> FRAX", function () {
         const balanceOfAfter = await rewardsPID1.balanceOf(personalVault1.address);
         const totalSupplyAfter = await rewardsPID1.totalSupply();
 
-        console.log(" ---- Reward Estimation    ----")
-        console.log("Earned FXS :\t",(earned[1][0]/10**18).toString());
-        console.log("Earned TEM:\t",(earned[1][1]/10**18).toString());
-        console.log("Earned SDT:\t",(earned[1][2]/10**18).toString());
-        console.log(" ---- User Reward Received ----")
-        console.log("FXS gain :\t",(after_Fxs - before_Fxs)/10**18)
-        console.log("Temple gain :\t",(after_Temple - before_Temple)/10**18)
-        console.log("SDT gain:\t",(after_Sdt - before_Sdt)/10**18)
+        //console.log(" ---- Reward Estimation    ----")
+        //console.log("Finish period before sync : ",pf1.toString())
+        //console.log("Finish period after sync : ",pf2.toString())
+        //console.log("Earned FXS :\t",(earned[1][0]/10**18).toString());
+        //console.log("Earned TEM:\t",(earned[1][1]/10**18).toString());
+        //console.log("Earned SDT:\t",(earned[1][2]/10**18).toString());
+        //console.log(" ---- User Reward Received ----")
+        //console.log("FXS gain :\t",(after_Fxs - before_Fxs)/10**18)
+        //console.log("Temple gain :\t",(after_Temple - before_Temple)/10**18)
+        //console.log("SDT gain:\t",(after_Sdt - before_Sdt)/10**18)
 
 
         expect(after_Fxs - before_Fxs).gt(0);
@@ -667,7 +670,7 @@ describe("StakeDAO <> FRAX", function () {
           .connect(veSdtHolder)
           ["vote_for_gauge_weights(address,uint256)"](rewardsPID1.address, 10_000);
         await fxsTemple.connect(lpHolder).approve(personalVault1.address, LOCKEDAMOUNTx2);
-        await personalVault1.connect(lpHolder).stakeLocked(LOCKEDAMOUNTx2, DAY);
+        await personalVault1.connect(lpHolder).stakeLocked(LOCKEDAMOUNTx2, WEEK);
 
         const before_Sdt = await sdt.balanceOf(lpHolder._address);
         const old_lg = await poolRegistry.poolInfo(1);
@@ -708,7 +711,7 @@ describe("StakeDAO <> FRAX", function () {
           ["vote_for_gauge_weights(address,uint256)"](rewardsPID1_New.address, 10_000);
         await distributor.connect(deployer_new)["approveGauge(address)"](rewardsPID1_New.address);
         const lockedStakesOfBefore = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
-        await network.provider.send("evm_increaseTime", [DAY]);
+        await network.provider.send("evm_increaseTime", [10*DAY]);
         await network.provider.send("evm_mine", []);
         await distributor.connect(deployer_new).distribute(rewardsPID1_New.address);
 
