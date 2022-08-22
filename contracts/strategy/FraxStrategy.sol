@@ -218,7 +218,7 @@ contract FraxStrategy is BaseStrategyV2 {
 
 	/// @notice function to set a vaultGaugeFactory
 	/// @param _factory gauge address
-	function setFactory(address _factory) external onlyGovernanceOrFactory {
+	function setFactory(address _factory) external onlyGovernance {
 		vaultGaugeFactory = _factory;
 	}
 
