@@ -14,8 +14,9 @@ contract Booster {
 
 	address public constant FXS = address(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
 
+	address public strategy;
+
 	address public immutable proxy;
-	address public immutable strategy;
 	address public immutable poolRegistry;
 
 	address public owner;
@@ -150,6 +151,12 @@ contract Booster {
 	/// @param _pid pool id to desactivate
 	function deactivatePool(uint256 _pid) external onlyPoolManager {
 		IPoolRegistry(poolRegistry).deactivatePool(_pid);
+	}
+
+	/// @notice Set strategy to interact with Locker.
+	/// @param _strategy new strategy
+	function setStrategy(address _strategy) external onlyPoolManager {
+		strategy = _strategy;
 	}
 
 	// #=#=#=#=#=#=#=#=#=#=#=#=#=#=#    EVENTS   #=#=#=#=#=#=#=#=#=#=#=#=#=# //
