@@ -216,6 +216,12 @@ contract FraxStrategy is BaseStrategyV2 {
 		multiGauges[_gauge] = _multiGauge;
 	}
 
+	/// @notice function to set a vaultGaugeFactory
+	/// @param _factory gauge address
+	function setFactory(address _factory) external onlyGovernanceOrFactory {
+		vaultGaugeFactory = _factory;
+	}
+
 	/// @notice execute a function
 	/// @param to Address to sent the value to
 	/// @param value Value to be sent
