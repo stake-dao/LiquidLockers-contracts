@@ -6,13 +6,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  // Warning 
-  // Don't forget to hardcode the feeRegistry address on 
-  // contract VaultV1.sol, line 410,
-
-  // Test it with the real address once deployed
-  // and remove the setter on test line 464 
-
   await deploy("VaultV1", {
     contract: "VaultV1",
     from: deployer,
