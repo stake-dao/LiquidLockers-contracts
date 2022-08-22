@@ -22,6 +22,11 @@ contract FraxStrategy is BaseStrategyV2 {
 		address receiver
 	) BaseStrategyV2(locker, governance, accumulator, veSDTFeeProxy, sdtDistributor, receiver) {}
 
+	/* ========== MUTATIVE FUNCTIONS ========== */
+	/// @notice function to deposit into a gauge
+	/// @param _token token address
+	/// @param _amount amount to deposit
+	/// @param _secs locking time in seconds
 	function deposit(
 		address _token,
 		uint256 _amount,
@@ -51,7 +56,10 @@ contract FraxStrategy is BaseStrategyV2 {
 	}
 
 	// Withdrawing implies to get claim rewards also.
-	function withdraw(address _token, bytes32 kek_id) external override onlyApprovedVault {
+	/// @notice function to withdraw from a gauge
+	/// @param _token token address
+	/// @param _kek_id deposit id to withdraw
+	function withdraw(address _token, bytes32 _kek_id) external override onlyApprovedVault {
 		require(gauges[_token] != address(0), "!gauge");
 		address gauge = gauges[_token];
 
@@ -60,7 +68,7 @@ contract FraxStrategy is BaseStrategyV2 {
 		(bool success, ) = LOCKER.execute(
 			gauge,
 			0,
-			abi.encodePacked(FraxStakingRewardsMultiGauge.withdrawLocked.selector, kek_id)
+			abi.encodePacked(FraxStakingRewardsMultiGauge.withdrawLocked.selector, _kek_id)
 		);
 
 		if (!success) {
@@ -76,8 +84,8 @@ contract FraxStrategy is BaseStrategyV2 {
 		emit Withdrawn(gauge, _token, net);
 	}
 
-	// TODO: Claim FXS from FeeDistributor
-	// Need to take into account _getReward() from withdraw.
+	/// @notice function to claim the reward and distribute it
+	/// @param _token token address
 	function claim(address _token) external override {
 		address gauge = gauges[_token];
 		require(gauge != address(0), "!gauge");
@@ -88,6 +96,8 @@ contract FraxStrategy is BaseStrategyV2 {
 		_distributeRewards(gauge);
 	}
 
+	/// @notice internal function used for distributing rewards
+	/// @param _gauge gauge address
 	function _distributeRewards(address _gauge) internal {
 		address[] memory rewardsToken = FraxStakingRewardsMultiGauge(_gauge).getAllRewardTokens();
 		uint256 lenght = rewardsToken.length;
@@ -115,15 +125,19 @@ contract FraxStrategy is BaseStrategyV2 {
 		}
 	}
 
+	/// @notice internal function used for distributing fees
+	/// @param _gauge gauge address
+	/// @param _rewardToken reward token address
+	/// @param _rewardBalance amount of reward
 	function _distributeFees(
 		address _gauge,
 		address _rewardToken,
-		uint256 rewardBalance
+		uint256 _rewardBalance
 	) internal returns (uint256 netRewards) {
-		uint256 multisigFee = (rewardBalance * perfFee[_gauge]) / BASE_FEE;
-		uint256 accumulatorPart = (rewardBalance * accumulatorFee[_gauge]) / BASE_FEE;
-		uint256 veSDTPart = (rewardBalance * veSDTFee[_gauge]) / BASE_FEE;
-		uint256 claimerPart = (rewardBalance * claimerRewardFee[_gauge]) / BASE_FEE;
+		uint256 multisigFee = (_rewardBalance * perfFee[_gauge]) / BASE_FEE;
+		uint256 accumulatorPart = (_rewardBalance * accumulatorFee[_gauge]) / BASE_FEE;
+		uint256 veSDTPart = (_rewardBalance * veSDTFee[_gauge]) / BASE_FEE;
+		uint256 claimerPart = (_rewardBalance * claimerRewardFee[_gauge]) / BASE_FEE;
 
 		// Distribute fees.
 		_transferFromLocker(_rewardToken, msg.sender, claimerPart);
@@ -136,31 +150,41 @@ contract FraxStrategy is BaseStrategyV2 {
 		_transferFromLocker(_rewardToken, address(this), netRewards);
 	}
 
+	/// @notice internal function used for transfering token from locker
+	/// @param _token token address
+	/// @param _recipient receipient address
+	/// @param _amount amount to transfert
 	function _transferFromLocker(
-		address token,
-		address recipient,
-		uint256 amount
+		address _token,
+		address _recipient,
+		uint256 _amount
 	) internal {
 		(bool success, ) = LOCKER.execute(
-			token,
+			_token,
 			0,
-			abi.encodeWithSignature("transfer(address,uint256)", recipient, amount)
+			abi.encodeWithSignature("transfer(address,uint256)", _recipient, _amount)
 		);
 		if (!success) {
 			revert TransferFromLockerFailed();
 		}
 	}
 
+	/// @notice only callable by approvedVault, used for allow delegating veFXS boost to a vault
+	/// @param _to Address to sent the value to
+	/// @param _data Call function data
 	function proxyCall(address _to, bytes memory _data) external onlyApprovedVault {
 		(bool success, ) = LOCKER.execute(_to, uint256(0), _data);
 		require(success, "Proxy Call Fail");
 	}
 
 	// BaseStrategy Function
+	/// @notice not implemented
 	function deposit(address, uint256) external view override onlyApprovedVault {
 		revert NotImplemented();
 	}
 
+	// BaseStrategy Function
+	/// @notice not implemented
 	function withdraw(address, uint256) external view override onlyApprovedVault {
 		revert NotImplemented();
 	}
@@ -185,6 +209,9 @@ contract FraxStrategy is BaseStrategyV2 {
 		emit GaugeSet(_gauge, _token);
 	}
 
+	/// @notice function to set a multi gauge
+	/// @param _gauge gauge address
+	/// @param _multiGauge multi gauge address
 	function setMultiGauge(address _gauge, address _multiGauge) external override onlyGovernanceOrFactory {
 		multiGauges[_gauge] = _multiGauge;
 	}

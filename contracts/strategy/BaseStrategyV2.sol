@@ -148,6 +148,48 @@ contract BaseStrategyV2 {
         );
     }
 
+	/// @notice function to set accumulator
+	/// @param _accumulator gauge address
+	function setAccumulator(address _accumulator) external onlyGovernance {
+        require(_accumulator != address(0), "zero address");
+		accumulator = _accumulator;
+	}
+
+	/// @notice function to set veSDTFeeProxy
+	/// @param _veSDTProxy veSDTProxy address
+	function setVeSDTProxy(address _veSDTProxy) external onlyGovernance {
+        require(_veSDTProxy != address(0), "zero address");
+		veSDTFeeProxy = _veSDTProxy;
+	}
+
+    /// @notice function to set reward receiver
+	/// @param _newRewardsReceiver reward receiver address
+	function setRewardsReceiver(address _newRewardsReceiver) external onlyGovernance {
+        require(_newRewardsReceiver != address(0), "zero address");
+		rewardsReceiver = _newRewardsReceiver;
+	}
+
+    /// @notice function to set governance
+	/// @param _newGovernance governance address
+	function setGovernance(address _newGovernance) external onlyGovernance {
+        require(_newGovernance != address(0), "zero address");
+		governance = _newGovernance;
+	}
+
+    /// @notice function to set sdt didtributor
+	/// @param _newSdtDistributor sdt distributor address 
+	function setSdtDistributor(address _newSdtDistributor) external onlyGovernance {
+        require(_newSdtDistributor != address(0), "zero address");
+		sdtDistributor = _newSdtDistributor;
+	}
+
+    /// @notice function to set vault gauge factory
+	/// @param _newVaultGaugeFactory vault gauge factory address 
+	function setVaultGaugeFactory(address _newVaultGaugeFactory) external onlyGovernance {
+		require(_newVaultGaugeFactory != address(0), "zero address");
+		vaultGaugeFactory = _newVaultGaugeFactory;
+	}
+
     ////////////////////////////////////////////////////////////////
     /// --- VIRTUAL FUNCTIONS
     ///////////////////////////////////////////////////////////////

@@ -9,7 +9,7 @@ interface IProxyFactory {
 
 contract PoolRegistry {
 	address public owner;
-	address public constant PROXY_FACTORY = address(0x66807B5598A848602734B82E432dD88DBE13fC8f); // Need to be change with Stake DAO deployed proxy
+	address public constant PROXY_FACTORY = address(0x60d4a8F3947BfC3a836a2b311e9A4c8325f985f5);
 	address public constant SDT = address(0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F);
 	address public constant VE_SDT = address(0x0C30476f66034E11782938DF8e4384970B6c9e8a);
 	address public constant VEBOOST = address(0xD67bdBefF01Fc492f1864E61756E5FBB3f173506);
@@ -56,38 +56,41 @@ contract PoolRegistry {
 		_;
 	}
 
-	//set operator/manager
+	/// @notice set operator/manager
+	/// @param _op new operator address
 	function setOperator(address _op) external onlyOwner {
 		operator = _op;
 		emit OperatorChanged(_op);
 	}
 
+	/// @notice set distributor
+	/// @param _distributor new distributor address
 	function setDistributor(address _distributor) external onlyOperator {
 		distributor = _distributor;
 	}
 
-	//set extra reward implementation contract for future pools
+	/// @notice set extra reward implementation contract for future pools (LG model)
+	/// @param _imp new LG model address
 	function setRewardImplementation(address _imp) external onlyOperator {
 		rewardImplementation = _imp;
 		emit RewardImplementationChanged(_imp);
 	}
 
-	//get number of pools
+	/// @notice get number of pools
 	function poolLength() external view returns (uint256) {
 		return poolInfo.length;
 	}
 
-	//get number of vaults made for a specific pool
+	/// @notice get number of vaults made for a specific pool
+	/// @param _pid pool id 
 	function poolVaultLength(uint256 _pid) external view returns (uint256) {
 		return poolVaultList[_pid].length;
 	}
 
-	//add a new pool and implementation
-	/**
-	 * @param _implementation is address of personal vault contract model
-	 * @param _stakingAddress is address of Frax gauge for stacking LP token
-	 * @param _stakingToken	is LP token for Frax gauge
-	 */
+	/// @notice add a new pool and implementation
+	/// @param _implementation personal vault contract model address
+	/// @param _stakingAddress Frax gauge stacking LP token address
+	/// @param _stakingToken LP token address for Frax gauge
 	function addPool(
 		address _implementation,
 		address _stakingAddress,
@@ -123,8 +126,9 @@ contract PoolRegistry {
 		emit PoolCreated(poolInfo.length - 1, _implementation, _stakingAddress, _stakingToken);
 	}
 
-	//replace rewards contract on a specific pool.
-	//each user must call changeRewards on vault to update to new contract
+	/// @notice update rewards contract on a specific pool, when updated with setRewardImplementation().
+	/// @dev each user must call changeRewards on vault to update to new contract
+	/// @param _pid pool id for the new rewards contract
 	function createNewPoolRewards(uint256 _pid) external onlyOperator {
 		require(rewardImplementation != address(0), "!imp");
 
@@ -136,14 +140,17 @@ contract PoolRegistry {
 		poolInfo[_pid].rewardsAddress = rewards;
 	}
 
-	//deactivates pool so that new vaults can not be made.
-	//can not force shutdown/withdraw user funds
+	/// @notice deactivates pool so that new vaults can not be made.
+	/// @dev can not force shutdown/withdraw user funds
+	/// @param _pid pool id to desactivate
 	function deactivatePool(uint256 _pid) external onlyOperator {
 		poolInfo[_pid].active = 0;
 		emit PoolDeactivated(_pid);
 	}
 
-	//clone a new user vault
+	/// @notice clone a new user vault
+	/// @param _pid pool id reference for new user vault
+	/// @param _user owner's address of the created vault
 	function addUserVault(uint256 _pid, address _user)
 		external
 		onlyOperator

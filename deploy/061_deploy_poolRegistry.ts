@@ -6,11 +6,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  // Warning
-  // The proxy address should be changed with the new proxy 
-  // deployed by Stake DAO with deploy 047
-  // Changes need to be done on PoolRegistry.sol line 12
-
   await deploy("PoolREGISTRY", {
     contract: "PoolRegistry",
     from: deployer,
@@ -20,5 +15,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 export default func;
 
-func.skip = async () => false;
+func.skip = async () => true;
 func.tags = ["PoolRegistry"];

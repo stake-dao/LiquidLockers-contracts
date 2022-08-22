@@ -405,15 +405,15 @@ library SafeERC20 {
 contract StakingProxyBase is IProxyVault {
 	using SafeERC20 for IERC20;
 
-	address public constant fxs = address(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
-	address public constant vefxsProxy = address(0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f);
-	address public feeRegistry; // Need to be hardcoded when contract is deployed
+	address public constant FXS = address(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
+	address public constant VE_FXS_PROXY = address(0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f);
+	address public constant FEE_REGISTRY = address(0x0f1dc3Bd5fE8a3034d6Df0A411Efc7916830d19c);
 
 	address public owner; //owner of the vault
-	address public stakingAddress; //farming contract
-	address public stakingToken; //farming token
-	address public override rewards; //extra rewards on Stake DAO
-	address public override usingProxy; //address of proxy being used
+	address public stakingAddress; //LP staking contract address
+	address public stakingToken; //LP token address
+	address public override rewards; //stake dao reward liquidity gauge address
+	address public override usingProxy; //address of Liquid Locker being used
 
 	uint256 public constant FEE_DENOMINATOR = 10000;
 
@@ -433,7 +433,7 @@ contract StakingProxyBase is IProxyVault {
 	}
 
 	modifier onlyAdmin() {
-		require(vefxsProxy == msg.sender, "!auth_admin_here");
+		require(VE_FXS_PROXY == msg.sender, "!auth_admin_here");
 		_;
 	}
 
@@ -445,8 +445,10 @@ contract StakingProxyBase is IProxyVault {
 		address _rewardsAddress
 	) external virtual override {}
 
-	//need to be called by each user for each personal vault
-	//when a pool change the Liquidity gauge reward address
+	/// @notice help to change stake dao liquidity gauge address for reward
+	/// @param _rewardsAddress address for new liquity gauge
+	/// @dev need to be called by each user for each personal vault
+	/// @dev when a pool change the Liquidity gauge reward address
 	function changeRewards(address _rewardsAddress) external onlyOwner {
 		require(ILiquidityGaugeStratFrax(rewards).initialized(), "pool not initialized yet");
 
@@ -472,21 +474,17 @@ contract StakingProxyBase is IProxyVault {
 		_checkpointRewards();
 	}
 
+	/// @notice call internal _setVeFXSProxy function
+	/// @param _proxy address of the proxy
 	function setVeFXSProxy(address _proxy) external onlyAdmin {
-		//set the vefxs proxy
 		_setVeFXSProxy(_proxy);
 	}
 
+	/// @notice set proxy address on staking contract
+	/// @param _proxyAddress proxy address
 	function _setVeFXSProxy(address _proxyAddress) internal {
-		//set proxy address on staking contract
 		IFraxFarmBase(stakingAddress).stakerSetVeFXSProxy(_proxyAddress);
 		usingProxy = _proxyAddress;
-	}
-
-	// Alternative solution until the feeRegistry is really deployed
-	// Todo : Remove it before the deployement
-	function setFeeRegistry(address _feeRegistry) external {
-		feeRegistry = _feeRegistry;
 	}
 
 	function getReward() external virtual override {}
@@ -503,7 +501,7 @@ contract StakingProxyBase is IProxyVault {
 		returns (address[] memory token_addresses, uint256[] memory total_earned)
 	{}
 
-	//checkpoint and add/remove weight to convex rewards contract
+	/// @notice internal function for checkpoint
 	function _checkpointRewards() internal {
 		//if rewards are active, checkpoint
 		if (ILiquidityGaugeStratFrax(rewards).initialized()) {
@@ -521,37 +519,37 @@ contract StakingProxyBase is IProxyVault {
 		}
 	}
 
-	//apply fees to fxs and send remaining to owner
+	/// @notice internal function to apply fees to fxs and send remaining to owner
 	function _processFxs() internal {
 		//get fee rate from booster
-		uint256 multisigFee = IFeeRegistry(feeRegistry).multisigPart();
-		uint256 accumulatorFee = IFeeRegistry(feeRegistry).accumulatorPart();
-		uint256 veSDTFee = IFeeRegistry(feeRegistry).veSDTPart();
-
+		uint256 multisigFee = IFeeRegistry(FEE_REGISTRY).multisigPart();
+		uint256 accumulatorFee = IFeeRegistry(FEE_REGISTRY).accumulatorPart();
+		uint256 veSDTFee = IFeeRegistry(FEE_REGISTRY).veSDTPart();
+		
 		//send fxs fees to fee deposit
-		uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
+		uint256 fxsBalance = IERC20(FXS).balanceOf(address(this));
 		uint256 sendMulti = (fxsBalance * multisigFee) / FEE_DENOMINATOR;
 		uint256 sendAccum = (fxsBalance * accumulatorFee) / FEE_DENOMINATOR;
 		uint256 sendveSDT = (fxsBalance * veSDTFee) / FEE_DENOMINATOR;
-
+		
 		if (sendMulti > 0) {
-			IERC20(fxs).transfer(IFeeRegistry(feeRegistry).multiSig(), sendMulti);
+			IERC20(FXS).transfer(IFeeRegistry(FEE_REGISTRY).multiSig(), sendMulti);
 		}
 		if (sendveSDT > 0) {
-			IERC20(fxs).transfer(IFeeRegistry(feeRegistry).veSDTFeeProxy(), sendveSDT);
+			IERC20(FXS).transfer(IFeeRegistry(FEE_REGISTRY).veSDTFeeProxy(), sendveSDT);
 		}
 		if (sendAccum > 0) {
-			IERC20(fxs).transfer(IFeeRegistry(feeRegistry).accumulator(), sendAccum);
+			IERC20(FXS).transfer(IFeeRegistry(FEE_REGISTRY).accumulator(), sendAccum);
 		}
-
+		
 		//transfer remaining fxs to owner
-		uint256 sendAmount = IERC20(fxs).balanceOf(address(this));
+		uint256 sendAmount = IERC20(FXS).balanceOf(address(this));
 		if (sendAmount > 0) {
-			IERC20(fxs).transfer(owner, sendAmount);
+			IERC20(FXS).transfer(owner, sendAmount);
 		}
 	}
 
-	//get extra rewards from the liquidity gauge
+	/// @notice internal function to get extra rewards from the liquidity gauge
 	function _processExtraRewards() internal {
 		if (ILiquidityGaugeStratFrax(rewards).initialized()) {
 			//check if there is a balance because the reward contract could have be activated later
@@ -566,11 +564,12 @@ contract StakingProxyBase is IProxyVault {
 		}
 	}
 
-	//transfer other reward tokens besides fxs(which needs to have fees applied)
+	/// @notice internal function to transfer other reward tokens besides fxs(which needs to have fees applied)
+	/// @param _tokens list of token to transfer addresses
 	function _transferTokens(address[] memory _tokens) internal {
 		//transfer all tokens
 		for (uint256 i = 0; i < _tokens.length; i++) {
-			if (_tokens[i] != fxs) {
+			if (_tokens[i] != FXS) {
 				uint256 bal = IERC20(_tokens[i]).balanceOf(address(this));
 				if (bal > 0) {
 					IERC20(_tokens[i]).safeTransfer(owner, bal);
@@ -729,15 +728,21 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 
 	constructor() {}
 
+	/// @notice return type of the vault
 	function vaultType() external pure override returns (VaultType) {
 		return VaultType.Erc20Baic;
 	}
 
+	/// @notice return version of the vault
 	function vaultVersion() external pure override returns (uint256) {
 		return 1;
 	}
 
-	//initialize vault
+	/// @notice initialize the vault
+	/// @param _owner owner of the vault
+	/// @param _stakingAddress LP staking contract address
+	/// @param _stakingToken LP token address
+	/// @param _rewardsAddress stake dao reward liquidity gauge address
 	function initialize(
 		address _owner,
 		address _stakingAddress,
@@ -755,7 +760,9 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 		IERC20(stakingToken).approve(_stakingAddress, type(uint256).max);
 	}
 
-	//create a new locked state of _secs timelength
+	/// @notice create a new locked state of _secs timelength
+	/// @param _liquidity amount to deposit
+	/// @param _secs locking time in seconds
 	function stakeLocked(uint256 _liquidity, uint256 _secs) external onlyOwner nonReentrant {
 		if (_liquidity > 0) {
 			//pull tokens from user
@@ -769,24 +776,28 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 		_checkpointRewards();
 	}
 
-	//add to a current lock
-	function lockAdditional(bytes32 _kek_id, uint256 _addl_liq) external onlyOwner nonReentrant {
-		if (_addl_liq > 0) {
+	/// @notice add to a current lock
+	/// @param _kek_id id of deposit
+	/// @param _add_liq amount to add to previous deposit
+	function lockAdditional(bytes32 _kek_id, uint256 _add_liq) external onlyOwner nonReentrant {
+		if (_add_liq > 0) {
 			//pull tokens from user
-			IERC20(stakingToken).safeTransferFrom(msg.sender, address(this), _addl_liq);
+			IERC20(stakingToken).safeTransferFrom(msg.sender, address(this), _add_liq);
 
 			//add stake
-			IFraxFarmERC20(stakingAddress).lockAdditional(_kek_id, _addl_liq);
+			IFraxFarmERC20(stakingAddress).lockAdditional(_kek_id, _add_liq);
 		}
 
 		//checkpoint rewards
 		_checkpointRewards();
 	}
 
-	//withdraw a staked position
+	/// @notice withdraw a staked position
+	/// @param _kek_id id of deposit
+	/// @param _claim bool for claim reward or not
 	function withdrawLocked(bytes32 _kek_id, bool _claim) external onlyOwner nonReentrant {
 		getReward(_claim);
-
+		
 		//withdraw directly to owner(msg.sender)
 		IFraxFarmERC20(stakingAddress).withdrawLocked(_kek_id, msg.sender);
 
@@ -794,8 +805,8 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 		_checkpointRewards();
 	}
 
-	//helper function to combine earned tokens on staking contract and any tokens that are on this vault
-	function earned() external view override returns (address[] memory token_addresses, uint256[] memory total_earned) {
+	/// @notice helper function to combine earned tokens on staking contract and any tokens that are on this vault
+	function earned() external view override returns (address[] memory _token_addresses, uint256[] memory _total_earned) {
 		//get list of reward tokens
 
 		address[] memory rewardTokens = IFraxFarmERC20(stakingAddress).getAllRewardTokens();
@@ -803,19 +814,19 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 
 		uint256 extraRewardsLength = ILiquidityGaugeStratFrax(rewards).reward_count();
 
-		token_addresses = new address[](rewardTokens.length + extraRewardsLength);
-		total_earned = new uint256[](rewardTokens.length + extraRewardsLength);
+		_token_addresses = new address[](rewardTokens.length + extraRewardsLength);
+		_total_earned = new uint256[](rewardTokens.length + extraRewardsLength);
 		//add any tokens that happen to be already claimed but sitting on the vault
 		//(ex. withdraw claiming rewards)
 		for (uint256 i = 0; i < rewardTokens.length; i++) {
-			token_addresses[i] = rewardTokens[i];
-			total_earned[i] = stakedearned[i] + IERC20(rewardTokens[i]).balanceOf(address(this));
+			_token_addresses[i] = rewardTokens[i];
+			_total_earned[i] = stakedearned[i] + IERC20(rewardTokens[i]).balanceOf(address(this));
 		}
 
 		for (uint256 i = 0; i < extraRewardsLength; i++) {
 			address token = ILiquidityGaugeStratFrax(rewards).reward_tokens(i);
-			token_addresses[i + rewardTokens.length] = token;
-			total_earned[i + rewardTokens.length] = ILiquidityGaugeStratFrax(rewards).claimable_reward(address(this), token);
+			_token_addresses[i + rewardTokens.length] = token;
+			_total_earned[i + rewardTokens.length] = ILiquidityGaugeStratFrax(rewards).claimable_reward(address(this), token);
 		}
 	}
 
@@ -830,20 +841,22 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
     A slightly less gas intensive approach could be to send rewards directly to booster and have it sort everything out.
     However that makes the logic a bit more complex as well as runs a few future proofing risks
     */
+
+	/// @notice call getReward with true for claim
 	function getReward() external override {
 		getReward(true);
 	}
 
-	//get reward with claim option.
-	//_claim bool is for the off chance that rewardCollectionPause is true so getReward() fails but
-	//there are tokens on this vault for cases such as withdraw() also calling claim.
-	//can also be used to rescue tokens on the vault
+	/// @notice get reward with claim option.
+	/// @param _claim bool is for the off chance that rewardCollectionPause is true so getReward() fails but
+	///there are tokens on this vault for cases such as withdraw() also calling claim.
+	///can also be used to rescue tokens on the vault
 	function getReward(bool _claim) public override {
 		//claim
 		if (_claim) {
 			IFraxFarmERC20(stakingAddress).getReward(address(this));
 		}
-
+		
 		//process fxs fees
 		_processFxs();
 
@@ -856,10 +869,11 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 		_processExtraRewards();
 	}
 
-	//auxiliary function to supply token list(save a bit of gas + dont have to claim everything)
-	//_claim bool is for the off chance that rewardCollectionPause is true so getReward() fails but
-	//there are tokens on this vault for cases such as withdraw() also calling claim.
-	//can also be used to rescue tokens on the vault
+	/// @notice auxiliary function to supply token list(save a bit of gas + dont have to claim everything)
+	/// @param _claim bool is for the off chance that rewardCollectionPause is true so getReward() fails but
+	///there are tokens on this vault for cases such as withdraw() also calling claim.
+	///can also be used to rescue tokens on the vault
+	/// @param _rewardTokenList tokens list address
 	function getReward(bool _claim, address[] calldata _rewardTokenList) external override {
 		//claim
 		if (_claim) {

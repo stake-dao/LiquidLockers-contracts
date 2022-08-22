@@ -20,7 +20,7 @@ export default {
     hardhat: {
       forking: {
         url: process.env.MAINNET,
-        blockNumber: 15365339
+        //blockNumber: 15374400
       }
     },
     mainnet: {
@@ -58,7 +58,7 @@ export default {
 
   },
   gasReporter: {
-    enabled: true,
+    enabled: false,
     currency: "USD",
     coinmarketcap: process.env.COINMARKETCAP_KEY
   },
