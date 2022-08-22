@@ -16,7 +16,7 @@ contract BlackpoolDepositor {
 
 	/* ========== STATE VARIABLES ========== */
 	address public token;
-	uint256 private constant MAXTIME = 2 * 364 * 86_400;
+	uint256 private constant MAXTIME = 4 * 364 * 86_400;
 	uint256 private constant WEEK = 7 * 86_400;
 
 	uint256 public lockIncentive = 10; //incentive to users who spend gas to lock token

@@ -103,3 +103,13 @@ export const VEAPW = "0xC5ca1EBF6e912E49A6a70Bb0385Ea065061a4F09";
 export const APWINE_FEE_DISTRIBUTOR = "0x354743132e75E417344BcfDDed6a045140556414";
 export const APWINE_SMART_WALLET_CHECKER = "0xb0463Ba57D6aADf85838f354057F9E4B69BfA4D6";
 export const APWINE_DAO = "0xdbbfc051d200438dd5847b093b22484b842de9e7";
+
+////////////////////////////////////////////////////////////////
+/// --- BLACKPOOL PROTOCOL
+///////////////////////////////////////////////////////////////
+
+export const BPT = "0x0eC9F76202a7061eB9b3a7D6B59D36215A7e37da";
+export const VEBPT = "0x19886A88047350482990D4EDd0C1b863646aB921";
+export const BPT_FEE_DISTRIBUTOR = "0xFf23e40ac05D30Df46c250Dd4d784f6496A79CE9";
+export const BPT_SMART_WALLET_CHECKER = "0xadd223B33EF85F79CB2fd0263881FfAb2C93918A";
+export const BPT_DAO = "0x07dff52fb8b38e55e6ecb407913cd847396af4f0";
