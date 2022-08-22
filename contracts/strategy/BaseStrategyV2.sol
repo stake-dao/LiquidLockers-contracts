@@ -148,6 +148,36 @@ contract BaseStrategyV2 {
         );
     }
 
+	/// @notice function to set accumulator
+	/// @param _accumulator gauge address
+	function setAccumulator(address _accumulator) external onlyGovernance {
+		accumulator = _accumulator;
+	}
+
+	/// @notice function to set veSDTFeeProxy
+	/// @param _veSDTProxy veSDTProxy address
+	function setVeSDTProxy(address _veSDTProxy) external onlyGovernance {
+		veSDTFeeProxy = _veSDTProxy;
+	}
+
+
+	function setRewardsReceiver(address _newRewardsReceiver) external onlyGovernance {
+		rewardsReceiver = _newRewardsReceiver;
+	}
+
+	function setGovernance(address _newGovernance) external onlyGovernance {
+		governance = _newGovernance;
+	}
+
+	function setSdtDistributor(address _newSdtDistributor) external onlyGovernance {
+		sdtDistributor = _newSdtDistributor;
+	}
+
+	function setVaultGaugeFactory(address _newVaultGaugeFactory) external onlyGovernance {
+		require(_newVaultGaugeFactory != address(0), "zero address");
+		vaultGaugeFactory = _newVaultGaugeFactory;
+	}
+
     ////////////////////////////////////////////////////////////////
     /// --- VIRTUAL FUNCTIONS
     ///////////////////////////////////////////////////////////////
