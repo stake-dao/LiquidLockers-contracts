@@ -76,7 +76,6 @@ export default {
   },
   // specify separate cache for hardhat, since it could possibly conflict with foundry's
   paths: {
-    sources: "./vyper-contracts",
     cache: "hh-cache"
   }
 } as HardhatUserConfig;
