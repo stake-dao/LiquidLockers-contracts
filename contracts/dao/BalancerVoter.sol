@@ -2,10 +2,12 @@
 
 pragma solidity 0.8.7;
 import "../BalancerLocker.sol";
+import "../strategy/BalancerStrategy.sol";
 
 contract BalancerVoter {
 	address public constant balancerLocker = 0xea79d1A83Da6DB43a85942767C389fE0ACf336A5;
 	address public constant balancerGaugeController = 0xC128468b7Ce63eA702C1f104D55A2566b13D3ABD;
+	address public constant balancerStrategy = 0x873b031Ea6E4236E44d933Aae5a66AF6d4DA419d;
 	address public governance;
 
 	constructor() {
@@ -17,7 +19,17 @@ contract BalancerVoter {
 		require(_gauges.length == _weights.length, "!length");
 		uint256 length = _gauges.length;
 		for (uint256 i; i < length; i++) {
-			BalancerLocker(balancerLocker).voteGaugeWeight(_gauges[i], _weights[i]);
+			bytes memory voteData = abi.encodeWithSignature(
+				"vote_for_gauge_weights(address,uint256)",
+				_gauges[i],
+				_weights[i]
+			);
+			(bool success, ) = BalancerStrategy(balancerStrategy).execute(
+				balancerLocker,
+				0,
+				abi.encodeWithSignature("execute(address,uint256,bytes)", balancerGaugeController, 0, voteData)
+			);
+			require(success, "Voting failed!");
 		}
 	}
 
@@ -51,9 +63,10 @@ contract BalancerVoter {
 		require(msg.sender == governance, "!governance");
 		(bool success, bytes memory result) = _to.call{ value: _value }(_data);
 		require(success, "!success");
-		uint256 tokenBalance = IERC20(_token).balanceOf(balancerLocker);
+		uint256 tokenBalance = IERC20(_token).balanceOf(crvLocker);
 		bytes memory transferData = abi.encodeWithSignature("transfer(address,uint256)", _recipient, tokenBalance);
-		(success, ) = BalancerLocker(balancerLocker).execute(_token, 0, transferData);
+		bytes memory executeData = abi.encodeWithSignature("execute(address,uint256,bytes)", _token, 0, transferData);
+		(success, ) = BalancerStrategy(balancerStrategy).execute(crvLocker, 0, executeData);
 		require(success, "transfer failed");
 		return (success, result);
 	}
