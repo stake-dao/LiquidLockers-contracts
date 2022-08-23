@@ -366,7 +366,7 @@ def deposit(_value: uint256, _addr: address , _claim_rewards: bool = False):
     @param _addr Address to deposit for
     """
     #only personal vault can deposit
-    #assert PoolRegistry(self.poolRegistry).vaultMap(self.pid,_addr) == msg.sender, "!only personal vault" 
+    assert PoolRegistry(self.poolRegistry).vaultMap(self.pid,_addr) == msg.sender, "!only personal vault" 
 
     total_supply: uint256 = self.totalSupply
 
@@ -377,7 +377,7 @@ def deposit(_value: uint256, _addr: address , _claim_rewards: bool = False):
 
         total_supply += _value
         new_balance: uint256 = self.balanceOf[msg.sender] + _value
-        # define my own balance of and so on 
+
         self.balanceOf[msg.sender] = new_balance
         self.totalSupply = total_supply
 
