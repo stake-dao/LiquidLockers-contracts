@@ -12,7 +12,7 @@ interface ILocker {
 
 	function release() external;
 
-	function claimRewards(address,address) external;
+	function claimRewards(address, address) external;
 
 	function claimFXSRewards(address) external;
 
@@ -29,4 +29,11 @@ interface ILocker {
 	function setAngleDepositor(address) external;
 
 	function setFxsDepositor(address) external;
+
+	function setYieldDistributor(address) external;
+
+	function setGaugeController(address) external;
+
+	function setAccumulator(address _accumulator) external;
+
 }

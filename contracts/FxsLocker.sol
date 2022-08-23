@@ -110,8 +110,8 @@ contract FxsLocker {
 		emit VotedOnGaugeWeight(_gauge, _weight);
 	}
 
-	/// @notice Set new governance address 
-	/// @param _governance governance address 
+	/// @notice Set new governance address
+	/// @param _governance governance address
 	function setGovernance(address _governance) external onlyGovernance {
 		governance = _governance;
 		emit GovernanceChanged(_governance);
@@ -132,7 +132,7 @@ contract FxsLocker {
 	}
 
 	/// @notice Set the gauge controller
-	/// @param _gaugeController gauge controller address 
+	/// @param _gaugeController gauge controller address
 	function setGaugeController(address _gaugeController) external onlyGovernance {
 		gaugeController = _gaugeController;
 		emit GaugeControllerChanged(_gaugeController);

@@ -6,6 +6,6 @@ interface IVeCRV {
 		int128 amount;
 		uint256 end;
 	}
-	
-	function locked(address) external returns(LockedBalance memory);
+
+	function locked(address) external returns (LockedBalance memory);
 }

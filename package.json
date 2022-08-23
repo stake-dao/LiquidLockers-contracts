@@ -19,7 +19,7 @@
     "hardhat-gas-reporter": "1.0.6",
     "prettier-plugin-solidity": "^1.0.0-beta.10",
     "solidity-coverage": "0.7.17",
-    "ts-node": "^9.1.1",
+    "ts-node": "^10.8.1",
     "typescript": "^4.2.4"
   },
   "dependencies": {
@@ -37,13 +37,17 @@
     "hardhat-contract-sizer": "^2.1.1",
     "hardhat-deploy": "^0.8.11",
     "hardhat-deploy-ethers": "^0.3.0-beta.10",
-    "prettier": "^2.3.0",
+    "prettier": "^2.6.2",
     "typechain": "^7.0.0"
   },
   "scripts": {
     "solhint": "solhint 'contracts/*.sol'",
+    "clean": "hardhat clean && forge clean",
     "test": "hardhat test",
-    "compile": "hardhat compile",
+    "test:foundry": "forge test",
+    "lint": "prettier --write **.{sol,ts}",
+    "compile": "hardhat compile && forge build",
+    "build": "hardhat compile --config ./hardhat.config.ts && forge build",
     "start:node": "npx hardhat node",
     "node:watch": "npx hardhat node --watch"
   }

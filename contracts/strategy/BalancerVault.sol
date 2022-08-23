@@ -25,6 +25,7 @@ contract BalancerVault is ERC20Upgradeable {
 	uint256 public min;
 	uint256 public constant max = 10000;
 	BalancerStrategy public balancerStrategy;
+
 	event Earn(address _token, uint256 _amount);
 	event Deposit(address _depositor, uint256 _amount);
 	event Withdraw(address _depositor, uint256 _amount);
@@ -48,7 +49,7 @@ contract BalancerVault is ERC20Upgradeable {
 	/// @notice function to deposit the BPT token
 	/// @param _staker address to stake for
 	/// @param _amount amount to deposit
-	/// @param _earn earn or not 
+	/// @param _earn earn or not
 	function deposit(
 		address _staker,
 		uint256 _amount,
@@ -59,10 +60,10 @@ contract BalancerVault is ERC20Upgradeable {
 		_deposit(_staker, _amount, _earn);
 	}
 
-	/// @notice function to provide liquidity in underlying tokens 
+	/// @notice function to provide liquidity in underlying tokens
 	/// @param _staker address to stake for
 	/// @param _maxAmountsIn amounts for each underlying token
-	/// @param _earn earn or not 
+	/// @param _earn earn or not
 	/// @param _minAmount amount to deposit
 	function provideLiquidityAndDeposit(
 		address _staker,
@@ -102,7 +103,7 @@ contract BalancerVault is ERC20Upgradeable {
 	/// @notice internal deposit function
 	/// @param _staker address to stake for
 	/// @param _amount amount to deposit
-	/// @param _earn earn or not 
+	/// @param _earn earn or not
 	function _deposit(
 		address _staker,
 		uint256 _amount,
@@ -166,7 +167,7 @@ contract BalancerVault is ERC20Upgradeable {
 		liquidityGauge = _liquidityGauge;
 		ERC20Upgradeable(address(this)).approve(liquidityGauge, type(uint256).max);
 	}
-	
+
 	/// @notice function to set the balancer strategy
 	/// @param _newStrat balancer strategy infos
 	function setBalancerStrategy(BalancerStrategy _newStrat) external {

@@ -28,6 +28,7 @@ contract AngleVaultFactory {
 	address public constant VEBOOST = 0xD67bdBefF01Fc492f1864E61756E5FBB3f173506;
 	address public angleStrategy;
 	address public sdtDistributor;
+
 	event VaultDeployed(address proxy, address lpToken, address impl);
 	event GaugeDeployed(address proxy, address stakeToken, address impl);
 
@@ -42,8 +43,8 @@ contract AngleVaultFactory {
 	}
 
 	/**
-	@dev Function to clone Angle Vault and its gauge contracts 
-	@param _angleGauge Angle liquidity gauge address
+	 * @dev Function to clone Angle Vault and its gauge contracts
+	 * @param _angleGauge Angle liquidity gauge address
 	 */
 	function cloneAndInit(address _angleGauge) public {
 		uint256 weight = IGaugeController(gaugeController).get_gauge_weight(_angleGauge);
@@ -73,12 +74,12 @@ contract AngleVaultFactory {
 	}
 
 	/**
-	@dev Internal function to clone the vault 
-	@param _impl address of contract to clone
-	@param _lpToken angle LP token address 
-	@param _governance governance address 
-	@param _name vault name
-	@param _symbol vault symbol
+	 * @dev Internal function to clone the vault
+	 * @param _impl address of contract to clone
+	 * @param _lpToken angle LP token address
+	 * @param _governance governance address
+	 * @param _name vault name
+	 * @param _symbol vault symbol
 	 */
 	function _cloneAndInitVault(
 		address _impl,
@@ -97,11 +98,11 @@ contract AngleVaultFactory {
 	}
 
 	/**
-	@dev Internal function to clone the gauge multi rewards
-	@param _impl address of contract to clone
-	@param _stakingToken sd LP token address 
-	@param _governance governance address 
-	@param _symbol gauge symbol
+	 * @dev Internal function to clone the gauge multi rewards
+	 * @param _impl address of contract to clone
+	 * @param _stakingToken sd LP token address
+	 * @param _governance governance address
+	 * @param _symbol gauge symbol
 	 */
 	function _cloneAndInitGauge(
 		address _impl,
@@ -115,10 +116,10 @@ contract AngleVaultFactory {
 	}
 
 	/**
-	@dev Internal function that deploy and returns a clone of vault impl
-	@param _impl address of contract to clone
-	@param _lpToken angle LP token address
-	@param _paramsHash governance+name+symbol+strategy parameters hash
+	 * @dev Internal function that deploy and returns a clone of vault impl
+	 * @param _impl address of contract to clone
+	 * @param _lpToken angle LP token address
+	 * @param _paramsHash governance+name+symbol+strategy parameters hash
 	 */
 	function cloneVault(
 		address _impl,
@@ -131,10 +132,10 @@ contract AngleVaultFactory {
 	}
 
 	/**
-	@dev Internal function that deploy and returns a clone of gauge impl
-	@param _impl address of contract to clone
-	@param _stakingToken sd LP token address
-	@param _paramsHash governance+name+symbol parameters hash
+	 * @dev Internal function that deploy and returns a clone of gauge impl
+	 * @param _impl address of contract to clone
+	 * @param _stakingToken sd LP token address
+	 * @param _paramsHash governance+name+symbol parameters hash
 	 */
 	function cloneGauge(
 		address _impl,
@@ -149,10 +150,10 @@ contract AngleVaultFactory {
 	}
 
 	/**
-	@dev Function that predicts the future address passing the parameters
-	@param _impl address of contract to clone
-	@param _token token (LP or sdLP)
-	@param _paramsHash parameters hash
+	 * @dev Function that predicts the future address passing the parameters
+	 * @param _impl address of contract to clone
+	 * @param _token token (LP or sdLP)
+	 * @param _paramsHash parameters hash
 	 */
 	function predictAddress(
 		address _impl,

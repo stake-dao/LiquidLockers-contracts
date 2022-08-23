@@ -2,5 +2,5 @@
 pragma solidity ^0.8.7;
 
 interface ISDTDistributor {
-    function distribute(address gaugeAddr) external;
+	function distribute(address gaugeAddr) external;
 }

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
+
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./BaseStrategy.sol";
@@ -20,6 +21,7 @@ contract BalancerStrategy is BaseStrategy {
 		address rewardToken;
 		uint256 amount;
 	}
+
 	enum MANAGEFEE {
 		PERFFEE,
 		VESDTFEE,
@@ -92,15 +94,11 @@ contract BalancerStrategy is BaseStrategy {
 
 		// Claim BAL
 		// within the mint() it calls the user checkpoint
-		(bool success, ) = locker.execute(
-			BAL_MINTER,
-			0,
-			abi.encodeWithSignature("mint(address)", gauge)
-		);	
+		(bool success, ) = locker.execute(BAL_MINTER, 0, abi.encodeWithSignature("mint(address)", gauge));
 		require(success, "BAL mint failed!");
 
 		uint256 balMinted = IERC20(BAL).balanceOf(address(locker)) - balBeforeClaim;
-		
+
 		// Send BAL here
 		(success, ) = locker.execute(
 			BAL,
@@ -119,9 +117,11 @@ contract BalancerStrategy is BaseStrategy {
 		SdtDistributorV2(sdtDistributor).distribute(multiGauges[gauge]);
 
 		// Claim rewards only if there is at least one extra reward
-		if(ILiquidityGauge(gauge).reward_tokens(0) != address(0)) {
+		if (ILiquidityGauge(gauge).reward_tokens(0) != address(0)) {
 			(success, ) = locker.execute(
-				gauge, 0, abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
+				gauge,
+				0,
+				abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
 			);
 			address rewardToken;
 			uint256 rewardsBalance;
@@ -130,24 +130,24 @@ contract BalancerStrategy is BaseStrategy {
 				if (rewardToken == address(0)) {
 					break;
 				}
-                rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
+				rewardsBalance = IERC20(rewardToken).balanceOf(address(this));
 				IERC20(rewardToken).approve(multiGauges[gauge], rewardsBalance);
 				ILiquidityGauge(multiGauges[gauge]).deposit_reward_token(rewardToken, rewardsBalance);
 				emit Claimed(gauge, rewardToken, rewardsBalance);
-			}	
+			}
 		}
 	}
 
-	/// @notice internal function for distributing fees to recipients 
+	/// @notice internal function for distributing fees to recipients
 	/// @param _gauge gauge address
 	/// @param _rewardsBalance total balance to distribute
-	function sendFee(address _gauge, uint256 _rewardsBalance) internal returns(uint256) {
+	function sendFee(address _gauge, uint256 _rewardsBalance) internal returns (uint256) {
 		// calculate the amount for each fee recipient
 		uint256 multisigFee = (_rewardsBalance * perfFee[_gauge]) / BASE_FEE;
 		uint256 accumulatorPart = (_rewardsBalance * accumulatorFee[_gauge]) / BASE_FEE;
 		uint256 veSDTPart = (_rewardsBalance * veSDTFee[_gauge]) / BASE_FEE;
 		uint256 claimerPart = (_rewardsBalance * claimerRewardFee[_gauge]) / BASE_FEE;
-		// send 
+		// send
 		IERC20(BAL).approve(address(accumulator), accumulatorPart);
 		accumulator.depositToken(BAL, accumulatorPart);
 		IERC20(BAL).transfer(rewardsReceiver, multisigFee);
@@ -243,11 +243,8 @@ contract BalancerStrategy is BaseStrategy {
 			claimerRewardFee[_gauge] = _newFee;
 		}
 		require(
-			perfFee[_gauge] + 
-			veSDTFee[_gauge] + 
-			accumulatorFee[_gauge] + 
-			claimerRewardFee[_gauge] 
-			<= BASE_FEE, "fee to high"
+			perfFee[_gauge] + veSDTFee[_gauge] + accumulatorFee[_gauge] + claimerRewardFee[_gauge] <= BASE_FEE,
+			"fee to high"
 		);
 	}
 

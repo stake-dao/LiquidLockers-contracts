@@ -14,4 +14,6 @@ interface VeToken {
 	function increase_unlock_time(uint256 _unlock_time) external;
 
 	function withdraw() external;
+
+	function locked__end(address) external view returns (uint256);
 }

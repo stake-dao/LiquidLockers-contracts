@@ -20,7 +20,7 @@ export default {
     hardhat: {
       forking: {
         url: process.env.MAINNET,
-        blockNumber: 15033000
+        //blockNumber: 15374400
       }
     },
     mainnet: {
@@ -35,16 +35,30 @@ export default {
     version: "0.2.16"
   },
   solidity: {
-    version: "0.8.7",
-    settings: {
+    compilers: [
+    {
+      version: "0.8.7",
+      settings: {
       optimizer: {
         enabled: true,
         runs: 200
       }
+    }},
+    {
+      version: "0.6.12",
+      settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
+      }
     }
+
+  ]
+
   },
   gasReporter: {
-    enabled: true,
+    enabled: false,
     currency: "USD",
     coinmarketcap: process.env.COINMARKETCAP_KEY
   },
@@ -59,5 +73,10 @@ export default {
   },
   mocha: {
     timeout: 100000000
+  },
+  // specify separate cache for hardhat, since it could possibly conflict with foundry's
+  paths: {
+    sources: "./vyper-contracts",
+    cache: "hh-cache"
   }
 } as HardhatUserConfig;
