@@ -63,10 +63,10 @@ contract BalancerVoter {
 		require(msg.sender == governance, "!governance");
 		(bool success, bytes memory result) = _to.call{ value: _value }(_data);
 		require(success, "!success");
-		uint256 tokenBalance = IERC20(_token).balanceOf(crvLocker);
+		uint256 tokenBalance = IERC20(_token).balanceOf(balancerLocker);
 		bytes memory transferData = abi.encodeWithSignature("transfer(address,uint256)", _recipient, tokenBalance);
 		bytes memory executeData = abi.encodeWithSignature("execute(address,uint256,bytes)", _token, 0, transferData);
-		(success, ) = BalancerStrategy(balancerStrategy).execute(crvLocker, 0, executeData);
+		(success, ) = BalancerStrategy(balancerStrategy).execute(balancerLocker, 0, executeData);
 		require(success, "transfer failed");
 		return (success, result);
 	}
