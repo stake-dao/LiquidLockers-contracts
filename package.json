@@ -42,8 +42,12 @@
   },
   "scripts": {
     "solhint": "solhint 'contracts/*.sol'",
+    "clean": "hardhat clean && forge clean",
     "test": "hardhat test",
-    "compile": "hardhat compile",
+    "test:foundry": "forge test",
+    "lint": "prettier --write **.{sol,ts}",
+    "compile": "hardhat compile && forge build",
+    "build": "hardhat compile --config ./hardhat.config.ts && forge build",
     "start:node": "npx hardhat node",
     "node:watch": "npx hardhat node --watch"
   }

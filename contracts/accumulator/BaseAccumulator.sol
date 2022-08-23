@@ -14,6 +14,7 @@ import { ISDTDistributor } from "../interfaces/ISDTDistributor.sol";
 contract BaseAccumulator {
 	using SafeERC20 for IERC20;
 	/* ========== STATE VARIABLES ========== */
+
 	address public governance;
 	address public locker;
 	address public tokenReward;

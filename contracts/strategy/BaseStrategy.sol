@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
+
 import "../interfaces/ILocker.sol";
 
 contract BaseStrategy {
@@ -31,10 +32,12 @@ contract BaseStrategy {
 		require(msg.sender == governance, "!governance");
 		_;
 	}
+
 	modifier onlyApprovedVault() {
 		require(vaults[msg.sender], "!approved vault");
 		_;
 	}
+
 	modifier onlyGovernanceOrFactory() {
 		require(msg.sender == governance || msg.sender == vaultGaugeFactory, "!governance && !factory");
 		_;

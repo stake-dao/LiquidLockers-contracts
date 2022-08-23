@@ -13,6 +13,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 pragma solidity ^0.8.7;
+
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -124,9 +125,9 @@ interface IBalancerVault {
 	function manageUserBalance(UserBalanceOp[] memory ops) external payable;
 
 	/**
-     * @dev Data for `manageUserBalance` operations, which include the possibility for ETH to be sent and received
-     without manual WETH wrapping or unwrapping.
-     */
+	 * @dev Data for `manageUserBalance` operations, which include the possibility for ETH to be sent and received
+	 * without manual WETH wrapping or unwrapping.
+	 */
 	struct UserBalanceOp {
 		UserBalanceOpKind kind;
 		IAsset asset;

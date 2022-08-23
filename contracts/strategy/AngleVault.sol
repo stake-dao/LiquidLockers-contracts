@@ -21,6 +21,7 @@ contract AngleVault is ERC20Upgradeable {
 	AngleStrategy public angleStrategy;
 	uint256 public min;
 	uint256 public constant max = 10000;
+
 	event Earn(address _token, uint256 _amount);
 	event Deposit(address _depositor, uint256 _amount);
 	event Withdraw(address _depositor, uint256 _amount);

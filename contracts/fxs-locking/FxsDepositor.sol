@@ -19,7 +19,7 @@ contract FxsDepositor {
 	using Address for address;
 	using SafeMath for uint256;
 
-  /* ========== STATE VARIABLES ========== */
+	/* ========== STATE VARIABLES ========== */
 	address public constant fxs = address(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
 	uint256 private constant MAXTIME = 4 * 364 * 86400; //364 days is divisible by 7 (week) to max precision
 	uint256 private constant WEEK = 7 * 86400;
@@ -45,19 +45,18 @@ contract FxsDepositor {
 	event SdFXSOperatorChanged(address indexed newSdFXS);
 	event FeesChanged(uint256 newFee);
 
-  /* ========== CONSTRUCTOR ========== */
+	/* ========== CONSTRUCTOR ========== */
 	constructor(address _locker, address _minter) {
 		governance = msg.sender;
 		locker = _locker;
 		minter = _minter;
 	}
 
-  /* ========== RESTRICTED FUNCTIONS ========== */
+	/* ========== RESTRICTED FUNCTIONS ========== */
 	function setGovernance(address _governance) external {
 		require(msg.sender == governance, "!auth");
 		governance = _governance;
 		emit GovernanceChanged(_governance);
-
 	}
 
 	function setSdFXSOperator(address _operator) external {
@@ -86,7 +85,7 @@ contract FxsDepositor {
 		}
 	}
 
-  /* ========== MUTATIVE FUNCTIONS ========== */
+	/* ========== MUTATIVE FUNCTIONS ========== */
 
 	/// @notice Locks the FXS held by the contract
 	/// @dev The contract must have FXS to lock

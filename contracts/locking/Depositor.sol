@@ -51,7 +51,7 @@ contract Depositor {
 
 	/* ========== RESTRICTED FUNCTIONS ========== */
 	/// @notice Set the new governance
-	/// @param _governance governance address 
+	/// @param _governance governance address
 	function setGovernance(address _governance) external {
 		require(msg.sender == governance, "!auth");
 		governance = _governance;
@@ -67,14 +67,14 @@ contract Depositor {
 	}
 
 	/// @notice Enable the relock or not
-	/// @param _relock relock status 
+	/// @param _relock relock status
 	function setRelock(bool _relock) external {
 		require(msg.sender == governance, "!auth");
 		relock = _relock;
 	}
 
 	/// @notice Set the gauge to deposit token yielded
-	/// @param _gauge gauge address 
+	/// @param _gauge gauge address
 	function setGauge(address _gauge) external {
 		require(msg.sender == governance, "!auth");
 		gauge = _gauge;
@@ -116,7 +116,7 @@ contract Depositor {
 			uint256 unlockAt = block.timestamp + MAXTIME;
 			uint256 unlockInWeeks = (unlockAt / WEEK) * WEEK;
 
-			// it means that a 1 week + at least 1 second has been passed 
+			// it means that a 1 week + at least 1 second has been passed
 			// since last increased unlock time
 			if (unlockInWeeks - unlockTime > 1) {
 				ILocker(locker).increaseUnlockTime(unlockAt);
@@ -188,7 +188,7 @@ contract Depositor {
 	/// @dev User needs to approve the contract to transfer Token tokens
 	/// @param _lock Whether to lock the token
 	/// @param _stake Whether to stake the token
-	/// @param _user User to deposit for 
+	/// @param _user User to deposit for
 	function depositAll(
 		bool _lock,
 		bool _stake,

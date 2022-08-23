@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
+
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./BaseStrategy.sol";
@@ -17,12 +18,13 @@ contract CurveStrategy is BaseStrategy {
 	address public constant CRV3 = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
 	address public constant CRV_MINTER = 0xd061D61a4d941c39E5453435B6345Dc261C2fcE0;
 	address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
-	mapping (address => uint256) public lGaugeType;
+	mapping(address => uint256) public lGaugeType;
 
 	struct ClaimerReward {
 		address rewardToken;
 		uint256 amount;
 	}
+
 	enum MANAGEFEE {
 		PERFFEE,
 		VESDTFEE,
@@ -97,15 +99,11 @@ contract CurveStrategy is BaseStrategy {
 
 		// Claim CRV
 		// within the mint() it calls the user checkpoint
-		(bool success, ) = locker.execute(
-			CRV_MINTER,
-			0,
-			abi.encodeWithSignature("mint(address)", gauge)
-		);	
+		(bool success, ) = locker.execute(CRV_MINTER, 0, abi.encodeWithSignature("mint(address)", gauge));
 		require(success, "CRV mint failed!");
 
 		uint256 crvMinted = IERC20(CRV).balanceOf(address(locker)) - crvBeforeClaim;
-		
+
 		// Send CRV here
 		(success, ) = locker.execute(
 			CRV,
@@ -124,9 +122,11 @@ contract CurveStrategy is BaseStrategy {
 		SdtDistributorV2(sdtDistributor).distribute(multiGauges[gauge]);
 
 		// Claim rewards only for lg type 0 and if there is at least one reward token added
-		if(lGaugeType[gauge] == 0 && ILiquidityGauge(gauge).reward_tokens(0) != address(0)) {
+		if (lGaugeType[gauge] == 0 && ILiquidityGauge(gauge).reward_tokens(0) != address(0)) {
 			(success, ) = locker.execute(
-				gauge, 0, abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
+				gauge,
+				0,
+				abi.encodeWithSignature("claim_rewards(address,address)", address(locker), address(this))
 			);
 			if (!success) {
 				// Claim on behalf of locker
@@ -144,24 +144,30 @@ contract CurveStrategy is BaseStrategy {
 				} else {
 					rewardsBalance = IERC20(rewardToken).balanceOf(address(locker));
 					(success, ) = locker.execute(
-					rewardToken, 0, abi.encodeWithSignature("transfer(address,uint256)", address(this), rewardsBalance)
+						rewardToken,
+						0,
+						abi.encodeWithSignature("transfer(address,uint256)", address(this), rewardsBalance)
 					);
 					require(success, "Transfer failed");
 				}
 				IERC20(rewardToken).approve(multiGauges[gauge], rewardsBalance);
 				ILiquidityGauge(multiGauges[gauge]).deposit_reward_token(rewardToken, rewardsBalance);
 				emit Claimed(gauge, rewardToken, rewardsBalance);
-			}	
+			}
 		}
 	}
 
-	function sendFee(address _gauge, address _rewardToken, uint256 _rewardsBalance) internal returns(uint256) {
+	function sendFee(
+		address _gauge,
+		address _rewardToken,
+		uint256 _rewardsBalance
+	) internal returns (uint256) {
 		// calculate the amount for each fee recipient
 		uint256 multisigFee = (_rewardsBalance * perfFee[_gauge]) / BASE_FEE;
 		uint256 accumulatorPart = (_rewardsBalance * accumulatorFee[_gauge]) / BASE_FEE;
 		uint256 veSDTPart = (_rewardsBalance * veSDTFee[_gauge]) / BASE_FEE;
 		uint256 claimerPart = (_rewardsBalance * claimerRewardFee[_gauge]) / BASE_FEE;
-		// send 
+		// send
 		IERC20(_rewardToken).approve(address(accumulator), accumulatorPart);
 		accumulator.depositToken(_rewardToken, accumulatorPart);
 		IERC20(_rewardToken).transfer(rewardsReceiver, multisigFee);
@@ -200,7 +206,7 @@ contract CurveStrategy is BaseStrategy {
 		vaults[_vault] = !vaults[_vault];
 		emit VaultToggled(_vault, vaults[_vault]);
 	}
-	
+
 	/// @notice function to set a gauge type
 	/// @param _gauge gauge address
 	/// @param _gaugeType type of gauge
@@ -307,11 +313,8 @@ contract CurveStrategy is BaseStrategy {
 			claimerRewardFee[_gauge] = _newFee;
 		}
 		require(
-			perfFee[_gauge] + 
-			veSDTFee[_gauge] + 
-			accumulatorFee[_gauge] + 
-			claimerRewardFee[_gauge] 
-			<= BASE_FEE, "fee to high"
+			perfFee[_gauge] + veSDTFee[_gauge] + accumulatorFee[_gauge] + claimerRewardFee[_gauge] <= BASE_FEE,
+			"fee to high"
 		);
 	}
 

@@ -21,6 +21,7 @@ contract CurveVault is ERC20Upgradeable {
 	CurveStrategy public curveStrategy;
 	uint256 public min;
 	uint256 public constant MAX = 10000;
+
 	event Earn(address _token, uint256 _amount);
 	event Deposit(address _depositor, uint256 _amount);
 	event Withdraw(address _depositor, uint256 _amount);
@@ -43,10 +44,10 @@ contract CurveVault is ERC20Upgradeable {
 	/// @notice function to deposit a new amount
 	/// @param _staker address to stake for
 	/// @param _amount amount to deposit
-	/// @param _earn earn or not 
+	/// @param _earn earn or not
 	function deposit(
 		address _staker,
-		uint256 _amount, 
+		uint256 _amount,
 		bool _earn
 	) public {
 		require(address(liquidityGauge) != address(0), "Gauge not yet initialized");
@@ -102,10 +103,10 @@ contract CurveVault is ERC20Upgradeable {
 
 	/// @notice function to set the keeper fee
 	/// @param _newFee keeper fee
-	function setKeeperFee(uint256 _newFee) external {	
+	function setKeeperFee(uint256 _newFee) external {
 		require(msg.sender == governance, "!governance");
-		require(_newFee <= MAX, "more than 100%");	
-		keeperFee = _newFee;	
+		require(_newFee <= MAX, "more than 100%");
+		keeperFee = _newFee;
 	}
 
 	/// @notice function to set the gauge multi rewards

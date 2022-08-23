@@ -22,7 +22,7 @@ contract sdToken is ERC20 {
 	}
 
 	/// @notice mint new sdToken, callable only by the operator
-	/// @param _to recipient to mint for 
+	/// @param _to recipient to mint for
 	/// @param _amount amount to mint
 	function mint(address _to, uint256 _amount) external {
 		require(msg.sender == operator, "!authorized");
