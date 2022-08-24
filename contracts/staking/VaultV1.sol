@@ -455,11 +455,11 @@ contract StakingProxyBase is IProxyVault {
 		//remove from old rewards and claim
 		uint256 bal = 0;
 		if (ILiquidityGaugeStratFrax(rewards).initialized()) {
-			bal = ILiquidityGaugeStratFrax(rewards).balanceOf(address(this));
+			bal = ILiquidityGaugeStratFrax(rewards).balanceOf(owner);
 			if (bal > 0) {
 				ILiquidityGaugeStratFrax(rewards).withdraw(bal, owner, false);
 			}
-			ILiquidityGaugeStratFrax(rewards).claim_rewards(address(this), owner);
+			ILiquidityGaugeStratFrax(rewards).claim_rewards(owner, address(0));
 		}
 
 		//set to new rewards
@@ -508,7 +508,7 @@ contract StakingProxyBase is IProxyVault {
 			//using liquidity shares from staking contract will handle rebasing tokens correctly
 			uint256 userLiq = IFraxFarmBase(stakingAddress).lockedLiquidityOf(address(this));
 			//get current balance of reward contract
-			uint256 bal = ILiquidityGaugeStratFrax(rewards).balanceOf(address(this));
+			uint256 bal = ILiquidityGaugeStratFrax(rewards).balanceOf(owner);
 			if (userLiq >= bal) {
 				//add the difference to reward contract
 				ILiquidityGaugeStratFrax(rewards).deposit(userLiq - bal, owner, false);
@@ -554,13 +554,13 @@ contract StakingProxyBase is IProxyVault {
 		if (ILiquidityGaugeStratFrax(rewards).initialized()) {
 			//check if there is a balance because the reward contract could have be activated later
 			//dont use _checkpointRewards since difference of 0 will still call deposit() and cost gas
-			uint256 bal = ILiquidityGaugeStratFrax(rewards).balanceOf(address(this));
+			uint256 bal = ILiquidityGaugeStratFrax(rewards).balanceOf(owner);
 			uint256 userLiq = IFraxFarmBase(stakingAddress).lockedLiquidityOf(address(this));
 			if (bal == 0 && userLiq > 0) {
 				//bal == 0 and liq > 0 can only happen if rewards were turned on after staking
 				ILiquidityGaugeStratFrax(rewards).deposit(userLiq, owner, false);
 			}
-			ILiquidityGaugeStratFrax(rewards).claim_rewards(address(this), owner);
+			ILiquidityGaugeStratFrax(rewards).claim_rewards(owner, address(0));
 		}
 	}
 
@@ -826,7 +826,7 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 		for (uint256 i = 0; i < extraRewardsLength; i++) {
 			address token = ILiquidityGaugeStratFrax(rewards).reward_tokens(i);
 			_token_addresses[i + rewardTokens.length] = token;
-			_total_earned[i + rewardTokens.length] = ILiquidityGaugeStratFrax(rewards).claimable_reward(address(this), token);
+			_total_earned[i + rewardTokens.length] = ILiquidityGaugeStratFrax(rewards).claimable_reward(owner, token);
 		}
 	}
 
