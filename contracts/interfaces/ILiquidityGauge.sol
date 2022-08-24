@@ -40,4 +40,6 @@ interface ILiquidityGauge {
 	function commit_transfer_ownership(address) external;
 
 	function claim_rewards(address) external;
+
+	function add_reward(address, address) external;
 }
