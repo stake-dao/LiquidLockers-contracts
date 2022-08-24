@@ -12,10 +12,13 @@ import { BlackpoolLocker } from "contracts/BlackpoolLocker.sol";
 import { sdToken } from "contracts/locking/sdToken.sol";
 
 contract DeployBlackpoolStack is Script, Test {
-	TransparentUpgradeableProxy transparentUpgradeableProxy;
-	BlackpoolAccumulator blackpoolAccumulator;
+
 	sdToken sdBPT;
+	BlackpoolAccumulator blackpoolAccumulator;
+	TransparentUpgradeableProxy transparentUpgradeableProxy;
+
 	BlackpoolDepositor blackpoolDepositor;
+
 	address constant SDT = 0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F;
 	address constant VESDT = 0x0C30476f66034E11782938DF8e4384970B6c9e8a;
 	address constant BOOSTPROXY = 0xD67bdBefF01Fc492f1864E61756E5FBB3f173506;
