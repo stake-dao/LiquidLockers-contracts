@@ -314,7 +314,7 @@ describe("StakeDAO <> FRAX", function () {
         const lgVE = await rewardsPID0.voting_escrow();
         const lgBoost = await rewardsPID0.veBoost_proxy();
         const lgPID = await rewardsPID0.pid();
-        const lgPoolRegistry = await rewardsPID0.poolRegistry();
+        const lgPoolRegistry = await rewardsPID0.pool_registry();
         const lgRewardData = await rewardsPID0.reward_data(SDT);
         const lgRewardToken0 = await rewardsPID0.reward_tokens(0);
         const lgRewardCount = await rewardsPID0.reward_count();
