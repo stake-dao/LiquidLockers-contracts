@@ -5,7 +5,7 @@ out = 'out'
 libs = ["node_modules", "lib"]
 test = 'test/foundry'
 scripts = 'scripts'
-
+gas_reports = ["*"]
 remappings = [
     '@openzeppelin/=node_modules/@openzeppelin/',
     '@openzeppelin/contracts-upgradeable=node_modules/@openzeppelin/contracts-upgradeable',
