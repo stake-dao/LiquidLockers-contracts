@@ -228,6 +228,7 @@ describe("StakeDAO <> FRAX", function () {
     await network.provider.send("hardhat_setBalance", [VESDT_HOLDER, ETH_100]);
     await network.provider.send("hardhat_setBalance", [TIMELOCK, ETH_100]);
     await network.provider.send("hardhat_setBalance", [GCADMIN, ETH_100]);
+    await network.provider.send("hardhat_setBalance", [SDT_HOLDER, ETH_100]);
 
     /* ==== Get Contract Factory ==== */
     const veSdtFxsProxyFactory = await ethers.getContractFactory("VeSDTFeeFraxProxy");

@@ -459,7 +459,7 @@ contract StakingProxyBase is IProxyVault {
 			if (bal > 0) {
 				ILiquidityGaugeStratFrax(rewards).withdraw(bal, owner, false);
 			}
-			ILiquidityGaugeStratFrax(rewards).claim_rewards(owner, address(0));
+			ILiquidityGaugeStratFrax(rewards).claim_rewards(owner);
 		}
 
 		//set to new rewards
@@ -546,21 +546,6 @@ contract StakingProxyBase is IProxyVault {
 		uint256 sendAmount = IERC20(FXS).balanceOf(address(this));
 		if (sendAmount > 0) {
 			IERC20(FXS).transfer(owner, sendAmount);
-		}
-	}
-
-	/// @notice internal function to get extra rewards from the liquidity gauge
-	function _processExtraRewards() internal {
-		if (ILiquidityGaugeStratFrax(rewards).initialized()) {
-			//check if there is a balance because the reward contract could have be activated later
-			//dont use _checkpointRewards since difference of 0 will still call deposit() and cost gas
-			uint256 bal = ILiquidityGaugeStratFrax(rewards).balanceOf(owner);
-			uint256 userLiq = IFraxFarmBase(stakingAddress).lockedLiquidityOf(address(this));
-			if (bal == 0 && userLiq > 0) {
-				//bal == 0 and liq > 0 can only happen if rewards were turned on after staking
-				ILiquidityGaugeStratFrax(rewards).deposit(userLiq, owner, false);
-			}
-			ILiquidityGaugeStratFrax(rewards).claim_rewards(owner, address(0));
 		}
 	}
 
@@ -866,7 +851,7 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 		_transferTokens(rewardTokens);
 
 		//extra rewards
-		_processExtraRewards();
+		ILiquidityGaugeStratFrax(rewards).claim_rewards(owner);
 	}
 
 	/// @notice auxiliary function to supply token list(save a bit of gas + dont have to claim everything)
@@ -887,6 +872,6 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 		_transferTokens(_rewardTokenList);
 
 		//extra rewards
-		_processExtraRewards();
+		ILiquidityGaugeStratFrax(rewards).claim_rewards(owner);
 	}
 }
