@@ -453,14 +453,11 @@ contract StakingProxyBase is IProxyVault {
 		require(ILiquidityGaugeStratFrax(rewards).initialized(), "pool not initialized yet");
 
 		//remove from old rewards and claim
-		uint256 bal = 0;
-		if (ILiquidityGaugeStratFrax(rewards).initialized()) {
-			bal = ILiquidityGaugeStratFrax(rewards).balanceOf(owner);
-			if (bal > 0) {
-				ILiquidityGaugeStratFrax(rewards).withdraw(bal, owner, false);
-			}
-			ILiquidityGaugeStratFrax(rewards).claim_rewards(owner);
+		uint256 bal = ILiquidityGaugeStratFrax(rewards).balanceOf(owner);
+		if (bal > 0) {
+			ILiquidityGaugeStratFrax(rewards).withdraw(bal, owner, false);
 		}
+		ILiquidityGaugeStratFrax(rewards).claim_rewards(owner);
 
 		//set to new rewards
 		rewards = _rewardsAddress;
@@ -469,9 +466,6 @@ contract StakingProxyBase is IProxyVault {
 		if (bal > 0) {
 			ILiquidityGaugeStratFrax(rewards).deposit(bal, owner, false);
 		}
-
-		//update balance
-		_checkpointRewards();
 	}
 
 	/// @notice call internal _setVeFXSProxy function
@@ -500,24 +494,6 @@ contract StakingProxyBase is IProxyVault {
 		override
 		returns (address[] memory token_addresses, uint256[] memory total_earned)
 	{}
-
-	/// @notice internal function for checkpoint
-	function _checkpointRewards() internal {
-		//if rewards are active, checkpoint
-		if (ILiquidityGaugeStratFrax(rewards).initialized()) {
-			//using liquidity shares from staking contract will handle rebasing tokens correctly
-			uint256 userLiq = IFraxFarmBase(stakingAddress).lockedLiquidityOf(address(this));
-			//get current balance of reward contract
-			uint256 bal = ILiquidityGaugeStratFrax(rewards).balanceOf(owner);
-			if (userLiq >= bal) {
-				//add the difference to reward contract
-				ILiquidityGaugeStratFrax(rewards).deposit(userLiq - bal, owner, false);
-			} else {
-				//remove the difference from the reward contract
-				ILiquidityGaugeStratFrax(rewards).withdraw(bal - userLiq, owner, false);
-			}
-		}
-	}
 
 	/// @notice internal function to apply fees to fxs and send remaining to owner
 	function _processFxs() internal {
@@ -755,10 +731,10 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 
 			//stake
 			IFraxFarmERC20(stakingAddress).stakeLocked(_liquidity, _secs);
-		}
 
-		//checkpoint rewards
-		_checkpointRewards();
+			// deposit into liquidity gauge
+			ILiquidityGaugeStratFrax(rewards).deposit(_liquidity, owner, false);
+		}
 	}
 
 	/// @notice add to a current lock
@@ -771,10 +747,10 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 
 			//add stake
 			IFraxFarmERC20(stakingAddress).lockAdditional(_kek_id, _add_liq);
-		}
 
-		//checkpoint rewards
-		_checkpointRewards();
+			// deposit into liquidity gauge
+			ILiquidityGaugeStratFrax(rewards).deposit(_add_liq, owner, false);
+		}
 	}
 
 	/// @notice withdraw a staked position
@@ -786,8 +762,10 @@ contract VaultV1 is StakingProxyBase, ReentrancyGuard {
 		//withdraw directly to owner(msg.sender)
 		IFraxFarmERC20(stakingAddress).withdrawLocked(_kek_id, msg.sender);
 
-		//checkpoint rewards
-		_checkpointRewards();
+		uint256 userLiq = IFraxFarmBase(stakingAddress).lockedLiquidityOf(address(this));
+		uint256 bal = ILiquidityGaugeStratFrax(rewards).balanceOf(owner);
+		// withdraw from liquidity gauge
+		ILiquidityGaugeStratFrax(rewards).withdraw(bal - userLiq, owner, false);
 	}
 
 	/// @notice helper function to combine earned tokens on staking contract and any tokens that are on this vault
