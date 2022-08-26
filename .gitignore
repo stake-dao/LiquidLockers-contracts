@@ -8,6 +8,7 @@ deployments
 yarn-error.log
 coverage.json
 coverage/
+broadcast/
 
 typechain/
 typechain-types/

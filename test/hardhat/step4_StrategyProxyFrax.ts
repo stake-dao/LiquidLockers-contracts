@@ -45,6 +45,9 @@ const VE_SDT_FEE_FRAX_PROXY = "0x86Ebcd1bC876782670FE0B9ea23d8504569B9ffc";
 const FEE_REGISTRY = "0x0f1dc3Bd5fE8a3034d6Df0A411Efc7916830d19c"
 const POOL_REGISTRY = "0x3051Cc7114C07365C99cF82DE13CD9d10e603a4A";
 const LGV4_MODEL = "0xbCbBa9F1B479aC12087dA21721Ac9df22B924535";
+const VAULTV1 = "0xa4c78b49c9ec659Df1f5b620F2Dc8b80A0dC4f7a";
+const FRAX_STRATEGY = "0xf285Dec3217E779353350443fC276c07D05917c3";
+const BOOSTER = "0xA9F2f220376b21bB484b16bb453698E82cbC2Ad5";
 
 // ---- SDT ---- //
 const SDT = "0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F";
@@ -249,13 +252,18 @@ describe("StakeDAO <> FRAX", function () {
     veSDTProxy = await ethers.getContractAt("VeSDTFeeFraxProxy", VE_SDT_FEE_FRAX_PROXY);
     feeRegistry = await ethers.getContractAt("FeeRegistry", FEE_REGISTRY);
     poolRegistry = await ethers.getContractAt("PoolRegistry", POOL_REGISTRY);
-    liquidityGauge = await ethers.getContractAt("LiquidityGaugeV4StratFrax", LGV4_MODEL)
-    liquidityGauge2 = await ethers.getContractAt("LiquidityGaugeV4StratFrax", LGV4_MODEL)
+    //liquidityGauge = await ethers.getContractAt("LiquidityGaugeV4StratFrax", LGV4_MODEL)
+    //liquidityGauge2 = await ethers.getContractAt("LiquidityGaugeV4StratFrax", LGV4_MODEL)
+    vaultV1Template = await ethers.getContractAt("VaultV1", VAULTV1);
+    fraxStrategy = await ethers.getContractAt("FraxStrategy", FRAX_STRATEGY);
+    booster = await ethers.getContractAt("Booster", BOOSTER)
 
     /* ==== Deployement Section ==== */
-    vaultV1Template = await VaultV1Contract.connect(deployer).deploy();
-    fraxStrategy = await FraxStrategyContract.connect(deployer).deploy(locker.address, deployer._address, FXSACCUMULATOR, VE_SDT_FEE_FRAX_PROXY, distributor.address, deployer._address);
-    booster = await boosterContract.connect(deployer).deploy(locker.address, poolRegistry.address, fraxStrategy.address);
+    liquidityGauge = await LiquidityGaugeV4FraxContract.connect(deployer).deploy()
+    liquidityGauge2 = await LiquidityGaugeV4FraxContract.connect(deployer).deploy()
+    //vaultV1Template = await VaultV1Contract.connect(deployer).deploy();
+    //fraxStrategy = await FraxStrategyContract.connect(deployer).deploy(locker.address, deployer._address, FXSACCUMULATOR, VE_SDT_FEE_FRAX_PROXY, distributor.address, deployer._address);
+    //booster = await boosterContract.connect(deployer).deploy(locker.address, poolRegistry.address, fraxStrategy.address);
 
     // Approve Booster to use onlyApproved functions (execute).
     await fraxStrategy.connect(deployer).toggleVault(booster.address);
@@ -306,7 +314,7 @@ describe("StakeDAO <> FRAX", function () {
         const lgVE = await rewardsPID0.voting_escrow();
         const lgBoost = await rewardsPID0.veBoost_proxy();
         const lgPID = await rewardsPID0.pid();
-        const lgPoolRegistry = await rewardsPID0.poolRegistry();
+        const lgPoolRegistry = await rewardsPID0.pool_registry();
         const lgRewardData = await rewardsPID0.reward_data(SDT);
         const lgRewardToken0 = await rewardsPID0.reward_tokens(0);
         const lgRewardCount = await rewardsPID0.reward_count();
