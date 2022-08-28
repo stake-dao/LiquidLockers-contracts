@@ -4,6 +4,7 @@ pragma solidity >=0.8.0;
 import "../interfaces/ILiquidityGaugeStratFrax.sol";
 import "../interfaces/IProxyVault.sol";
 import "../interfaces/IFeeRegistry.sol";
+import "../interfaces/IPoolRegistry.sol";
 
 interface IFraxFarmBase {
 	function totalLiquidityLocked() external view returns (uint256);
@@ -407,13 +408,14 @@ contract StakingProxyBase is IProxyVault {
 
 	address public constant FXS = address(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
 	address public constant VE_FXS_PROXY = address(0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f);
-	address public constant FEE_REGISTRY = address(0x0f1dc3Bd5fE8a3034d6Df0A411Efc7916830d19c);
+	address public constant FEE_REGISTRY = address(0x0f1dc3Bd5fE8a3034d6Df0A411Efc7916830d19c); 
 
 	address public owner; //owner of the vault
 	address public stakingAddress; //LP staking contract address
 	address public stakingToken; //LP token address
 	address public override rewards; //stake dao reward liquidity gauge address
 	address public override usingProxy; //address of Liquid Locker being used
+	address public poolRegistry; //need to be hardcoded 
 
 	uint256 public constant FEE_DENOMINATOR = 10000;
 
@@ -446,13 +448,16 @@ contract StakingProxyBase is IProxyVault {
 	) external virtual override {}
 
 	/// @notice help to change stake dao liquidity gauge address for reward
-	/// @param _rewardsAddress address for new liquity gauge
 	/// @dev need to be called by each user for each personal vault
 	/// @dev when a pool change the Liquidity gauge reward address
-	function changeRewards(address _rewardsAddress) external onlyOwner {
-		require(ILiquidityGaugeStratFrax(rewards).initialized(), "pool not initialized yet");
+	function changeRewards() external onlyOwner {
+		// check if new reward address has been set on the pool registry for this pid
+		uint256 pid = IPoolRegistry(poolRegistry).vaultPid(address(this));
+		(, , , address newRewards, ) = IPoolRegistry(poolRegistry).poolInfo(pid);
+		require(newRewards != rewards, "!rewardsAddress");		
 
 		//remove from old rewards and claim
+		//uint256 bal = IFraxFarmERC20(stakingAddress).lockedLiquidityOf(address(this));
 		uint256 bal = ILiquidityGaugeStratFrax(rewards).balanceOf(owner);
 		if (bal > 0) {
 			ILiquidityGaugeStratFrax(rewards).withdraw(bal, owner, false);
@@ -460,12 +465,17 @@ contract StakingProxyBase is IProxyVault {
 		ILiquidityGaugeStratFrax(rewards).claim_rewards(owner);
 
 		//set to new rewards
-		rewards = _rewardsAddress;
+		rewards = newRewards;
 
 		// deposit in new rewards
 		if (bal > 0) {
 			ILiquidityGaugeStratFrax(rewards).deposit(bal, owner, false);
 		}
+	}
+
+	/// @notice To be removed when the poolRegistry address will be hardcoded
+	function setPoolRegistry(address _poolRegistry) external {
+		poolRegistry = _poolRegistry;
 	}
 
 	/// @notice call internal _setVeFXSProxy function

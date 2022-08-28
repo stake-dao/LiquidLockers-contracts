@@ -256,19 +256,20 @@ describe("StakeDAO <> FRAX", function () {
     gaugeController = await ethers.getContractAt(GAUGECONTROLLERABI, GAUGECONTROLLER);
     veSDTProxy = await ethers.getContractAt("VeSDTFeeFraxProxy", VE_SDT_FEE_FRAX_PROXY);
     feeRegistry = await ethers.getContractAt("FeeRegistry", FEE_REGISTRY);
-    poolRegistry = await ethers.getContractAt("PoolRegistry", POOL_REGISTRY);
+    //poolRegistry = await ethers.getContractAt("PoolRegistry", POOL_REGISTRY);
     //liquidityGauge = await ethers.getContractAt("LiquidityGaugeV4StratFrax", LGV4_MODEL)
     //liquidityGauge2 = await ethers.getContractAt("LiquidityGaugeV4StratFrax", LGV4_MODEL)
     //vaultV1Template = await ethers.getContractAt("VaultV1", VAULTV1);
     fraxStrategy = await ethers.getContractAt("FraxStrategy", FRAX_STRATEGY);
-    booster = await ethers.getContractAt("Booster", BOOSTER)
+    //booster = await ethers.getContractAt("Booster", BOOSTER)
 
     /* ==== Deployement Section ==== */
+    poolRegistry = await poolRegistryContract.connect(deployer).deploy()
     liquidityGauge = await LiquidityGaugeV4FraxContract.connect(deployer).deploy()
     liquidityGauge2 = await LiquidityGaugeV4FraxContract.connect(deployer).deploy()
     vaultV1Template = await VaultV1Contract.connect(deployer).deploy();
     //fraxStrategy = await FraxStrategyContract.connect(deployer).deploy(locker.address, deployer._address, FXSACCUMULATOR, VE_SDT_FEE_FRAX_PROXY, distributor.address, deployer._address);
-    //booster = await boosterContract.connect(deployer).deploy(locker.address, poolRegistry.address, fraxStrategy.address);
+    booster = await boosterContract.connect(deployer).deploy(locker.address, poolRegistry.address, fraxStrategy.address);
 
     // Approve Booster to use onlyApproved functions (execute).
     await fraxStrategy.connect(deployer).toggleVault(booster.address);
@@ -301,7 +302,7 @@ describe("StakeDAO <> FRAX", function () {
   });
 
   describe("### Testing Frax Strategies, boosted by Stake DAO Liquid Lockers 🐘💧🔒 ###", function () {
-    const LOCKDURATION = 1 * WEEK;
+    const LOCKDURATION = 52 * WEEK;
     const AMOUNT = 400;
     const LOCKEDAMOUNT = parseUnits(AMOUNT.toString(), 18);
     const LOCKEDAMOUNTx2 = parseUnits((AMOUNT * 2).toString(), 18);
@@ -737,7 +738,8 @@ describe("StakeDAO <> FRAX", function () {
         await distributor.connect(deployer_new)["approveGauge(address)"](rewardsPID1_New.address);
 
         // User update the personnal vault with new LGV4 address
-        await personalVault1.connect(lpHolder).changeRewards(new_lg.rewardsAddress);
+        await personalVault1.connect(lpHolder).setPoolRegistry(poolRegistry.address)
+        await personalVault1.connect(lpHolder).changeRewards();
 
         // Time jump 8 days, and distribute SDT reward to the new LGV4
         //await network.provider.send("evm_increaseTime", [8*DAY]);
@@ -835,6 +837,9 @@ describe("StakeDAO <> FRAX", function () {
             .withdrawLocked(lockedStakesOfBefore[lockedStakesOfBefore.length - 1]["kek_id"], true)
         ).to.be.revertedWith("Stake is still locked!");
       });
+      it("Should revert on changing Reward because no new LGV4", async function() {
+        await expect(personalVault1.connect(lpHolder).changeRewards()).to.be.revertedWith("!rewardsAddress")
+      })
     });
     describe("Booster Management tests : ", function () {
       it("Should setPendingOwner to new ower", async function () {

@@ -11,10 +11,13 @@ interface IPoolRegistry {
 			address,
 			address,
 			address,
+			address,
 			uint8
 		);
 
 	function vaultMap(uint256 _pid, address _user) external view returns (address vault);
+	
+	function vaultPid(address _vault) external view returns(uint256 pid);
 
 	function addUserVault(uint256 _pid, address _user)
 		external
