@@ -7,7 +7,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
 
   const LOCKER = "0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f";
-  const POOL_REGISTRY = "0x3051Cc7114C07365C99cF82DE13CD9d10e603a4A";
+  const POOL_REGISTRY = "0xd4525e29111edd74eaa425ab4c0bc507be3ac69f";
   const FRAX_STRATEGY = "0xf285Dec3217E779353350443fC276c07D05917c3";
 
   await deploy("BOOSTER", {
