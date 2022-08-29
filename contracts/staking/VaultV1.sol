@@ -457,20 +457,15 @@ contract StakingProxyBase is IProxyVault {
 		require(newRewards != rewards, "!rewardsAddress");		
 
 		//remove from old rewards and claim
-		//uint256 bal = IFraxFarmERC20(stakingAddress).lockedLiquidityOf(address(this));
 		uint256 bal = ILiquidityGaugeStratFrax(rewards).balanceOf(owner);
 		if (bal > 0) {
 			ILiquidityGaugeStratFrax(rewards).withdraw(bal, owner, false);
+			ILiquidityGaugeStratFrax(newRewards).deposit(bal, owner, false);
 		}
 		ILiquidityGaugeStratFrax(rewards).claim_rewards(owner);
 
 		//set to new rewards
 		rewards = newRewards;
-
-		// deposit in new rewards
-		if (bal > 0) {
-			ILiquidityGaugeStratFrax(rewards).deposit(bal, owner, false);
-		}
 	}
 
 	/// @notice To be removed when the poolRegistry address will be hardcoded
