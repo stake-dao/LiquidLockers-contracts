@@ -110,7 +110,7 @@ contract SdLiquidityZapperTest is Test {
 			true
 		);
 		uint256 balanceAfterZap = IERC20(CRVSDCRVSTRATGAUGE).balanceOf(address(this));
-		uint256 crvBalanceAfter = CRV.balanceOf(address(this));
+		uint256 crvBalanceAfter = CRV.balanceOf(address(sdLiquidityZapper));
 		assert(balanceBeforeZap == 0);
 		assert(balanceAfterZap > balanceBeforeZap);
 		assert(crvBalanceAfter == 0);
@@ -134,5 +134,17 @@ contract SdLiquidityZapperTest is Test {
 		uint256 balancerAfterZap = SDBALSTRATGAUGE.balanceOf(address(this));
 		assert(balanceBeforeZap == 0);
 		assert(balancerAfterZap > 0);
+	}
+
+	function testZapIntoSdBalWithoutLock() public {
+		uint256 balanceBeforeZap = SDBALSTRATGAUGE.balanceOf(address(this));
+		deal(address(BAL), address(this), 100e18);
+		BAL.approve(address(sdLiquidityZapper), 100e18);
+		sdLiquidityZapper.zapToSdBalPool(100e18, 5000, 0, 0, SDBALSTRATVAULT, true, false);
+		uint256 balancerAfterZap = SDBALSTRATGAUGE.balanceOf(address(this));
+		uint256 balBalanceAfterZap = BAL.balanceOf(address(sdLiquidityZapper));
+		assert(balanceBeforeZap == 0);
+		assert(balancerAfterZap > 0);
+		assert(balBalanceAfterZap == 0);
 	}
 }
