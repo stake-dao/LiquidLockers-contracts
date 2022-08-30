@@ -10,6 +10,7 @@ import { JsonRpcSigner } from "@ethersproject/providers";
 
 import FxsLockerABI from "./fixtures/FXSLocker.json";
 import FxsTempleGaugeFraxABI from "./fixtures/fxsTempleGauge.json";
+import AFraxGaugeFraxABI from "./fixtures/AFraxGaugeFrax.json"
 import MASTERCHEFABI from "./fixtures/Masterchef.json";
 import ERC20ABI from "./fixtures/ERC20.json";
 import FXSABI from "./fixtures/FXS.json";
@@ -45,7 +46,7 @@ const VE_SDT_FEE_FRAX_PROXY = "0x86Ebcd1bC876782670FE0B9ea23d8504569B9ffc";
 const FEE_REGISTRY = "0x0f1dc3Bd5fE8a3034d6Df0A411Efc7916830d19c"
 const POOL_REGISTRY = "0xd4525E29111edD74eAA425AB4c0Bc507bE3aC69F";
 const LGV4_MODEL = "0x6aDb68d8C15954aD673d8f129857b34dc2F08bf2";
-const VAULTV1 = "0xa4c78b49c9ec659Df1f5b620F2Dc8b80A0dC4f7a";
+const VAULTV1 = "0xb787120Bc5C9e062Bf806F74837284CAa0A5740b";
 const FRAX_STRATEGY = "0xf285Dec3217E779353350443fC276c07D05917c3";
 const BOOSTER = "0x3f7c5021f5Bc634fae82cf9F67F19C5f05562bD3";
 
@@ -259,7 +260,7 @@ describe("StakeDAO <> FRAX", function () {
     poolRegistry = await ethers.getContractAt("PoolRegistry", POOL_REGISTRY);
     liquidityGauge = await ethers.getContractAt("LiquidityGaugeV4StratFrax", LGV4_MODEL)
     liquidityGauge2 = await ethers.getContractAt("LiquidityGaugeV4StratFrax", LGV4_MODEL)
-    //vaultV1Template = await ethers.getContractAt("VaultV1", VAULTV1);
+    vaultV1Template = await ethers.getContractAt("VaultV1", VAULTV1);
     fraxStrategy = await ethers.getContractAt("FraxStrategy", FRAX_STRATEGY);
     booster = await ethers.getContractAt("Booster", BOOSTER)
 
@@ -267,15 +268,15 @@ describe("StakeDAO <> FRAX", function () {
     //poolRegistry = await poolRegistryContract.connect(deployer).deploy()
     //liquidityGauge = await LiquidityGaugeV4FraxContract.connect(deployer).deploy()
     //liquidityGauge2 = await LiquidityGaugeV4FraxContract.connect(deployer).deploy()
-    vaultV1Template = await VaultV1Contract.connect(deployer).deploy();
+    //vaultV1Template = await VaultV1Contract.connect(deployer).deploy();
     //fraxStrategy = await FraxStrategyContract.connect(deployer).deploy(locker.address, deployer._address, FXSACCUMULATOR, VE_SDT_FEE_FRAX_PROXY, distributor.address, deployer._address);
     //booster = await boosterContract.connect(deployer).deploy(locker.address, poolRegistry.address, fraxStrategy.address);
 
     // Approve Booster to use onlyApproved functions (execute).
-    await fraxStrategy.connect(deployer).toggleVault(booster.address);
+    //await fraxStrategy.connect(deployer).toggleVault(booster.address);
 
     // Liquid Locker give governance right to the frax strategy
-    await locker.connect(deployer).setGovernance(fraxStrategy.address);
+    //await locker.connect(deployer).setGovernance(fraxStrategy.address);
 
     // Set Liquid Locker as a valid veFXS Proxy
     await fxsTempleGauge.connect(govFrax).toggleValidVeFXSProxy(locker.address);
