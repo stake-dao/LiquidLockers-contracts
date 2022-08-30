@@ -40,7 +40,8 @@ contract SdLiquidityZapper {
 	 ** @param _amountToLock amount that will get 1:1 SD token by depositing to locker
 	 ** @param _minAmount min LP token amount that we expect when we provide liquidity to Curve Pool
 	 ** @param _pool Address of the token/SdToken Curve Pool
-	 ** @param _strategyVault Address of the related Curve Strategy's vault 
+	 ** @param _strategyVault Address of the related Curve Strategy's vault
+	 ** @param _earn Indicates if funds should be pushed underlying strategy from vault or will stay in vault 
 	 */
 	function zapToSdCurvePool(
 		address _token,
@@ -48,15 +49,19 @@ contract SdLiquidityZapper {
 		uint256 _amountToLock,
 		uint256 _minAmount,
 		address _pool,
-		address _strategyVault
+		address _strategyVault,
+		bool _earn,
+		bool _lock
 	) external {
 		IERC20(_token).transferFrom(msg.sender, address(this), _totalAmount);
-		if (_amountToLock > 0) _lockTokens(_token, _amountToLock);
-		uint256[2] memory _amounts = [_totalAmount - _amountToLock, _amountToLock];
+		uint256 receivedSdToken;
+		if (_amountToLock > 0) receivedSdToken = _lockTokens(_token, _amountToLock, _lock);
+
+		uint256[2] memory _amounts = [_totalAmount - _amountToLock, receivedSdToken];
 
 		_provideLiquidityCurve(_pool, _amounts, _minAmount);
 		uint256 receivedLP = IERC20(_pool).balanceOf(address(this));
-		CurveVault(_strategyVault).deposit(msg.sender, receivedLP, true);
+		CurveVault(_strategyVault).deposit(msg.sender, receivedLP, _earn);
 	}
 
 	/**
@@ -67,13 +72,16 @@ contract SdLiquidityZapper {
 	** @param _minAmount Minimum LP token amount that we will get when we provide liquidity 
 	** @param _minAmountSdLpReceived Minimum LP token amount that we will get when we provide Liquidity sdBAL Liquidity pool
 	** @param _strategyVault Address of the related Balancer strategy's vault
+	** @param _earn Indicates if funds should be pushed underlying strategy from vault or will stay in vault
 	 */
 	function zapToSdBalPool(
 		uint256 _amount,
 		uint256 _lockAmountPercentage,
 		uint256 _minAmount,
 		uint256 _minAmountSdLpReceived,
-		address _strategyVault
+		address _strategyVault,
+		bool _earn,
+		bool _lock
 	) external {
 		// transfer BAL here
 		IERC20(BAL).transferFrom(msg.sender, address(this), _amount);
@@ -89,15 +97,16 @@ contract SdLiquidityZapper {
 		_provideLiquidityBalancer(BPTPOOLID, assets, maxAmountsIn, _minAmount);
 		uint256 bptReceived = IERC20(BPT).balanceOf(address(this));
 		uint256 lockAmount;
+		uint256 receivedSdToken;
 		if (_lockAmountPercentage > 0) {
 			lockAmount = (bptReceived * _lockAmountPercentage) / 10000;
-			_lockTokens(BAL, lockAmount);
+			receivedSdToken = _lockTokens(BAL, lockAmount, _lock);
 		}
 
 		assets[0] = BPT;
 		assets[1] = SDBAL;
 		maxAmountsIn[0] = bptReceived - lockAmount;
-		maxAmountsIn[1] = lockAmount;
+		maxAmountsIn[1] = receivedSdToken;
 		_provideLiquidityBalancer(SDBALPOOLID, assets, maxAmountsIn, _minAmountSdLpReceived);
 		uint256 lpBalanceAfter = IERC20(SDBALLP).balanceOf(address(this));
 		uint256 allowance = IERC20(SDBALLP).allowance(address(this), _strategyVault);
@@ -105,7 +114,7 @@ contract SdLiquidityZapper {
 			IERC20(SDBALLP).approve(_strategyVault, 0);
 			IERC20(SDBALLP).approve(_strategyVault, type(uint256).max);
 		}
-		BalancerVault(_strategyVault).deposit(msg.sender, lpBalanceAfter, true);
+		BalancerVault(_strategyVault).deposit(msg.sender, lpBalanceAfter, _earn);
 	}
 
 	///////////////////////////////////////////////
@@ -129,9 +138,21 @@ contract SdLiquidityZapper {
 	 ** @notice Send the tokens via depositor to the locker then locking to underlying protocol and mints 1:1 SdTokens
 	 ** @param _token address of the underlying token that we are planning to lock such as CRV,ANGLE,FXS
 	 ** @param _amount amount of the tokens we are planning to lock
+	 ** @param _lock indicates that if tokens should be locked to underlying protocol or needs to stay in depositor for gas saving
 	 */
-	function _lockTokens(address _token, uint256 _amount) internal {
-		Depositor(depositors[_token]).deposit(_amount, true, false, address(this));
+	function _lockTokens(
+		address _token,
+		uint256 _amount,
+		bool _lock
+	) internal returns (uint256 sdReceived) {
+		address depositor = depositors[_token];
+		Depositor(depositor).deposit(_amount, _lock, false, address(this));
+		if (!_lock) {
+			address sdToken = _token == BAL ? SDBAL : Depositor(depositor).minter();
+			sdReceived = IERC20(sdToken).balanceOf(address(this));
+		} else {
+			sdReceived = _amount;
+		}
 	}
 
 	/**

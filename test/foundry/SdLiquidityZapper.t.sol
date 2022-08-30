@@ -61,7 +61,16 @@ contract SdLiquidityZapperTest is Test {
 		uint256 balanceBeforeZap = IERC20(CRVSDCRVSTRATGAUGE).balanceOf(address(this));
 		deal(address(CRV), address(this), 100e18);
 		CRV.approve(address(sdLiquidityZapper), 100e18);
-		sdLiquidityZapper.zapToSdCurvePool(address(CRV), 100e18, 50e18, 0, CRVSDCRVCURVEPOOL, CRVSDCRVSTRATEGYVAULT);
+		sdLiquidityZapper.zapToSdCurvePool(
+			address(CRV),
+			100e18,
+			50e18,
+			0,
+			CRVSDCRVCURVEPOOL,
+			CRVSDCRVSTRATEGYVAULT,
+			true,
+			true
+		);
 		uint256 balanceAfterZap = IERC20(CRVSDCRVSTRATGAUGE).balanceOf(address(this));
 		assert(balanceBeforeZap == 0);
 		assert(balanceAfterZap > 0);
@@ -77,7 +86,9 @@ contract SdLiquidityZapperTest is Test {
 			50e18,
 			0,
 			ANGLESDANGLECURVEPOOL,
-			ANGLESDANGLESTRATEGYVAULT
+			ANGLESDANGLESTRATEGYVAULT,
+			true,
+			true
 		);
 		uint256 balanceAfterZap = IERC20(ANGLESDANGLESTRATGAUGE).balanceOf(address(this));
 		assert(balanceBeforeZap == 0);
@@ -88,7 +99,16 @@ contract SdLiquidityZapperTest is Test {
 		uint256 balanceBeforeZap = IERC20(CRVSDCRVSTRATGAUGE).balanceOf(address(this));
 		deal(address(CRV), address(this), 100e18);
 		CRV.approve(address(sdLiquidityZapper), 100e18);
-		sdLiquidityZapper.zapToSdCurvePool(address(CRV), 100e18, 0, 0, CRVSDCRVCURVEPOOL, CRVSDCRVSTRATEGYVAULT);
+		sdLiquidityZapper.zapToSdCurvePool(
+			address(CRV),
+			100e18,
+			0,
+			0,
+			CRVSDCRVCURVEPOOL,
+			CRVSDCRVSTRATEGYVAULT,
+			true,
+			true
+		);
 		uint256 balanceAfterZap = IERC20(CRVSDCRVSTRATGAUGE).balanceOf(address(this));
 		uint256 crvBalanceAfter = CRV.balanceOf(address(this));
 		assert(balanceBeforeZap == 0);
@@ -100,7 +120,7 @@ contract SdLiquidityZapperTest is Test {
 		uint256 balanceBeforeZap = SDBALSTRATGAUGE.balanceOf(address(this));
 		deal(address(BAL), address(this), 100e18);
 		BAL.approve(address(sdLiquidityZapper), 100e18);
-		sdLiquidityZapper.zapToSdBalPool(100e18, 5000, 0, 0, SDBALSTRATVAULT);
+		sdLiquidityZapper.zapToSdBalPool(100e18, 5000, 0, 0, SDBALSTRATVAULT, true, true);
 		uint256 balancerAfterZap = SDBALSTRATGAUGE.balanceOf(address(this));
 		assert(balanceBeforeZap == 0);
 		assert(balancerAfterZap > 0);
@@ -110,7 +130,7 @@ contract SdLiquidityZapperTest is Test {
 		uint256 balanceBeforeZap = SDBALSTRATGAUGE.balanceOf(address(this));
 		deal(address(BAL), address(this), 100e18);
 		BAL.approve(address(sdLiquidityZapper), 100e18);
-		sdLiquidityZapper.zapToSdBalPool(100e18, 0, 0, 0, SDBALSTRATVAULT);
+		sdLiquidityZapper.zapToSdBalPool(100e18, 0, 0, 0, SDBALSTRATVAULT, true, true);
 		uint256 balancerAfterZap = SDBALSTRATGAUGE.balanceOf(address(this));
 		assert(balanceBeforeZap == 0);
 		assert(balancerAfterZap > 0);
