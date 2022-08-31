@@ -10,8 +10,7 @@ import { JsonRpcSigner } from "@ethersproject/providers";
 
 import FxsLockerABI from "./fixtures/FXSLocker.json";
 import FxsTempleGaugeFraxABI from "./fixtures/fxsTempleGauge.json";
-import AFraxGaugeFraxABI from "./fixtures/AFraxGaugeFrax.json"
-import MASTERCHEFABI from "./fixtures/Masterchef.json";
+import AFraxGaugeFRAXABI from "./fixtures/AFraxGaugeFrax.json"
 import ERC20ABI from "./fixtures/ERC20.json";
 import FXSABI from "./fixtures/FXS.json";
 import DISTRIBUTORABI from "./fixtures/SDTDistributor.json";
@@ -81,6 +80,13 @@ const FXS_TEMPLE = "0x6021444f1706f15465bEe85463BCc7d7cC17Fc03";
 const FXS_TEMPLE_GAUGE = "0x10460d02226d6ef7B2419aE150E6377BdbB7Ef16";
 const FXS_TEMPLE_HOLDER = "0x8df937afdf1d08c2ba565d636ca1365a42144385";
 
+// Tests for aFrax pool
+const A_FRAX = "0xd4937682df3C8aEF4FE912A96A74121C0829E664";
+const A_FRAX_GAUGE = "0x02577b426F223A6B4f2351315A19ecD6F357d65c";
+const A_FRAX_HOLDER = "0xf7Eab72Ee14daD3DFEf597420F669c25B39f938C";
+const A_FRAX_LGV4 = "0xF92E7769a454e377C507c9AcA66d0cC4C4463443"
+const STK_AAVE = "0x4da27a545c0c5B758a6BA100e3a049001de870f5";
+
 const ETH_100 = BigNumber.from(10).mul(BigNumber.from(10).pow(18)).toHexString();
 
 describe("StakeDAO <> FRAX", function () {
@@ -116,6 +122,9 @@ describe("StakeDAO <> FRAX", function () {
   let booster: Contract;
   let fraxStrategy: Contract;
   let fxsTempleGauge: Contract;
+  let aFraxGauge: Contract;
+  let afrax: Contract;
+  let stkAAVE: Contract;
   let vaultV1Template: Contract;
   let personalVault1: Contract;
   let rewardsPID0: Contract;
@@ -132,32 +141,6 @@ describe("StakeDAO <> FRAX", function () {
   let LiquidityGaugeV4FraxContract: any;
   let LiquidityGaugeV4FraxContract2: any;
 
-  /**
-   * @notice list of all setter to call
-   * 
-   * Approve Booster to use onlyApproved functions (execute) :
-   *  FraxStrategy -> toggleVault(booster.address)
-   * 
-   * Liquid Locker give governance right to the frax strategy :
-   *  Locker -> setGovernance(fraxStrategy.address)
-   * 
-   * Should set Booster contract as operator on poolRegistry :
-   *  PoolRegistry -> setOperator(booster.address);
-   * 
-   * Should set pool reward implementation to the liquidity gauge contract :
-   *  Booster -> setPoolRewardImplementation(liquidityGauge.address)
-   * 
-   * Should set distributor :
-   *  Booster -> setDistributor(DISTRIBUTOR)
-   * 
-   * Set Liquid Locker as a valid veFXS Proxy (ask frax team to do it) :
-   * This is needed for creating a personal Vault for users, but not needed
-   * for creating a pool
-   *  For each gauge we implement : 
-   *  tokenGauge -> toggleValidVeFXSProxy(locker.address) (only callable 
-   *  by this address : 0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27) 
-   */
-
   before(async function () {
     /* ==== Get Signer ====*/
     [localDeployer, dummyMs, nooby] = await ethers.getSigners();
@@ -167,7 +150,7 @@ describe("StakeDAO <> FRAX", function () {
     });
     await network.provider.request({
       method: "hardhat_impersonateAccount",
-      params: [FXS_TEMPLE_HOLDER]
+      params: [A_FRAX_HOLDER]
     });
     await network.provider.request({
       method: "hardhat_impersonateAccount",
@@ -210,7 +193,7 @@ describe("StakeDAO <> FRAX", function () {
       params: [FXS_HOLDER]
     });
     deployer = ethers.provider.getSigner(STDDEPLOYER);
-    lpHolder = ethers.provider.getSigner(FXS_TEMPLE_HOLDER);
+    lpHolder = ethers.provider.getSigner(A_FRAX_HOLDER);
     noob = ethers.provider.getSigner(nooby.address);
     timelock = ethers.provider.getSigner(TIMELOCK);
     veSdtHolder = ethers.provider.getSigner(VESDT_HOLDER);
@@ -225,19 +208,13 @@ describe("StakeDAO <> FRAX", function () {
 
     /* ==== Set Balance Address ====  */
     await network.provider.send("hardhat_setBalance", [STDDEPLOYER, ETH_100]);
-    await network.provider.send("hardhat_setBalance", [FXS_TEMPLE_HOLDER, ETH_100]);
+    await network.provider.send("hardhat_setBalance", [A_FRAX_HOLDER, ETH_100]);
     await network.provider.send("hardhat_setBalance", [VESDT_HOLDER, ETH_100]);
     await network.provider.send("hardhat_setBalance", [TIMELOCK, ETH_100]);
     await network.provider.send("hardhat_setBalance", [GCADMIN, ETH_100]);
     await network.provider.send("hardhat_setBalance", [SDT_HOLDER, ETH_100]);
 
     /* ==== Get Contract Factory ==== */
-    const veSdtFxsProxyFactory = await ethers.getContractFactory("VeSDTFeeFraxProxy");
-    const poolRegistryContract = await ethers.getContractFactory("PoolRegistry");
-    const boosterContract = await ethers.getContractFactory("Booster");
-    const FraxStrategyContract = await ethers.getContractFactory("FraxStrategy");
-
-    const feeRegistryContract = await ethers.getContractFactory("FeeRegistry");
     LiquidityGaugeV4FraxContract = await ethers.getContractFactory("LiquidityGaugeV4StratFrax");
     LiquidityGaugeV4FraxContract2 = await ethers.getContractFactory("LiquidityGaugeV4StratFrax");
     VaultV1Contract = await ethers.getContractFactory("VaultV1");
@@ -245,16 +222,19 @@ describe("StakeDAO <> FRAX", function () {
     /* ==== Get Contract At ==== */
     locker = await ethers.getContractAt(FxsLockerABI, FXSLOCKER);
     fxsTempleGauge = await ethers.getContractAt(FxsTempleGaugeFraxABI, FXS_TEMPLE_GAUGE);
+    aFraxGauge = await ethers.getContractAt(AFraxGaugeFRAXABI, A_FRAX_GAUGE)
     fxsTemple = await ethers.getContractAt(ERC20ABI, FXS_TEMPLE);
+    afrax = await ethers.getContractAt(ERC20ABI, A_FRAX);
     frax = await ethers.getContractAt(ERC20ABI, FRAX);
     fxs = await ethers.getContractAt(FXSABI, FXS);
     sdt = await ethers.getContractAt(ERC20ABI, SDT);
     veSdt = await ethers.getContractAt("veSDT", VE_SDT);
-    veSDTBoost = await ethers.getContractAt("veBoostProxy", VEBOOST);
     temple = await ethers.getContractAt(ERC20ABI, TEMPLE);
+    stkAAVE = await ethers.getContractAt(ERC20ABI, STK_AAVE);
     sdFrax3CRV = await ethers.getContractAt(SDFRAX3CRVABI, SDFRAX3CRV);
     distributor = await ethers.getContractAt(DISTRIBUTORABI, DISTRIBUTOR);
     gaugeController = await ethers.getContractAt(GAUGECONTROLLERABI, GAUGECONTROLLER);
+    veSDTBoost = await ethers.getContractAt("veBoostProxy", VEBOOST);
     veSDTProxy = await ethers.getContractAt("VeSDTFeeFraxProxy", VE_SDT_FEE_FRAX_PROXY);
     feeRegistry = await ethers.getContractAt("FeeRegistry", FEE_REGISTRY);
     poolRegistry = await ethers.getContractAt("PoolRegistry", POOL_REGISTRY);
@@ -264,116 +244,35 @@ describe("StakeDAO <> FRAX", function () {
     fraxStrategy = await ethers.getContractAt("FraxStrategy", FRAX_STRATEGY);
     booster = await ethers.getContractAt("Booster", BOOSTER)
 
-    /* ==== Deployement Section ==== */
-    //poolRegistry = await poolRegistryContract.connect(deployer).deploy()
-    //liquidityGauge = await LiquidityGaugeV4FraxContract.connect(deployer).deploy()
-    //liquidityGauge2 = await LiquidityGaugeV4FraxContract.connect(deployer).deploy()
-    //vaultV1Template = await VaultV1Contract.connect(deployer).deploy();
-    //fraxStrategy = await FraxStrategyContract.connect(deployer).deploy(locker.address, deployer._address, FXSACCUMULATOR, VE_SDT_FEE_FRAX_PROXY, distributor.address, deployer._address);
-    //booster = await boosterContract.connect(deployer).deploy(locker.address, poolRegistry.address, fraxStrategy.address);
-
-    // Approve Booster to use onlyApproved functions (execute).
-    //await fraxStrategy.connect(deployer).toggleVault(booster.address);
-
-    // Liquid Locker give governance right to the frax strategy
-    //await locker.connect(deployer).setGovernance(fraxStrategy.address);
-
     // Set Liquid Locker as a valid veFXS Proxy
-    await fxsTempleGauge.connect(govFrax).toggleValidVeFXSProxy(locker.address);
+    //await aFraxGauge.connect(govFrax).toggleValidVeFXSProxy(locker.address);
 
-    // frax-temple LP holder lock SDT for 4 years, max boost
-    await sdt.connect(sdtHolder).transfer(lpHolder._address,parseUnits("200000", 18));
-    await sdt.connect(lpHolder).approve(VE_SDT,parseUnits("200000", 18));
-    await veSdt.connect(lpHolder).create_lock(parseUnits("200000", 18),1787603790); //1787603790 = 24 August 2026
-    let lastBlock = await ethers.provider.getBlock("latest");
-    const bal = await veSdt.connect(lpHolder)["balanceOf(address,uint256)"](lpHolder._address, lastBlock.timestamp)
-    const adjustedBal = await veSDTBoost.connect(lpHolder).adjusted_balance_of(lpHolder._address)
-    //console.log("LP holder veSDT",bal.toString()/10**18)
-    //console.log("LP holder veSDT",adjustedBal.toString()/10**18)
-    
-    // SDT received as reward on test "Should get reward"
-    //0.5960996787912948 -> without max boost
-    //0.5965112550942471 -> with max boost 
-    // increase of 0.70%
-
-    // SDT received as reward on test "Should time jump and withdraw locked"
-    // 2.3841641497622015 -> without max boost
-    // 2.3858033892727777 -> with max boost 
-    // increase of 0.43%
+    // lp holder lock SDT for veSDT
+    //await sdt.connect(sdtHolder).transfer(lpHolder._address,parseUnits("200000", 18));
+    //await sdt.connect(lpHolder).approve(VE_SDT,parseUnits("200000", 18));
+    //await veSdt.connect(lpHolder).create_lock(parseUnits("200000", 18),1787603790); //1787603790 = 24 August 2026
+    //let lastBlock = await ethers.provider.getBlock("latest");
+    //const bal = await veSdt.connect(lpHolder)["balanceOf(address,uint256)"](lpHolder._address, lastBlock.timestamp)
+    //const adjustedBal = await veSDTBoost.connect(lpHolder).adjusted_balance_of(lpHolder._address)
   });
 
   describe("### Testing Frax Strategies, boosted by Stake DAO Liquid Lockers 🐘💧🔒 ###", function () {
-    const LOCKDURATION = 52 * WEEK;
-    const AMOUNT = 20;
+    const LOCKDURATION = 1 * DAY;
+    const AMOUNT = 5_000;
     const LOCKEDAMOUNT = parseUnits(AMOUNT.toString(), 18);
     const LOCKEDAMOUNTx2 = parseUnits((AMOUNT * 2).toString(), 18);
+    const PID = 1; // aFrax pool
     describe("Pool registry contract tests : ", function () {
-      it("Should set Booster contract as operator on poolRegistry", async function () {
-        const opBefore = await poolRegistry.operator();
-        await poolRegistry.connect(deployer).setOperator(booster.address);
-        const opAfter = await poolRegistry.operator();
-
-        expect(opBefore).eq(NULL);
-        expect(opAfter).eq(booster.address);
-      });
-      it("Should set pool reward implementation to the liquidity gauge contract", async function () {
-        const rewardImpBefore = await poolRegistry.rewardImplementation();
-        await booster.connect(deployer).setPoolRewardImplementation(liquidityGauge.address);
-        const rewardImpAfter = await poolRegistry.rewardImplementation();
-
-        //console.log(rewardImpBefore,rewardImpAfter)
-        expect(rewardImpBefore).eq(NULL);
-        expect(rewardImpAfter).eq(liquidityGauge.address);
-      });
-      it("Should set distributor", async function () {
-        await booster.connect(deployer).setDistributor(DISTRIBUTOR);
-        const distributor = await poolRegistry.distributor();
-
-        expect(distributor).eq(DISTRIBUTOR);
-      });
-      it("Should create a new pool", async function () {
-        await booster.connect(deployer).addPool(vaultV1Template.address, FXS_TEMPLE_GAUGE, FXS_TEMPLE);
-        const NbrsOfPool = await poolRegistry.poolLength();
-        const PoolInfo0 = await poolRegistry.poolInfo(0);
-        rewardsPID0 = LiquidityGaugeV4FraxContract.attach(PoolInfo0.rewardsAddress);
-        const lgAdmin = await rewardsPID0.admin();
-        const lgSDT = await rewardsPID0.SDT();
-        const lgVE = await rewardsPID0.voting_escrow();
-        const lgBoost = await rewardsPID0.veBoost_proxy();
-        const lgPID = await rewardsPID0.pid();
-        const lgPoolRegistry = await rewardsPID0.pool_registry();
-        const lgRewardData = await rewardsPID0.reward_data(SDT);
-        const lgRewardToken0 = await rewardsPID0.reward_tokens(0);
-        const lgRewardCount = await rewardsPID0.reward_count();
-
-        //console.log(PoolInfo0)
-
-        expect(NbrsOfPool).eq(1);
-        expect(PoolInfo0.implementation).eq(vaultV1Template.address);
-        expect(PoolInfo0.stakingAddress).eq(FXS_TEMPLE_GAUGE);
-        expect(PoolInfo0.stakingToken).eq(FXS_TEMPLE);
-        expect(PoolInfo0.rewardsAddress).eq(rewardsPID0.address);
-        expect(PoolInfo0.active).eq(1);
-        expect(lgAdmin).eq(deployer._address);
-        expect(lgSDT).eq(SDT);
-        expect(lgVE).eq(VE_SDT);
-        expect(lgBoost).eq(VEBOOST);
-        expect(lgPID).eq(0);
-        expect(lgPoolRegistry).eq(poolRegistry.address);
-        expect(lgRewardData["distributor"]).eq(DISTRIBUTOR);
-        expect(lgRewardToken0).eq(SDT);
-        expect(lgRewardCount).eq(1);
-      });
       it("Should create a personal vault", async function () {
-        const poolVaultLengthBefore = await poolRegistry.poolVaultLength(0);
+        const poolVaultLengthBefore = await poolRegistry.poolVaultLength(PID);
 
-        await booster.connect(lpHolder).createVault(0);
+        await booster.connect(lpHolder).createVault(PID);
 
-        const vaultAddress = await poolRegistry.vaultMap(0, lpHolder._address);
+        const vaultAddress = await poolRegistry.vaultMap(PID, lpHolder._address);
         personalVault1 = VaultV1Contract.attach(vaultAddress);
-        const vaultMap = await poolRegistry.vaultMap(0, lpHolder._address);
-        const poolVaultLengthAfter = await poolRegistry.poolVaultLength(0);
-        const veFXSMulti = await fxsTempleGauge.veFXSMultiplier(vaultAddress);
+        const vaultMap = await poolRegistry.vaultMap(PID, lpHolder._address);
+        const poolVaultLengthAfter = await poolRegistry.poolVaultLength(PID);
+        const veFXSMulti = await aFraxGauge.veFXSMultiplier(vaultAddress);
         const owner = await personalVault1.owner();
         const proxy = await personalVault1.usingProxy();
 
@@ -381,48 +280,14 @@ describe("StakeDAO <> FRAX", function () {
         //console.log(poolVaultLengthBefore)
 
         expect(vaultMap).eq(vaultAddress);
-        expect(poolVaultLengthBefore).eq(0);
-        expect(poolVaultLengthAfter).eq(1);
+        //expect(poolVaultLengthBefore).eq(0);
+        expect(poolVaultLengthAfter).eq(poolVaultLengthBefore.add(1));
         expect(veFXSMulti).gt(0);
         expect(owner).eq(lpHolder._address);
         expect(proxy).eq(FXSLOCKER);
       });
-      it("Should create a new pool reward for an existing pool", async function () {
-        const pid_old = await rewardsPID0.pid();
-        await booster.connect(deployer).setPoolRewardImplementation(liquidityGauge2.address);
-        await booster.connect(deployer).createNewPoolRewards(0);
-        const NbrsOfPool = await poolRegistry.poolLength();
-        const PoolInfo0 = await poolRegistry.poolInfo(0);
-        rewardsPID0_2 = LiquidityGaugeV4FraxContract.attach(PoolInfo0.rewardsAddress);
-        const pid_new = await rewardsPID0_2.pid();
-
-        expect(NbrsOfPool).eq(1);
-        expect(PoolInfo0.implementation).eq(vaultV1Template.address);
-        expect(PoolInfo0.stakingAddress).eq(FXS_TEMPLE_GAUGE);
-        expect(PoolInfo0.stakingToken).eq(FXS_TEMPLE);
-        expect(PoolInfo0.rewardsAddress).eq(rewardsPID0_2.address);
-        expect(PoolInfo0.active).eq(1);
-        expect(pid_old).eq(pid_new);
-      });
-      it("Should desactivate a pool", async function () {
-        const PoolInfo0Before = await poolRegistry.poolInfo(0);
-        await booster.connect(deployer).deactivatePool(0);
-        const PoolInfo0After = await poolRegistry.poolInfo(0);
-
-        //console.log(PoolInfo0Before,PoolInfo0After)
-
-        expect(PoolInfo0Before.active).eq(1);
-        expect(PoolInfo0After.active).eq(0);
-      });
-      it("Should add gauge to gauge controller and send reward to it", async function () {
-        // Creating a new pool, previous has been desactivated for testing
-        await booster.connect(deployer).setPoolRewardImplementation(liquidityGauge.address);
-        await booster.connect(deployer).setDistributor(distributor.address);
-        await booster.connect(deployer).addPool(vaultV1Template.address, FXS_TEMPLE_GAUGE, FXS_TEMPLE);
-        
-        const NbrsOfPool = await poolRegistry.poolLength();
-        const PoolInfo1 = await poolRegistry.poolInfo(NbrsOfPool - 1);
-
+      it("Should add gauge to gauge controller and send reward to it", async function () { 
+        const PoolInfo1 = await poolRegistry.poolInfo(PID);
         rewardsPID1 = LiquidityGaugeV4FraxContract.attach(PoolInfo1.rewardsAddress);
 
         let lastBlock = await ethers.provider.getBlock("latest");
@@ -465,54 +330,24 @@ describe("StakeDAO <> FRAX", function () {
         expect(Number(after_LGV4) - Number(before_LGV4)).gt(0);
       });
       // ---- Reverting cases ---- //
-      it("Should revert on setting operator", async function () {
-        await expect(poolRegistry.connect(noob).setOperator(booster.address)).to.be.revertedWith("!auth");
-      });
-      it("Should revert on set pool reward implementation", async function () {
-        await expect(booster.connect(noob).setPoolRewardImplementation(liquidityGauge.address)).to.be.revertedWith(
-          "!auth"
-        );
-      });
-      it("Should revert on adding pool", async function () {
-        await expect(
-          booster.connect(noob).addPool(vaultV1Template.address, FXS_TEMPLE_GAUGE, FXS_TEMPLE)
-        ).to.be.revertedWith("!auth");
-        await expect(booster.connect(deployer).addPool(NULL, FXS_TEMPLE_GAUGE, FXS_TEMPLE)).to.be.revertedWith("!imp");
-        await expect(booster.connect(deployer).addPool(vaultV1Template.address, NULL, FXS_TEMPLE)).to.be.revertedWith(
-          "!stkAdd"
-        );
-        await expect(
-          booster.connect(deployer).addPool(vaultV1Template.address, FXS_TEMPLE_GAUGE, NULL)
-        ).to.be.revertedWith("!stkTok");
-      });
       it("Should revert on creating a user vault", async function () {
-        await expect(poolRegistry.connect(lpHolder).addUserVault(0, lpHolder._address)).to.be.revertedWith("!op auth");
-        await expect(booster.connect(lpHolder).createVault(0)).to.be.revertedWith("already exists");
-        await expect(booster.connect(noob).createVault(0)).to.be.revertedWith("!active");
+        await expect(poolRegistry.connect(lpHolder).addUserVault(PID, lpHolder._address)).to.be.revertedWith("!op auth");
+        await expect(booster.connect(lpHolder).createVault(PID)).to.be.revertedWith("already exists");
       });
     });
     describe("Personal Vault contract tests : ", function () {
       it("Should stake locked lp token", async function () {
-        const NbrsOfPool = await poolRegistry.poolLength();
-        const PoolInfo1 = await poolRegistry.poolInfo(NbrsOfPool - 1);
-
-        //console.log(NbrsOfPool,PoolInfo1)
-
-        // Create a vault for the user on the new pool
-        await booster.connect(lpHolder).createVault(NbrsOfPool - 1);
-        const vaultAddress = await poolRegistry.vaultMap(NbrsOfPool - 1, lpHolder._address);
-        personalVault1 = VaultV1Contract.attach(vaultAddress);
-
+        const vaultAddress = await poolRegistry.vaultMap(PID, lpHolder._address);
         const balanceOfBefore = await rewardsPID1.balanceOf(lpHolder._address);
         const totalSupplyBefore = await rewardsPID1.totalSupply();
 
-        await fxsTemple.connect(lpHolder).approve(personalVault1.address, LOCKEDAMOUNT);
+        await afrax.connect(lpHolder).approve(personalVault1.address, LOCKEDAMOUNT);
         await personalVault1.connect(lpHolder).stakeLocked(LOCKEDAMOUNT, LOCKDURATION);
 
         const balanceOfAfter = await rewardsPID1.balanceOf(lpHolder._address);
         const totalSupplyAfter = await rewardsPID1.totalSupply();
-        const lockedStakesOfLength = await fxsTempleGauge.lockedStakesOfLength(vaultAddress);
-        const lockedStakesOf = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
+        const lockedStakesOfLength = await aFraxGauge.lockedStakesOfLength(vaultAddress);
+        const lockedStakesOf = await aFraxGauge.lockedStakesOf(personalVault1.address);
 
         expect(balanceOfBefore).eq(0);
         expect(balanceOfAfter).eq(LOCKEDAMOUNT);
@@ -523,37 +358,40 @@ describe("StakeDAO <> FRAX", function () {
         expect(lockedStakesOf[lockedStakesOfLength - 1]["liquidity"]).eq(LOCKEDAMOUNT);
       });
       it("Should add liquidity to a previous deposit", async function () {
-        const lockedStakesOfBefore = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
+        const lockedStakesOfBefore = await aFraxGauge.lockedStakesOf(personalVault1.address);
 
-        await fxsTemple.connect(lpHolder).approve(personalVault1.address, LOCKEDAMOUNT);
+        await afrax.connect(lpHolder).approve(personalVault1.address, LOCKEDAMOUNT);
         await personalVault1.connect(lpHolder).lockAdditional(lockedStakesOfBefore[0]["kek_id"], LOCKEDAMOUNT);
 
-        const lockedStakesOfLength = await fxsTempleGauge.lockedStakesOfLength(personalVault1.address);
-        const lockedStakesOfAfter = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
+        const lockedStakesOfLength = await aFraxGauge.lockedStakesOfLength(personalVault1.address);
+        const lockedStakesOfAfter = await aFraxGauge.lockedStakesOf(personalVault1.address);
         const balanceOf = await rewardsPID1.balanceOf(lpHolder._address);
         const totalSupply = await rewardsPID1.totalSupply();
 
-        expect(lockedStakesOfAfter[lockedStakesOfLength - 1]["liquidity"]).eq(LOCKEDAMOUNTx2);
+        expect(lockedStakesOfAfter[lockedStakesOfLength - 1]["liquidity"]).gt(LOCKEDAMOUNTx2);
         expect(balanceOf).eq(LOCKEDAMOUNTx2);
         expect(totalSupply).eq(LOCKEDAMOUNTx2);
-      }); 
+      });
       it("Should get reward", async function () {
-        const before_Temple = await temple.balanceOf(lpHolder._address);
+        const before_Rewards1 = await stkAAVE.balanceOf(lpHolder._address);
         const before_Fxs = await fxs.balanceOf(lpHolder._address);
         const before_Fxs_multi = await fxs.balanceOf(MULTISIG);
         const before_Fxs_accum = await fxs.balanceOf(FXSACCUMULATOR);
         const before_Fxs_veSDT = await fxs.balanceOf(VE_SDT_FEE_FRAX_PROXY);
         const before_Sdt = await sdt.balanceOf(lpHolder._address);
         const before_Sdt_vault = await sdt.balanceOf(personalVault1.address);
+        const rewardRateReward0 = await aFraxGauge.rewardRates(0)
+        const rewardRateReward1 = await aFraxGauge.rewardRates(1)
+        //console.log(rewardRateReward0,rewardRateReward1)
 
         await network.provider.send("evm_increaseTime", [DAY]);
         await network.provider.send("evm_mine", []);
 
-        await fxsTempleGauge.connect(lpHolder).sync()
+        await aFraxGauge.connect(lpHolder).sync()
         const earned = await personalVault1.connect(lpHolder).earned();
         await personalVault1.connect(lpHolder)["getReward()"]();
 
-        const after_Temple = await temple.balanceOf(lpHolder._address);
+        const after_Reward1 = await stkAAVE.balanceOf(lpHolder._address);
         const after_Fxs = await fxs.balanceOf(lpHolder._address);
         const after_Fxs_multi = await fxs.balanceOf(MULTISIG);
         const after_Fxs_accum = await fxs.balanceOf(FXSACCUMULATOR);
@@ -563,11 +401,11 @@ describe("StakeDAO <> FRAX", function () {
 
         //console.log(" ---- Reward Estimation    ----")
         //console.log("Earned FXS :\t",(earned[1][0]/10**18).toString());
-        //console.log("Earned TEM:\t",(earned[1][1]/10**18).toString());
+        //console.log("Earned stk:\t",(earned[1][1]/10**18).toString());
         //console.log("Earned SDT:\t",(earned[1][2]/10**18).toString());
         //console.log(" ---- User Reward Received ----")
         //console.log("FXS gain :\t",(after_Fxs - before_Fxs)/10**18)
-        //console.log("Temple gain :\t",(after_Temple - before_Temple)/10**18)
+        //console.log("stk gain :\t",(after_Reward1 - before_Rewards1)/10**18)
         //console.log("SDT gain:\t",(after_Sdt - before_Sdt)/10**18)
         //console.log("SDT gain vault:\t",(after_Sdt_vault - before_Sdt_vault)/10**18)
         //console.log(" ---- DAO Reward Received  ----")
@@ -575,107 +413,128 @@ describe("StakeDAO <> FRAX", function () {
         //console.log("FXS accu :\t",(after_Fxs_accum - before_Fxs_accum)/10**18)
         //console.log("FXS veSDT :\t",(after_Fxs_veSDT - before_Fxs_veSDT)/10**18)
 
+        expect(rewardRateReward0).gt(0);
         expect(after_Fxs - before_Fxs).gt(0);
         expect(after_Fxs_multi - before_Fxs_multi).gt(0);
         expect(after_Fxs_accum - before_Fxs_accum).gt(0);
         expect(after_Fxs_veSDT - before_Fxs_veSDT).gt(0);
-        expect(after_Temple - before_Temple).gt(0);
         expect(after_Sdt - before_Sdt).gt(0);
+        if(rewardRateReward1>0) {
+          expect(after_Reward1 - before_Rewards1).gt(0);
+        }
       });
       it("Should get reward without claiming", async function () {
-        const before_Temple = await temple.balanceOf(lpHolder._address);
+        const before_Rewards1 = await stkAAVE.balanceOf(lpHolder._address);
         const before_Fxs = await fxs.balanceOf(lpHolder._address);
         const before_Fxs_multi = await fxs.balanceOf(MULTISIG);
         const before_Fxs_accum = await fxs.balanceOf(FXSACCUMULATOR);
         const before_Fxs_veSDT = await fxs.balanceOf(VE_SDT_FEE_FRAX_PROXY);
         const before_Sdt = await sdt.balanceOf(lpHolder._address);
+        const rewardRateReward1 = await aFraxGauge.rewardRates(1)
 
-        await network.provider.send("evm_increaseTime", [DAY]);
+        await network.provider.send("evm_increaseTime", [2*DAY]);
         await network.provider.send("evm_mine", []);
+        const earned = await personalVault1.connect(lpHolder).earned();
         await personalVault1.connect(lpHolder)["getReward(bool)"](false);
 
-        const after_Temple = await temple.balanceOf(lpHolder._address);
+        const after_Reward1 = await stkAAVE.balanceOf(lpHolder._address);
         const after_Fxs = await fxs.balanceOf(lpHolder._address);
         const after_Fxs_multi = await fxs.balanceOf(MULTISIG);
         const after_Fxs_accum = await fxs.balanceOf(FXSACCUMULATOR);
         const after_Fxs_veSDT = await fxs.balanceOf(VE_SDT_FEE_FRAX_PROXY);
         const after_Sdt = await sdt.balanceOf(lpHolder._address);
 
+        //console.log(" ---- Reward Estimation    ----")
+        //console.log("Earned FXS :\t",(earned[1][0]/10**18).toString());
+        //console.log("Earned stk:\t",(earned[1][1]/10**18).toString());
+        //console.log("Earned SDT:\t",(earned[1][2]/10**18).toString());
+        //console.log(" ---- User Reward Received ----")
+        //console.log("stk gain :\t",(after_Reward1 - before_Rewards1)/10**18)
+        //console.log("SDT gain:\t",(after_Sdt - before_Sdt)/10**18)
+        //console.log(" ---- DAO Reward Received  ----")
         //console.log("FXS gain :\t",(after_Fxs - before_Fxs)/10**18)
         //console.log("FXS mult :\t",(after_Fxs_multi - before_Fxs_multi)/10**18)
         //console.log("FXS accu :\t",(after_Fxs_accum - before_Fxs_accum)/10**18)
         //console.log("FXS veSDT :\t",(after_Fxs_veSDT - before_Fxs_veSDT)/10**18)
-        //console.log("Temple gain :\t",(after_Temple - before_Temple)/10**18)
-        //console.log("SDT gain:\t",(after_Sdt - before_Sdt)/10**18)
 
         expect(after_Fxs - before_Fxs).eq(0);
         expect(after_Fxs_multi - before_Fxs_multi).eq(0);
         expect(after_Fxs_accum - before_Fxs_accum).eq(0);
         expect(after_Fxs_veSDT - before_Fxs_veSDT).eq(0);
-        expect(after_Temple - before_Temple).eq(0);
+        if(rewardRateReward1>0) {
+          expect(after_Reward1 - before_Rewards1).gt(0);
+        }
         expect(after_Sdt - before_Sdt).gt(0);
       });
       it("Should get reward for just specific token", async function () {
-        const before_Temple = await temple.balanceOf(lpHolder._address);
+        const before_Rewards1 = await stkAAVE.balanceOf(lpHolder._address);
         const before_Fxs = await fxs.balanceOf(lpHolder._address);
         const before_Fxs_multi = await fxs.balanceOf(MULTISIG);
         const before_Fxs_accum = await fxs.balanceOf(FXSACCUMULATOR);
         const before_Fxs_veSDT = await fxs.balanceOf(VE_SDT_FEE_FRAX_PROXY);
         const before_Sdt = await sdt.balanceOf(lpHolder._address);
+        const rewardRateReward1 = await aFraxGauge.rewardRates(1)
 
-        
         await network.provider.send("evm_increaseTime", [DAY]);
         await network.provider.send("evm_mine", []);
+        const earned = await personalVault1.connect(lpHolder).earned();
         await personalVault1.connect(lpHolder)["getReward(bool,address[])"](true, []);
 
-        const after_Temple = await temple.balanceOf(lpHolder._address);
+        const after_Reward1 = await stkAAVE.balanceOf(lpHolder._address);
         const after_Fxs = await fxs.balanceOf(lpHolder._address);
         const after_Fxs_multi = await fxs.balanceOf(MULTISIG);
         const after_Fxs_accum = await fxs.balanceOf(FXSACCUMULATOR);
         const after_Fxs_veSDT = await fxs.balanceOf(VE_SDT_FEE_FRAX_PROXY);
         const after_Sdt = await sdt.balanceOf(lpHolder._address);
 
+        //console.log(" ---- Reward Estimation    ----")
+        //console.log("Earned FXS :\t",(earned[1][0]/10**18).toString());
+        //console.log("Earned stk:\t",(earned[1][1]/10**18).toString());
+        //console.log("Earned SDT:\t",(earned[1][2]/10**18).toString());
+        //console.log(" ---- User Reward Received ----")
+        //console.log("stk gain :\t",(after_Reward1 - before_Rewards1)/10**18)
+        //console.log("SDT gain:\t",(after_Sdt - before_Sdt)/10**18)
+        //console.log(" ---- DAO Reward Received  ----")
         //console.log("FXS gain :\t",(after_Fxs - before_Fxs)/10**18)
         //console.log("FXS mult :\t",(after_Fxs_multi - before_Fxs_multi)/10**18)
         //console.log("FXS accu :\t",(after_Fxs_accum - before_Fxs_accum)/10**18)
         //console.log("FXS veSDT :\t",(after_Fxs_veSDT - before_Fxs_veSDT)/10**18)
-        //console.log("Temple gain :\t",(after_Temple - before_Temple)/10**18)
-        //console.log("SDT gain:\t",(after_Sdt - before_Sdt)/10**18)
 
         expect(after_Fxs - before_Fxs).gt(0);
         expect(after_Fxs_multi - before_Fxs_multi).gt(0);
         expect(after_Fxs_accum - before_Fxs_accum).gt(0);
         expect(after_Fxs_veSDT - before_Fxs_veSDT).gt(0);
-        expect(after_Temple - before_Temple).eq(0);
+        expect(after_Reward1 - before_Rewards1).eq(0);
         expect(after_Sdt - before_Sdt).gt(0);
       });
       it("Should time jump and withdraw locked", async function () {
-        const lockedStakesOfBefore = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
-        await network.provider.send("evm_increaseTime", [LOCKDURATION]);
+        const lockedStakesOfBefore = await aFraxGauge.lockedStakesOf(personalVault1.address);
+        await network.provider.send("evm_increaseTime", [DAY]);
         await network.provider.send("evm_mine", []);
 
-        const before_Temple = await temple.balanceOf(lpHolder._address);
+        const before_Rewards1 = await stkAAVE.balanceOf(lpHolder._address);
         const before_Fxs = await fxs.balanceOf(lpHolder._address);
         const before_Sdt = await sdt.balanceOf(lpHolder._address);
-        const before_lp = await fxsTemple.balanceOf(lpHolder._address);
+        const before_lp = await afrax.balanceOf(lpHolder._address);
         const before_working_balance = await rewardsPID1.working_balances(lpHolder._address)
+        const rewardRateReward1 = await aFraxGauge.rewardRates(1)
 
         const balanceOfBefore = await rewardsPID1.balanceOf(lpHolder._address);
         const totalSupplyBefore = await rewardsPID1.totalSupply();
 
         await fxs.connect(fxsHolder).transfer(FRAX_GAUGE_FXS_REWARDS_DISTRIBUTOR, parseUnits((1_000_000).toString(), 18))
-        const pf1 = await fxsTempleGauge.periodFinish()
+        const pf1 = await aFraxGauge.periodFinish()
 
-        await fxsTempleGauge.connect(lpHolder).sync()
+        await aFraxGauge.connect(lpHolder).sync()
         const earned = await personalVault1.earned();
         await personalVault1.connect(lpHolder).withdrawLocked(lockedStakesOfBefore[0]["kek_id"], true);
         
-        const pf2 = await fxsTempleGauge.periodFinish()
+        const pf2 = await aFraxGauge.periodFinish()
         const after_working_balance = await rewardsPID1.working_balances(lpHolder._address)
-        const after_Temple = await temple.balanceOf(lpHolder._address);
+        const after_Rewards1 = await stkAAVE.balanceOf(lpHolder._address);
         const after_Fxs = await fxs.balanceOf(lpHolder._address);
         const after_Sdt = await sdt.balanceOf(lpHolder._address);
-        const after_lp = await fxsTemple.balanceOf(lpHolder._address);
+        const after_lp = await afrax.balanceOf(lpHolder._address);
 
         const balanceOfAfter = await rewardsPID1.balanceOf(lpHolder._address);
         const totalSupplyAfter = await rewardsPID1.totalSupply();
@@ -686,20 +545,22 @@ describe("StakeDAO <> FRAX", function () {
         //console.log("Finish period before sync : ",pf1.toString())
         //console.log("Finish period after sync : ",pf2.toString())
         //console.log("Earned FXS :\t",(earned[1][0]/10**18).toString());
-        //console.log("Earned TEM:\t",(earned[1][1]/10**18).toString());
+        //console.log("Earned stk:\t",(earned[1][1]/10**18).toString());
         //console.log("Earned SDT:\t",(earned[1][2]/10**18).toString());
         //console.log(" ---- User Reward Received ----")
         //console.log("FXS gain :\t",(after_Fxs - before_Fxs)/10**18)
-        //console.log("Temple gain :\t",(after_Temple - before_Temple)/10**18)
+        //console.log("stk gain :\t",(after_Rewards1 - before_Rewards1)/10**18)
         //console.log("SDT gain:\t",(after_Sdt - before_Sdt)/10**18)
 
         expect(earned[1][0]).gt(0)
-        expect(earned[1][1]).gt(0)
         expect(earned[1][2]).gt(0)
         expect(after_Fxs - before_Fxs).gt(0);
-        expect(after_Temple - before_Temple).gt(0);
         expect(after_Sdt - before_Sdt).gt(0);
-        expect(after_lp - before_lp).greaterThanOrEqual(AMOUNT * 2 * 10 ** 18);
+        expect(after_lp - before_lp).gt(AMOUNT * 2 * 10 ** 18);
+        if(rewardRateReward1>0) {
+          expect(earned[1][1]).gt(0)
+          expect(after_Rewards1 - before_Rewards1).gt(0);
+        }
 
         expect(balanceOfBefore).eq(LOCKEDAMOUNTx2);
         expect(balanceOfAfter).eq(0);
@@ -708,11 +569,11 @@ describe("StakeDAO <> FRAX", function () {
       });
       it("Should update the pool reward for the user personal vault, after new pool reward creation", async function () {
         // deposit LP into gauge 
-        await fxsTemple.connect(lpHolder).approve(personalVault1.address, LOCKEDAMOUNTx2);
-        await personalVault1.connect(lpHolder).stakeLocked(LOCKEDAMOUNTx2, 2*WEEK);
+        await afrax.connect(lpHolder).approve(personalVault1.address, LOCKEDAMOUNTx2);
+        await personalVault1.connect(lpHolder).stakeLocked(LOCKEDAMOUNTx2, LOCKDURATION);
 
         const before_Sdt = await sdt.balanceOf(lpHolder._address);
-        const old_lg = await poolRegistry.poolInfo(1);
+        const old_lg = await poolRegistry.poolInfo(PID);
         const old_lg_vault = await personalVault1.rewards()
         //console.log(old_lg)
 
@@ -726,8 +587,8 @@ describe("StakeDAO <> FRAX", function () {
         await booster.connect(deployer).setPoolRewardImplementation(liquidityGauge2.address);
         //console.log(liquidityGauge2.address)
         // Update pool id with new LGV4 address
-        await booster.connect(deployer).createNewPoolRewards(NbrsOfPool - 1);
-        const new_lg = await poolRegistry.poolInfo(NbrsOfPool - 1);
+        await booster.connect(deployer).createNewPoolRewards(PID);
+        const new_lg = await poolRegistry.poolInfo(PID);
         //console.log(new_lg)
         rewardsPID1_New = LiquidityGaugeV4FraxContract.attach(new_lg.rewardsAddress);
 
@@ -766,30 +627,31 @@ describe("StakeDAO <> FRAX", function () {
         expect(new_lg_supply).eq(LOCKEDAMOUNTx2);
       });
       it("Should time jump and withdraw locked, after new pool reward creation ", async function () {
-        const lockedStakesOfBefore = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
+        const lockedStakesOfBefore = await aFraxGauge.lockedStakesOf(personalVault1.address);
         await network.provider.send("evm_increaseTime", [14*DAY]);
         await network.provider.send("evm_mine", []);
         const distribut = await distributor.connect(deployer_new).distribute(rewardsPID1_New.address);
-        const tx = await distribut.wait()
+        //const tx = await distribut.wait()
         //console.log(tx.events)
 
-        const before_Temple = await temple.balanceOf(lpHolder._address);
+        const before_Rewards1 = await stkAAVE.balanceOf(lpHolder._address);
         const before_Fxs = await fxs.balanceOf(lpHolder._address);
         const before_Sdt = await sdt.balanceOf(lpHolder._address);
-        const before_lp = await fxsTemple.balanceOf(lpHolder._address);
+        const before_lp = await afrax.balanceOf(lpHolder._address);
         const balanceOfBefore = await rewardsPID1_New.balanceOf(lpHolder._address);
         const totalSupplyBefore = await rewardsPID1_New.totalSupply();
+        const rewardRateReward1 = await aFraxGauge.rewardRates(1)
 
-        await fxsTempleGauge.connect(lpHolder).sync()
+        await aFraxGauge.connect(lpHolder).sync()
         const earned = await personalVault1.earned();
         await personalVault1
           .connect(lpHolder)
           .withdrawLocked(lockedStakesOfBefore[lockedStakesOfBefore.length - 1]["kek_id"], true);
 
-        const after_Temple = await temple.balanceOf(lpHolder._address);
+        const after_Reward1 = await stkAAVE.balanceOf(lpHolder._address);
         const after_Fxs = await fxs.balanceOf(lpHolder._address);
         const after_Sdt = await sdt.balanceOf(lpHolder._address);
-        const after_lp = await fxsTemple.balanceOf(lpHolder._address);
+        const after_lp = await afrax.balanceOf(lpHolder._address);
 
         const balanceOfAfter = await rewardsPID1_New.balanceOf(lpHolder._address);
         const totalSupplyAfter = await rewardsPID1_New.totalSupply();
@@ -800,16 +662,18 @@ describe("StakeDAO <> FRAX", function () {
         //console.log("Earned SDT :\t",(earned[1][2]/10**18).toString());
         //console.log(" ---- User Reward Received ----")
         //console.log("FXS gain :\t",(after_Fxs - before_Fxs)/10**18)
-        //console.log("Temple gain :\t",(after_Temple - before_Temple)/10**18)
+        //console.log("stk gain :\t",(after_Reward1 - before_Rewards1)/10**18)
         //console.log("SDT gain:\t",(after_Sdt - before_Sdt)/10**18)
 
         expect(earned[1][0]).gt(0)
-        expect(earned[1][1]).gt(0)
         expect(earned[1][2]).gt(0)
         expect(after_Fxs - before_Fxs).gt(0);
-        expect(after_Temple - before_Temple).gt(0);
         expect(after_Sdt - before_Sdt).gt(0);
-        expect(after_lp - before_lp).greaterThanOrEqual(AMOUNT * 2 * 10 ** 18);
+        expect(after_lp - before_lp).greaterThanOrEqual(AMOUNT * 2 * 10 ** 18)
+        if(rewardRateReward1>0) {
+          expect(earned[1][1]).gt(0)
+          expect(after_Reward1 - before_Rewards1).gt(0);
+        }
 
         expect(balanceOfBefore).eq(LOCKEDAMOUNTx2);
         expect(balanceOfAfter).eq(0);
@@ -822,7 +686,7 @@ describe("StakeDAO <> FRAX", function () {
         await expect(feeRegistry.connect(deployer).setMultisig(NULL)).to.be.revertedWith("!address(0)");
       });
       it("Should revert on lockAdditional because kekid doesn't match", async function () {
-        await fxsTemple.connect(lpHolder).approve(personalVault1.address, LOCKEDAMOUNTx2);
+        await afrax.connect(lpHolder).approve(personalVault1.address, LOCKEDAMOUNTx2);
         await personalVault1.connect(lpHolder).stakeLocked(LOCKEDAMOUNT, LOCKDURATION);
         const wrongKekId = "0xc074440c3abd793f5926f435dd2c9323436647588a1c1deb2ab0a93be0406285";
         await expect(personalVault1.connect(lpHolder).lockAdditional(wrongKekId, LOCKEDAMOUNT)).to.be.revertedWith(
@@ -830,7 +694,7 @@ describe("StakeDAO <> FRAX", function () {
         );
       });
       it("Should revert on withdrawLocked because not enough time waited", async function () {
-        const lockedStakesOfBefore = await fxsTempleGauge.lockedStakesOf(personalVault1.address);
+        const lockedStakesOfBefore = await aFraxGauge.lockedStakesOf(personalVault1.address);
         await expect(
           personalVault1
             .connect(lpHolder)
@@ -841,100 +705,5 @@ describe("StakeDAO <> FRAX", function () {
         await expect(personalVault1.connect(lpHolder).changeRewards()).to.be.revertedWith("!rewardsAddress")
       })
     });
-    describe("Booster Management tests : ", function () {
-      it("Should setPendingOwner to new ower", async function () {
-        const pendingOwnerBefore = await booster.pendingOwner();
-        const ownerBefore = await booster.owner();
-        await booster.connect(deployer).setPendingOwner(lpHolder._address);
-        const pendingOwnerAfter = await booster.pendingOwner();
-        const ownerAfter = await booster.owner();
-
-        expect(pendingOwnerBefore).eq(NULL);
-        expect(pendingOwnerAfter).eq(lpHolder._address);
-        expect(ownerBefore).eq(deployer._address);
-        expect(ownerAfter).eq(ownerBefore);
-      });
-      it("Should acceptPendingOwner", async function () {
-        await booster.connect(lpHolder).acceptPendingOwner();
-        const pendingOwner = await booster.pendingOwner();
-        const owner = await booster.owner();
-
-        expect(pendingOwner).eq(NULL);
-        expect(owner).eq(lpHolder._address);
-      });
-      it("Should revert on acceptPendingOwner, because setPendingOnwer not trigger", async function () {
-        await expect(booster.connect(deployer).acceptPendingOwner()).to.be.revertedWith("!p_owner");
-      });
-      it("Should revert on acceptPendingOwner, because caller is not the next owner", async function () {
-        await booster.connect(lpHolder).setPendingOwner(deployer._address);
-        await expect(booster.connect(noob).acceptPendingOwner()).to.be.revertedWith("!p_owner");
-      });
-      it("Should setPoolManager", async function () {
-        const poolManagerBefore = await booster.poolManager();
-        await booster.connect(lpHolder).setPoolManager(lpHolder._address);
-        const poolManagerAfter = await booster.poolManager();
-
-        expect(poolManagerBefore).not.eq(poolManagerAfter);
-        expect(poolManagerAfter).eq(lpHolder._address);
-      });
-    });
   }); 
-  describe("### Testing FeeRegistry contract ###", function () {
-    it("Should set news fees", async function () {
-      await feeRegistry.connect(deployer).setFees(100, 200, 400);
-      const multi = await feeRegistry.multisigPart();
-      const accum = await feeRegistry.accumulatorPart();
-      const veSDT = await feeRegistry.veSDTPart();
-      const total = await feeRegistry.totalFees();
-
-      expect(multi).eq(100);
-      expect(accum).eq(200);
-      expect(veSDT).eq(400);
-      expect(total).eq(100 + 200 + 400);
-    });
-    it("Should set new addresses for multiSig", async function () {
-      await feeRegistry.connect(deployer).setMultisig(RAND1);
-      const multi = await feeRegistry.multiSig();
-      expect(multi).eq(RAND1);
-    });
-    it("Should set new addresses for accumulator", async function () {
-      await feeRegistry.connect(deployer).setAccumulator(RAND2);
-      const accum = await feeRegistry.accumulator();
-      expect(accum).eq(RAND2);
-    });
-    it("Should set new addresses for VeSDTFeeFraxProxy", async function () {
-      await feeRegistry.connect(deployer).setVeSDTFeeProxy(RAND3);
-      const proxy = await feeRegistry.veSDTFeeProxy();
-      expect(proxy).eq(RAND3);
-    });
-    it("Should revert because not onwer", async function () {
-      await expect(feeRegistry.connect(noob).setFees(100, 200, 400)).to.be.revertedWith("!auth");
-    });
-    it("Should revert because not onwer", async function () {
-      await expect(feeRegistry.connect(deployer).setFees(1000, 600, 700)).to.be.revertedWith("fees over");
-    });
-    it("Should revert because can't use address null", async function () {
-      await expect(feeRegistry.connect(deployer).setMultisig(NULL)).to.be.revertedWith("!address(0)");
-    });
-  });
-  describe("### Testing VeSDTFeeFraxProxy contract ###", function () {
-    it("Should test using VeSDTFeeFraxProxy", async function () {
-      await fxs.connect(fxsHolder).transfer(VE_SDT_FEE_FRAX_PROXY, parseUnits("20", 18));
-      const fxsBalanceBefore = await fxs.balanceOf(VE_SDT_FEE_FRAX_PROXY);
-      const claimerBefore = await frax.balanceOf(noob._address);
-      const feeDBalanceBefore = await sdFrax3CRV.balanceOf(FEED);
-
-      const sendRewards = await veSDTProxy.connect(noob).sendRewards();
-
-      const fxsBalanceAfter = await fxs.balanceOf(VE_SDT_FEE_FRAX_PROXY);
-      const claimerAfter = await frax.balanceOf(noob._address);
-      const feeDBalanceAfter = await sdFrax3CRV.balanceOf(FEED);
-
-      //console.log((feeDBalanceBefore/10**18).toString(),(feeDBalanceAfter/10**18).toString())
-      expect(fxsBalanceBefore).not.eq(0);
-      expect(fxsBalanceAfter).eq(0);
-      expect(claimerAfter - claimerBefore).not.eq(0);
-      expect(feeDBalanceAfter - feeDBalanceBefore).gt(0);
-    });
-  });
 });
