@@ -3,6 +3,7 @@
 pragma solidity 0.8.7;
 
 import "../strategy/AngleStrategy.sol";
+import "../interfaces/ISDTDistributor.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IMerkle {
@@ -14,7 +15,8 @@ contract AngleVoterV2 {
 	address public constant ANGLE_LOCKER = 0xD13F8C25CceD32cdfA79EB5eD654Ce3e484dCAF5;
 	address public constant ANGLE_GC = 0x9aD7e7b0877582E14c17702EecF49018DD6f2367;
     address public constant ANGLE = 0x31429d1856aD1377A8A0079410B297e1a9e214c2;
-    IMerkle public merkleReward = IMerkle(0x5a93D504604fB57E15b0d73733DDc86301Dde2f1);
+    IMerkle public constant MERKLE_REWARD = IMerkle(0x5a93D504604fB57E15b0d73733DDc86301Dde2f1);
+	ISDTDistributor public constant SDT_DISTRIBUTOR = ISDTDistributor(0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C);
 	address public governance;
 
 	constructor() {
@@ -46,7 +48,7 @@ contract AngleVoterV2 {
 		// claim merkle reward
 		uint256 angleBeforeClaim = IERC20(ANGLE).balanceOf(ANGLE_LOCKER);
 		// the angle locker will receive ANGLE rewards
-		merkleReward.claim(users, tokens, amounts, _proofs);
+		MERKLE_REWARD.claim(users, tokens, amounts, _proofs);
 
 		// notify amounts to the related gauges
 		uint256 gaugeslength = _gauges.length;
@@ -58,6 +60,8 @@ contract AngleVoterV2 {
 				abi.encodeWithSignature("execute(address,uint256,bytes)", _gauges[i], 0, notifyData)
 			);
 			require(success, "Notify failed!");
+			// Distribute SDT to the related gauge
+			SDT_DISTRIBUTOR.distribute(_gauges[i]);
 			unchecked {
 				++i;
 			}

@@ -25,6 +25,7 @@ interface ILGV4 {
 contract AngleMerkleClaimTest is Test {
 
 	address public multisig = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063;
+	address public constant SDT = 0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F;
 	address public constant ANGLE = 0x31429d1856aD1377A8A0079410B297e1a9e214c2;
 	address public constant ANGLE_LOCKER = 0xD13F8C25CceD32cdfA79EB5eD654Ce3e484dCAF5;
 
@@ -73,21 +74,21 @@ contract AngleMerkleClaimTest is Test {
 
 	function testClaim() public {
 		// total ANGLE amount to claim for all guni gauges
-		uint256 totalAmount = 240008653919396200000000;
+		uint256 totalAmount = 448265229291772000000000;
 		// merkle tree proof (fetched from Angle UI)
 		bytes32[][] memory proofs = new bytes32[][](1);
 		proofs[0] = new bytes32[](6);
-		proofs[0][0] = bytes32(0xdcbf8b200c282884277de54206386fe8fbab0e1dff4f2b94e19e9cf54d569338);
-		proofs[0][1] = bytes32(0x433021e24ea4538b8f18c86c8173888ecfc862cade5f38418d1c4fb709872bde);
-		proofs[0][2] = bytes32(0x3c021ea991224400587829219913c19e4f9c59ab48ae7b7e0a9fd4a6f389a09c);
-		proofs[0][3] = bytes32(0xe56d80e6a36d3c41256685708b7c64e41c110b77f23c4daa67b9be10e51a117c);
-		proofs[0][4] = bytes32(0x5228a1a3fcd990de927ab3776d38c8bc6a10ace9d78dbe23cbdd1d0aef691012);
-		proofs[0][5] = bytes32(0xef7a39949475c66796971184706b4d67f754773052c751d43bce7356511fb309);
+		proofs[0][0] = bytes32(0xedc62f28e3fcf032331b4479d1d7d6f27f93988e715c412841ee197565588dd7);
+		proofs[0][1] = bytes32(0xfa64d6467608f1b2e19cb71a09ec7dd02d3998abfdad107fb4b6de4104fa2951);
+		proofs[0][2] = bytes32(0x6db857b72bc4e3fd57fab1a4ab08d2c8817a96cac4b44346941952860379ca24);
+		proofs[0][3] = bytes32(0x97a04a4822d1e3337b7b2891b78a0f9ffbda26bc85b665ae3a34d870b727eec9);
+		proofs[0][4] = bytes32(0x42549ba36c0e7f9bcc4284ddcc7d257e81a09b0f08b02ec4efe18b3d351a9a00);
+		proofs[0][5] = bytes32(0xf514c28734b2bcedc16ab63718842c0e9b19843f6c7fc2189cccd44c8f05a70e);
 
 		// amount to notify as reward for each LGV$
 		uint256[] memory amountsToNotify = new uint256[](2);
-		amountsToNotify[0] = 153388051999170600000000; // AgEurEth reward
-		amountsToNotify[1] = 86620601920225600000000; // AgEurUsdc reward
+		amountsToNotify[0] = 297664340000000000000000; // AgEurEth reward
+		amountsToNotify[1] = 150600889291772000000000; // AgEurUsdc reward
 
 		// LGV4 addresses
 		address[] memory gauges = new address[](2);
@@ -95,14 +96,20 @@ contract AngleMerkleClaimTest is Test {
 		gauges[1] = address(guniAgEurUsdcLG);
 		
 		// LGV4 balance
-		uint256 balanceBeforeAgEurEthLG =  IERC20(ANGLE).balanceOf(address(guniAgEurEthLG));
-		uint256 balanceBeforeAgEurUsdcLG =  IERC20(ANGLE).balanceOf(address(guniAgEurUsdcLG));
+		uint256 balanceAngleBeforeAgEurEthLG =  IERC20(ANGLE).balanceOf(address(guniAgEurEthLG));
+		uint256 balanceSdtBeforeAgEurEthLG = IERC20(SDT).balanceOf(address(guniAgEurEthLG));
+		uint256 balanceAngleBeforeAgEurUsdcLG =  IERC20(ANGLE).balanceOf(address(guniAgEurUsdcLG));
+		uint256 balanceSdtBeforeAgEurUsdcLG = IERC20(SDT).balanceOf(address(guniAgEurEthLG));
 		vm.prank(multisig);
 		voterV2.claimRewardFromMerkle(totalAmount, proofs, amountsToNotify, gauges);
-		uint256 balanceAfterAgEurEthLG =  IERC20(ANGLE).balanceOf(address(guniAgEurEthLG));
-		uint256 balanceAfterAgEurUsdcLG =  IERC20(ANGLE).balanceOf(address(guniAgEurUsdcLG));
-		require(balanceAfterAgEurEthLG - balanceBeforeAgEurEthLG == amountsToNotify[0], "wrong amount received");
-		require(balanceAfterAgEurUsdcLG - balanceBeforeAgEurUsdcLG == amountsToNotify[1], "wrong amount received"); 
+		uint256 balanceAngleAfterAgEurEthLG =  IERC20(ANGLE).balanceOf(address(guniAgEurEthLG));
+		uint256 balanceSdtAfterAgEurEthLG = IERC20(SDT).balanceOf(address(guniAgEurEthLG));
+		uint256 balanceAngleAfterAgEurUsdcLG =  IERC20(ANGLE).balanceOf(address(guniAgEurUsdcLG));
+		uint256 balanceSdtAfterAgEurUsdcLG = IERC20(SDT).balanceOf(address(guniAgEurEthLG));
+		require(balanceAngleAfterAgEurEthLG - balanceAngleBeforeAgEurEthLG == amountsToNotify[0], "wrong amount received");
+		require(balanceAngleAfterAgEurUsdcLG - balanceAngleBeforeAgEurUsdcLG == amountsToNotify[1], "wrong amount received");
+		require(balanceSdtAfterAgEurEthLG - balanceSdtBeforeAgEurEthLG > 0, "wrong amount received");
+		require(balanceSdtAfterAgEurUsdcLG - balanceSdtBeforeAgEurUsdcLG > 0, "wrong amount received"); 
 	}
 
 	function testMigration() public {
