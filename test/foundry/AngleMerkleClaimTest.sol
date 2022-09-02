@@ -87,13 +87,26 @@ contract AngleMerkleClaimTest is Test {
 
 		// amount to notify as reward for each LGV$
 		uint256[] memory amountsToNotify = new uint256[](2);
-		amountsToNotify[0] = 297664340000000000000000; // AgEurEth reward
+		amountsToNotify[0] = 297661340000000000000000; // AgEurEth reward
 		amountsToNotify[1] = 150600889291772000000000; // AgEurUsdc reward
 
 		// LGV4 addresses
 		address[] memory gauges = new address[](2);
 		gauges[0] = address(guniAgEurEthLG);
 		gauges[1] = address(guniAgEurUsdcLG);
+
+		uint256[] memory feeAmounts = new uint256[](3);
+		feeAmounts[0] = 1000000000000000000;
+		feeAmounts[1] = 1000000000000000000;
+		feeAmounts[2] = 1000000000000000000;
+
+		address[] memory feeRecipients = new address[](3);
+		feeRecipients[0] = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063; // ms
+		feeRecipients[1] = 0x8cc02F4f383A11b989708437DbA6BB0628d7eE78; // accumulator
+		feeRecipients[2] = 0xE92Aa77c3D8c7347950B2a8d4B2A0AdBF0c31054; // veSDTFeeProxy
+
+		// define Claim structure
+		AngleVoterV2.Claim memory claim = AngleVoterV2.Claim(gauges, amountsToNotify, feeAmounts, feeRecipients);
 		
 		// LGV4 balance
 		uint256 balanceAngleBeforeAgEurEthLG =  IERC20(ANGLE).balanceOf(address(guniAgEurEthLG));
@@ -101,7 +114,7 @@ contract AngleMerkleClaimTest is Test {
 		uint256 balanceAngleBeforeAgEurUsdcLG =  IERC20(ANGLE).balanceOf(address(guniAgEurUsdcLG));
 		uint256 balanceSdtBeforeAgEurUsdcLG = IERC20(SDT).balanceOf(address(guniAgEurEthLG));
 		vm.prank(multisig);
-		voterV2.claimRewardFromMerkle(totalAmount, proofs, amountsToNotify, gauges);
+		voterV2.claimRewardFromMerkle(totalAmount, proofs, claim);
 		uint256 balanceAngleAfterAgEurEthLG =  IERC20(ANGLE).balanceOf(address(guniAgEurEthLG));
 		uint256 balanceSdtAfterAgEurEthLG = IERC20(SDT).balanceOf(address(guniAgEurEthLG));
 		uint256 balanceAngleAfterAgEurUsdcLG =  IERC20(ANGLE).balanceOf(address(guniAgEurUsdcLG));

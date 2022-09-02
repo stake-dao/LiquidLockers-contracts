@@ -11,12 +11,21 @@ interface IMerkle {
 }
 
 contract AngleVoterV2 {
+	// Addresses
 	address public angleStrategy = 0x22635427C72e8b0028FeAE1B5e1957508d9D7CAF;
 	address public constant ANGLE_LOCKER = 0xD13F8C25CceD32cdfA79EB5eD654Ce3e484dCAF5;
 	address public constant ANGLE_GC = 0x9aD7e7b0877582E14c17702EecF49018DD6f2367;
     address public constant ANGLE = 0x31429d1856aD1377A8A0079410B297e1a9e214c2;
     IMerkle public constant MERKLE_REWARD = IMerkle(0x5a93D504604fB57E15b0d73733DDc86301Dde2f1);
 	ISDTDistributor public constant SDT_DISTRIBUTOR = ISDTDistributor(0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C);
+
+	struct Claim {
+		address[] gauges;
+		uint256[] amountsToNotify;
+		uint256[] feeAmounts;
+		address[] feeRecipients;
+	}
+
 	address public governance;
 
 	constructor() {
@@ -26,16 +35,16 @@ contract AngleVoterV2 {
 	/// @notice claim ANGLE rewards for guni gauges
 	/// @param _totalAmount total amount to claim
 	/// @param _proofs merkle tree proof
-	/// @param _amountsToNotify amounts to notify for each LGV4
-	/// @param _gauges gauges to notify the related amount
+	/// @param _claim claim structure
     function claimRewardFromMerkle(
 		uint256 _totalAmount, 
-		bytes32[][] memory _proofs, 
-		uint256[] memory _amountsToNotify, 
-		address[] memory _gauges
+		bytes32[][] calldata _proofs, 
+		Claim calldata _claim
 	) external {
+		Claim memory claim = _claim;
         require(msg.sender == governance, "!governance");
-		require(_amountsToNotify.length == _gauges.length, "different length");
+		require(claim.amountsToNotify.length == claim.gauges.length, "different length");
+		require(claim.feeAmounts.length == claim.feeRecipients.length, "different length");
 
 		// define merkle claims parameters
         address[] memory users = new address[](1);
@@ -51,17 +60,38 @@ contract AngleVoterV2 {
 		MERKLE_REWARD.claim(users, tokens, amounts, _proofs);
 
 		// notify amounts to the related gauges
-		uint256 gaugeslength = _gauges.length;
-		for (uint256 i; i < gaugeslength; ) {
-			bytes memory notifyData = abi.encodeWithSignature("deposit_reward_token(address,uint256)", ANGLE, _amountsToNotify[i]);
-			(bool success, ) = AngleStrategy(angleStrategy).execute(
+		bytes memory data;
+		bool success;
+		for (uint256 i; i < claim.gauges.length; ) {
+			data = abi.encodeWithSignature(
+				"deposit_reward_token(address,uint256)",
+				ANGLE,
+				claim.amountsToNotify[i]
+			);
+			(success, ) = AngleStrategy(angleStrategy).execute(
 				ANGLE_LOCKER,
 				0,
-				abi.encodeWithSignature("execute(address,uint256,bytes)", _gauges[i], 0, notifyData)
+				abi.encodeWithSignature("execute(address,uint256,bytes)", claim.gauges[i], 0, data)
 			);
 			require(success, "Notify failed!");
 			// Distribute SDT to the related gauge
-			SDT_DISTRIBUTOR.distribute(_gauges[i]);
+			SDT_DISTRIBUTOR.distribute(claim.gauges[i]);
+			unchecked {
+				++i;
+			}
+		}
+		// transfer Fees to recipients 
+		for (uint256 i; i < claim.feeRecipients.length; ) {
+			data = abi.encodeWithSignature(
+				"transfer(address,uint256)",
+				claim.feeRecipients[i],
+				claim.feeAmounts[i]
+			);
+			(success, ) = AngleStrategy(angleStrategy).execute(
+				ANGLE_LOCKER,
+				0,
+				abi.encodeWithSignature("execute(address,uint256,bytes)", ANGLE, 0, data)
+			);
 			unchecked {
 				++i;
 			}
