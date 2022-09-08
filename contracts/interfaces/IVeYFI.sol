@@ -8,5 +8,12 @@ interface IVeYFI {
 		address user
 	) external;
 
+	struct LockedBalance {
+		uint256 amount;
+		uint256 end;
+	}
+
 	function withdraw() external;
+
+	function locked(address) external view returns (LockedBalance memory);
 }

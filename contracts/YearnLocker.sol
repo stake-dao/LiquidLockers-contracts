@@ -14,7 +14,7 @@ contract YearnLocker {
 
 	/* ========== STATE VARIABLES ========== */
 	address public governance;
-	address public bptDepositor;
+	address public yearnDepositor;
 	address public accumulator;
 	address public rewardPool;
 
@@ -27,16 +27,20 @@ contract YearnLocker {
 	event VotedOnGaugeWeight(address indexed _gauge, uint256 _weight);
 	event Released(address indexed user, uint256 value);
 	event GovernanceChanged(address indexed newGovernance);
-	event BPTDepositorChanged(address indexed newApwDepositor);
+	event YFIDepositorChanged(address indexed newYearnDepositor);
 	event AccumulatorChanged(address indexed newAccumulator);
 	event RewardPoolChanged(address indexed newRewardPool);
 
 	/* ========== CONSTRUCTOR ========== */
-	constructor(address _accumulator, address _veToken) {
+	constructor(
+		address _accumulator,
+		address _veToken,
+		address _rewardPool
+	) {
 		governance = msg.sender;
 		accumulator = _accumulator;
 		VEYFI = _veToken;
-		IERC20(YFI).approve(_veToken, type(uint256).max);
+		rewardPool = _rewardPool;
 	}
 
 	/* ========== MODIFIERS ========== */
@@ -51,12 +55,17 @@ contract YearnLocker {
 	}
 
 	modifier onlyGovernanceOrDepositor() {
-		require(msg.sender == governance || msg.sender == bptDepositor, "!(gov||YearnDepositor)");
+		require(msg.sender == governance || msg.sender == yearnDepositor, "!(gov||YearnDepositor)");
 		_;
 	}
 
+	function approveUnderlying() external onlyGovernance {
+		IERC20(YFI).approve(VEYFI, 0);
+		IERC20(YFI).approve(VEYFI, type(uint256).max);
+	}
+
 	/* ========== MUTATIVE FUNCTIONS ========== */
-	/// @notice Creates a lock by locking BPT token in the VEBPT contract for the specified time
+	/// @notice Creates a lock by locking YFI token in the VotingYFI contract for the specified time
 	/// @dev Can only be called by governance or proxy
 	/// @param _value The amount of token to be locked
 	/// @param _unlockTime The duration for which the token is to be locked
@@ -65,20 +74,20 @@ contract YearnLocker {
 		emit LockCreated(msg.sender, _value, _unlockTime);
 	}
 
-	/// @notice Increases the amount of BPT locked in VEBPT
-	/// @dev The BPT needs to be transferred to this contract before calling
+	/// @notice Increases the amount of YFI locked in veYFI
+	/// @dev The YFI needs to be transferred to this contract before calling
 	/// @param _value The amount by which the lock amount is to be increased
 	function increaseAmount(uint256 _value) external onlyGovernanceOrDepositor {
 		IVeYFI(VEYFI).modify_lock(_value, 0, address(this));
 	}
 
-	/// @notice Increases the duration for which BPT is locked in VEBPT for the user calling the function
+	/// @notice Increases the duration for which YFI is locked in VotingYFI for the user calling the function
 	/// @param _unlockTime The duration in seconds for which the token is to be locked
 	function increaseUnlockTime(uint256 _unlockTime) external onlyGovernanceOrDepositor {
 		IVeYFI(VEYFI).modify_lock(0, _unlockTime, address(this));
 	}
 
-	/// @notice Claim the token reward from the BPT fee Distributor passing the token as input parameter
+	/// @notice Claim the token reward from the VotingYFI RewardPool passing the token as input parameter
 	/// @param _recipient The address which will receive the claimed token reward
 	function claimRewards(address _token, address _recipient) external onlyGovernanceOrAcc {
 		uint256 claimed = IRewardPool(rewardPool).claim(address(this), false);
@@ -86,9 +95,9 @@ contract YearnLocker {
 		IERC20(_token).safeTransfer(_recipient, claimed);
 	}
 
-	/// @notice Withdraw the BPT from VEBPT
+	/// @notice Withdraw the YFI from VotingYFI
 	/// @dev call only after lock time expires
-	/// @param _recipient The address which will receive the released BPT
+	/// @param _recipient The address which will receive the released YFI
 	function release(address _recipient) external onlyGovernance {
 		IVeYFI(VEYFI).withdraw();
 		uint256 balance = IERC20(YFI).balanceOf(address(this));
@@ -104,11 +113,11 @@ contract YearnLocker {
 		emit GovernanceChanged(_governance);
 	}
 
-	/// @notice Set the BPT Depositor
-	/// @param _bptDepositor BPT deppositor address
-	function setBptDepositor(address _bptDepositor) external onlyGovernance {
-		bptDepositor = _bptDepositor;
-		emit BPTDepositorChanged(_bptDepositor);
+	/// @notice Set the YFI Depositor
+	/// @param _yearnDepositor YFI deppositor address
+	function setBptDepositor(address _yearnDepositor) external onlyGovernance {
+		yearnDepositor = _yearnDepositor;
+		emit YFIDepositorChanged(_yearnDepositor);
 	}
 
 	/// @notice Set the Reward Pool
