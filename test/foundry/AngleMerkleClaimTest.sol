@@ -37,6 +37,11 @@ contract AngleMerkleClaimTest is Test {
 	
 	address public alice = makeAddr("alice");
 	address public bob = makeAddr("bob");
+
+	uint256 public constant BASE_FEE = 10000;
+	uint256 public constant MS_FEE = 200;
+	uint256 public constant ACC_FEE = 800;
+	uint256 public constant VESDT_PROXY_FEE = 500;
 	
 	function setUp() public {
 		// deploy new angle voter
@@ -74,21 +79,21 @@ contract AngleMerkleClaimTest is Test {
 
 	function testClaim() public {
 		// total ANGLE amount to claim for all guni gauges
-		uint256 totalAmount = 448265229291772000000000;
+		uint256 totalAmount = 768323052279494300000000;
 		// merkle tree proof (fetched from Angle UI)
 		bytes32[][] memory proofs = new bytes32[][](1);
 		proofs[0] = new bytes32[](6);
-		proofs[0][0] = bytes32(0xedc62f28e3fcf032331b4479d1d7d6f27f93988e715c412841ee197565588dd7);
-		proofs[0][1] = bytes32(0xfa64d6467608f1b2e19cb71a09ec7dd02d3998abfdad107fb4b6de4104fa2951);
-		proofs[0][2] = bytes32(0x6db857b72bc4e3fd57fab1a4ab08d2c8817a96cac4b44346941952860379ca24);
-		proofs[0][3] = bytes32(0x97a04a4822d1e3337b7b2891b78a0f9ffbda26bc85b665ae3a34d870b727eec9);
-		proofs[0][4] = bytes32(0x42549ba36c0e7f9bcc4284ddcc7d257e81a09b0f08b02ec4efe18b3d351a9a00);
-		proofs[0][5] = bytes32(0xf514c28734b2bcedc16ab63718842c0e9b19843f6c7fc2189cccd44c8f05a70e);
+		proofs[0][0] = bytes32(0x2a09844018b8c01a95bb547cc67e73efc85d77555ce7e8fba882e30bbf0e8fee);
+		proofs[0][1] = bytes32(0x6d5671085e73ea1b6b227891c0217ce9d2706c9b3971495d9b6ee297df24838b);
+		proofs[0][2] = bytes32(0xcaf7c76bfcf0cd723ebe3f04ba3aee76d6a6658ea38c8134582fbbee1e3d02dc);
+		proofs[0][3] = bytes32(0x1af3e78e4127ec2ea37cfdaf0a79a9bff9019cce7fd53e5834d759041a582c0b);
+		proofs[0][4] = bytes32(0xcea8f208561df64186a30350124b4d57a974662c7cc7c096111c9672074cec17);
+		proofs[0][5] = bytes32(0x968a20655b3ed42dd5c0b9a2f46c7a097f639ac2b3a19074a1e5129397f9eb8e);
 
 		// amount to notify as reward for each LGV$
 		uint256[] memory amountsToNotify = new uint256[](2);
-		amountsToNotify[0] = 297661340000000000000000; // AgEurEth reward
-		amountsToNotify[1] = 150600889291772000000000; // AgEurUsdc reward
+		amountsToNotify[0] = 587199560000000000000000; // AgEurEth reward
+		amountsToNotify[1] = 181123492279494300000000; // AgEurUsdc reward
 
 		// LGV4 addresses
 		address[] memory gauges = new address[](2);
@@ -96,9 +101,27 @@ contract AngleMerkleClaimTest is Test {
 		gauges[1] = address(guniAgEurUsdcLG);
 
 		uint256[] memory feeAmounts = new uint256[](3);
-		feeAmounts[0] = 1000000000000000000;
-		feeAmounts[1] = 1000000000000000000;
-		feeAmounts[2] = 1000000000000000000;
+
+		uint256 msFeeAgEurEth = (amountsToNotify[0] * MS_FEE / BASE_FEE);
+		uint256 accFeeAgEurEth = (amountsToNotify[0] * ACC_FEE / BASE_FEE);
+		uint256 veSdtProxyFeeAgEurEth = (amountsToNotify[0] * VESDT_PROXY_FEE / BASE_FEE);
+		uint256 msFeeAgEurUsdc = (amountsToNotify[1] * MS_FEE / BASE_FEE);
+		uint256 accFeeAgEurUsdc = (amountsToNotify[1] * ACC_FEE / BASE_FEE);
+		uint256 veSdtProxyFeeAgEurUsdc = (amountsToNotify[1] * VESDT_PROXY_FEE / BASE_FEE);
+
+		feeAmounts[0] = msFeeAgEurEth + msFeeAgEurUsdc;
+		feeAmounts[1] = accFeeAgEurEth + accFeeAgEurUsdc;
+		feeAmounts[2] = veSdtProxyFeeAgEurEth + veSdtProxyFeeAgEurUsdc;
+
+		emit log_uint(feeAmounts[0]); // ms
+		emit log_uint(feeAmounts[1]); // accumulator
+		emit log_uint(feeAmounts[2]); // veSDTFeeProxy
+		
+		amountsToNotify[0] -= msFeeAgEurEth + accFeeAgEurEth + veSdtProxyFeeAgEurEth;
+		amountsToNotify[1] -= msFeeAgEurUsdc + accFeeAgEurUsdc + veSdtProxyFeeAgEurUsdc;
+
+		emit log_uint(amountsToNotify[0]); // AgEurEth reward - fees
+		emit log_uint(amountsToNotify[1]); // AgEurUsdc reward - fees
 
 		address[] memory feeRecipients = new address[](3);
 		feeRecipients[0] = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063; // ms
@@ -107,20 +130,28 @@ contract AngleMerkleClaimTest is Test {
 
 		// define Claim structure
 		AngleVoterV2.Claim memory claim = AngleVoterV2.Claim(gauges, amountsToNotify, feeAmounts, feeRecipients);
-		
+		claimReward(totalAmount, proofs, claim, amountsToNotify);
+	}
+
+	function claimReward(
+		uint256 _totalAmount, 
+		bytes32[][] memory _proofs, 
+		AngleVoterV2.Claim memory _claim, 
+		uint256[] memory _amountsToNotify
+	) internal {
 		// LGV4 balance
 		uint256 balanceAngleBeforeAgEurEthLG =  IERC20(ANGLE).balanceOf(address(guniAgEurEthLG));
 		uint256 balanceSdtBeforeAgEurEthLG = IERC20(SDT).balanceOf(address(guniAgEurEthLG));
 		uint256 balanceAngleBeforeAgEurUsdcLG =  IERC20(ANGLE).balanceOf(address(guniAgEurUsdcLG));
 		uint256 balanceSdtBeforeAgEurUsdcLG = IERC20(SDT).balanceOf(address(guniAgEurEthLG));
 		vm.prank(multisig);
-		voterV2.claimRewardFromMerkle(totalAmount, proofs, claim);
+		voterV2.claimRewardFromMerkle(_totalAmount, _proofs, _claim);
 		uint256 balanceAngleAfterAgEurEthLG =  IERC20(ANGLE).balanceOf(address(guniAgEurEthLG));
 		uint256 balanceSdtAfterAgEurEthLG = IERC20(SDT).balanceOf(address(guniAgEurEthLG));
 		uint256 balanceAngleAfterAgEurUsdcLG =  IERC20(ANGLE).balanceOf(address(guniAgEurUsdcLG));
 		uint256 balanceSdtAfterAgEurUsdcLG = IERC20(SDT).balanceOf(address(guniAgEurEthLG));
-		require(balanceAngleAfterAgEurEthLG - balanceAngleBeforeAgEurEthLG == amountsToNotify[0], "wrong amount received");
-		require(balanceAngleAfterAgEurUsdcLG - balanceAngleBeforeAgEurUsdcLG == amountsToNotify[1], "wrong amount received");
+		require(balanceAngleAfterAgEurEthLG - balanceAngleBeforeAgEurEthLG == _amountsToNotify[0], "wrong amount received");
+		require(balanceAngleAfterAgEurUsdcLG - balanceAngleBeforeAgEurUsdcLG == _amountsToNotify[1], "wrong amount received");
 		require(balanceSdtAfterAgEurEthLG - balanceSdtBeforeAgEurEthLG > 0, "wrong amount received");
 		require(balanceSdtAfterAgEurUsdcLG - balanceSdtBeforeAgEurUsdcLG > 0, "wrong amount received"); 
 	}
