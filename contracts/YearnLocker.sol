@@ -115,7 +115,7 @@ contract YearnLocker {
 
 	/// @notice Set the YFI Depositor
 	/// @param _yearnDepositor YFI deppositor address
-	function setBptDepositor(address _yearnDepositor) external onlyGovernance {
+	function setYFIDepositor(address _yearnDepositor) external onlyGovernance {
 		yearnDepositor = _yearnDepositor;
 		emit YFIDepositorChanged(_yearnDepositor);
 	}

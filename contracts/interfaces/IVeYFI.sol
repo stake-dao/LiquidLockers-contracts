@@ -13,6 +13,8 @@ interface IVeYFI {
 		uint256 end;
 	}
 
+	function balanceOf(address account) external view returns (uint256);
+
 	function withdraw() external;
 
 	function locked(address) external view returns (LockedBalance memory);
