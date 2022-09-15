@@ -19,7 +19,7 @@ export default {
   networks: {
     hardhat: {
       forking: {
-        url: process.env.MAINNET,
+        url: process.env.MAINNET
         //blockNumber: 15410500
       }
     },
@@ -32,30 +32,29 @@ export default {
     deployer: 0
   },
   vyper: {
-    version: "0.2.16"
+    compilers: [{ version: "0.2.16" }, { version: "0.3.4" }]
   },
   solidity: {
     compilers: [
-    {
-      version: "0.8.7",
-      settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200
+      {
+        version: "0.8.7",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      },
+      {
+        version: "0.6.12",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
       }
-    }},
-    {
-      version: "0.6.12",
-      settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200
-      }
-      }
-    }
-
-  ]
-
+    ]
   },
   gasReporter: {
     enabled: false,
