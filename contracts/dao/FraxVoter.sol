@@ -3,10 +3,12 @@
 pragma solidity 0.8.7;
 
 import "../FxsLocker.sol";
+import { FraxStrategy } from "../strategy/FraxStrategy.sol";
 
 contract FraxVoter {
 	address public constant fxsLocker = 0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f;
 	address public constant fxsGaugeController = 0x3669C421b77340B2979d1A00a792CC2ee0FcE737;
+	address public constant fraxStrategy = 0xf285Dec3217E779353350443fC276c07D05917c3;
 	address public governance;
 
 	constructor() {
@@ -23,7 +25,13 @@ contract FraxVoter {
 				_gauges[i],
 				_weights[i]
 			);
-			(bool success, ) = FxsLocker(fxsLocker).execute(fxsGaugeController, 0, voteData);
+			bytes memory executeData = abi.encodeWithSignature(
+				"execute(address,uint256,bytes)",
+				fxsGaugeController,
+				0,
+				voteData
+			);
+			(bool success, ) = FraxStrategy(fraxStrategy).execute(fxsLocker, 0, executeData);
 			require(success, "Voting failed!");
 		}
 	}
@@ -60,7 +68,8 @@ contract FraxVoter {
 		require(success, "!success");
 		uint256 tokenBalance = IERC20(_token).balanceOf(fxsLocker);
 		bytes memory transferData = abi.encodeWithSignature("transfer(address,uint256)", _recipient, tokenBalance);
-		(success, ) = FxsLocker(fxsLocker).execute(_token, 0, transferData);
+		bytes memory executeData = abi.encodeWithSignature("execute(address,uint256,bytes)", _token, 0, transferData);
+		(success, ) = FraxStrategy(fraxStrategy).execute(fxsLocker, 0, executeData);
 		require(success, "transfer failed");
 		return (success, result);
 	}
