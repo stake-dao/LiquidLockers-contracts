@@ -91,7 +91,7 @@ claim_data: HashMap[address, HashMap[address, uint256]]
 admin: public(address)
 future_admin: public(address)
 claimer: public(address)
-poolRegistry: public(address)
+pool_registry: public(address)
 
 initialized: public(bool)
 
@@ -107,7 +107,7 @@ def __init__():
     self.initialized = True
 
 @external
-def initialize(_admin: address, _SDT: address, _voting_escrow: address, _veBoost_proxy: address, _distributor: address, _pid: uint256, _poolRegistry: address):
+def initialize(_admin: address, _SDT: address, _voting_escrow: address, _veBoost_proxy: address, _distributor: address, _pid: uint256, _pool_registry: address):
     """
     @notice Contract initializer
     @param _admin Admin who can kill the gauge
@@ -115,6 +115,8 @@ def initialize(_admin: address, _SDT: address, _voting_escrow: address, _veBoost
     @param _voting_escrow Address of the veSDT contract
     @param _veBoost_proxy Address of the proxy contract used to query veSDT balances and taking into account potential delegations
     @param _distributor Address of the contract responsible for distributing SDT tokens to this gauge
+    @param _pid pool id corresponding to this gauge
+    @param _pool_registry Address of the pool registry contract
     """
     assert self.initialized == False #dev: contract is already initialized
     self.initialized = True
@@ -130,7 +132,7 @@ def initialize(_admin: address, _SDT: address, _voting_escrow: address, _veBoost
     self.voting_escrow = _voting_escrow
     self.veBoost_proxy = _veBoost_proxy
     self.pid = _pid
-    self.poolRegistry = _poolRegistry
+    self.pool_registry = _pool_registry
 
     # add in all liquidityGauge the SDT reward - the distribution could be null though
     self.reward_data[_SDT].distributor = _distributor
@@ -169,6 +171,12 @@ def _update_liquidity_limit(addr: address, l: uint256, L: uint256):
 def _checkpoint_reward(_user: address, token: address, _total_supply: uint256, _user_balance: uint256, _claim: bool, receiver: address):
     """
     @notice Claim pending rewards and checkpoint rewards for a user
+    @param _user Account to checkpoint reward for
+    @param token Token to checkpoint reward for
+    @param _total_supply Amount total deposited in the contract
+    @param _user_balance Amount total deposited in the contract for _user
+    @param _claim Bool to claim (or not) reward during the checkpoint
+    @param receiver Address to transfer the claimed reward
     """
     total_supply: uint256 = _total_supply
     user_balance: uint256 = _user_balance
@@ -220,6 +228,12 @@ def _checkpoint_reward(_user: address, token: address, _total_supply: uint256, _
 def _checkpoint_rewards(_user: address, _total_supply: uint256, _claim: bool, _receiver: address, _only_checkpoint:bool = False):
     """
     @notice Claim pending rewards and checkpoint rewards for a user
+    @param _user Account to checkpoint reward for
+    @param _total_supply Amount total deposited in the contract
+    @param _user_balance Amount total deposited in the contract for _user
+    @param _claim Bool to claim (or not) reward during the checkpoint
+    @param _receiver Address to transfer the claimed reward
+    @param _only_checkpoint Bool to call only checkpoint reward
     """
 
     receiver: address = _receiver
@@ -364,28 +378,29 @@ def deposit(_value: uint256, _addr: address , _claim_rewards: bool = False):
     @dev Depositting also claims pending reward tokens
     @param _value Number of tokens to deposit
     @param _addr Address to deposit for
+    @param _claim_rewards Bool to claim reward on _checkpoint_rewards()
     """
     #only personal vault can deposit
-    #assert PoolRegistry(self.poolRegistry).vaultMap(self.pid,_addr) == msg.sender, "!only personal vault" 
+    assert PoolRegistry(self.pool_registry).vaultMap(self.pid, _addr) == msg.sender, "!only personal vault" 
 
     total_supply: uint256 = self.totalSupply
 
     if _value != 0:
         is_rewards: bool = self.reward_count != 0
         if is_rewards:
-            self._checkpoint_rewards(msg.sender, total_supply, _claim_rewards, ZERO_ADDRESS)
+            self._checkpoint_rewards(_addr, total_supply, _claim_rewards, ZERO_ADDRESS)
 
         total_supply += _value
-        new_balance: uint256 = self.balanceOf[msg.sender] + _value
-        # define my own balance of and so on 
-        self.balanceOf[msg.sender] = new_balance
+        new_balance: uint256 = self.balanceOf[_addr] + _value
+
+        self.balanceOf[_addr] = new_balance
         self.totalSupply = total_supply
 
-        self._update_liquidity_limit(msg.sender, new_balance, total_supply)
+        self._update_liquidity_limit(_addr, new_balance, total_supply)
     else:
-        self._checkpoint_rewards(msg.sender, total_supply, False, ZERO_ADDRESS, True)
+        self._checkpoint_rewards(_addr, total_supply, False, ZERO_ADDRESS, True)
 
-    log Deposit(msg.sender, _value)
+    log Deposit(_addr, _value)
 
 @external
 @nonreentrant('lock')
@@ -394,30 +409,34 @@ def withdraw(_value: uint256, _addr: address, _claim_rewards: bool = False):
     @notice Withdraw `_value` LP tokens
     @dev Withdrawing also claims pending reward tokens
     @param _value Number of tokens to withdraw
+    @param _addr Address to withdraw for
+    @param _claim_rewards Bool to claim reward on _checkpoint_rewards()
     """
-    assert PoolRegistry(self.poolRegistry).vaultMap(self.pid,_addr) == msg.sender, "!only personal vault" 
+    assert PoolRegistry(self.pool_registry).vaultMap(self.pid, _addr) == msg.sender, "!only personal vault" 
     total_supply: uint256 = self.totalSupply
 
     if _value != 0:
         is_rewards: bool = self.reward_count != 0
         if is_rewards:
-            self._checkpoint_rewards(msg.sender, total_supply, _claim_rewards, ZERO_ADDRESS)
+            self._checkpoint_rewards(_addr, total_supply, _claim_rewards, ZERO_ADDRESS)
 
         total_supply -= _value
-        new_balance: uint256 = self.balanceOf[msg.sender] - _value
-        self.balanceOf[msg.sender] = new_balance
+        new_balance: uint256 = self.balanceOf[_addr] - _value
+        self.balanceOf[_addr] = new_balance
         self.totalSupply = total_supply
 
-        self._update_liquidity_limit(msg.sender, new_balance, total_supply)
+        self._update_liquidity_limit(_addr, new_balance, total_supply)
     else:
-        self._checkpoint_rewards(msg.sender, total_supply, False, ZERO_ADDRESS, True)
+        self._checkpoint_rewards(_addr, total_supply, False, ZERO_ADDRESS, True)
 
-    log Withdraw(msg.sender, _value)
+    log Withdraw(_addr, _value)
 
 @external
 def add_reward(_reward_token: address, _distributor: address):
     """
     @notice Set the active reward contract
+    @param _reward_token Address for new reward token
+    @param _distributor Address of _reward_token distributor
     """
     assert msg.sender == self.admin  # dev: only owner
 
@@ -431,6 +450,11 @@ def add_reward(_reward_token: address, _distributor: address):
 
 @external
 def set_reward_distributor(_reward_token: address, _distributor: address):
+    """
+    @notice Change address for a existring reward token distributor
+    @param _reward_token Address of the reward token
+    @param _distributor New address of the distributor
+    """
     current_distributor: address = self.reward_data[_reward_token].distributor
 
     assert msg.sender == current_distributor or msg.sender == self.admin
@@ -441,6 +465,10 @@ def set_reward_distributor(_reward_token: address, _distributor: address):
 
 @external
 def set_claimer(_claimer: address):
+    """
+    @notice Change address for claimer
+    @param _claimer New address for claimer
+    """
     assert msg.sender == self.admin
     assert _claimer != ZERO_ADDRESS
 
@@ -449,6 +477,11 @@ def set_claimer(_claimer: address):
 @external
 @nonreentrant("lock")
 def deposit_reward_token(_reward_token: address, _amount: uint256):
+    """
+    @notice Depositing new amount of reward token into this LGV4
+    @param _reward_token Address of the reward token
+    @param _amount Amount of reward token to be deposited
+    """
     assert msg.sender == self.reward_data[_reward_token].distributor
 
     self._checkpoint_rewards(ZERO_ADDRESS, self.totalSupply, False, ZERO_ADDRESS)
@@ -489,7 +522,6 @@ def commit_transfer_ownership(addr: address):
     assert addr != ZERO_ADDRESS  # dev: future admin cannot be the 0 address
 
     self.future_admin = addr
-    self.admin = addr
     log CommitOwnership(addr)
 
 

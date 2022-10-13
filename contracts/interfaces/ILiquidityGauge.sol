@@ -40,4 +40,15 @@ interface ILiquidityGauge {
 	function commit_transfer_ownership(address) external;
 
 	function claim_rewards(address) external;
+
+	function add_reward(address, address) external;
+
+	function initialize(
+		address staking_token,
+		address admin,
+		address SDT,
+		address voting_escrow,
+		address veBoost_proxy,
+		address distributor
+	) external;
 }

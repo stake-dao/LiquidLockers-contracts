@@ -20,6 +20,7 @@ contract PoolRegistry {
 	PoolInfo[] public poolInfo;
 	mapping(uint256 => mapping(address => address)) public vaultMap; //pool -> user -> vault
 	mapping(uint256 => address[]) public poolVaultList; //pool -> vault array
+	mapping(address => uint256) public vaultPid;
 
 	struct PoolInfo {
 		address implementation; // Personal Vault model
@@ -172,6 +173,8 @@ contract PoolRegistry {
 		vaultMap[_pid][_user] = vault;
 		//add to pool vault list
 		poolVaultList[_pid].push(vault);
+		// add pid to vault map
+		vaultPid[vault] = _pid;
 
 		//return values
 		stakingAddress = pool.stakingAddress;

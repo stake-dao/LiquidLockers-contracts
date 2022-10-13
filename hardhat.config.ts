@@ -19,8 +19,8 @@ export default {
   networks: {
     hardhat: {
       forking: {
-        url: process.env.MAINNET,
-        //blockNumber: 15374400
+        url: process.env.MAINNET
+        //blockNumber: 15410500
       }
     },
     mainnet: {
@@ -32,30 +32,29 @@ export default {
     deployer: 0
   },
   vyper: {
-    version: "0.2.16"
+    compilers: [{ version: "0.2.16" }, { version: "0.3.4" }, { version: "0.2.15" }, { version: "0.3.3" }]
   },
   solidity: {
     compilers: [
-    {
-      version: "0.8.7",
-      settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200
+      {
+        version: "0.8.7",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      },
+      {
+        version: "0.6.12",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
       }
-    }},
-    {
-      version: "0.6.12",
-      settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200
-      }
-      }
-    }
-
-  ]
-
+    ]
   },
   gasReporter: {
     enabled: false,
@@ -76,7 +75,6 @@ export default {
   },
   // specify separate cache for hardhat, since it could possibly conflict with foundry's
   paths: {
-    sources: "./vyper-contracts",
     cache: "hh-cache"
   }
 } as HardhatUserConfig;
