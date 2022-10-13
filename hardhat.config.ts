@@ -32,7 +32,7 @@ export default {
     deployer: 0
   },
   vyper: {
-    compilers: [{ version: "0.2.16" }, { version: "0.3.4" }]
+    compilers: [{ version: "0.2.16" }, { version: "0.3.4" }, { version: "0.2.15" }, { version: "0.3.3" }]
   },
   solidity: {
     compilers: [
