@@ -4,42 +4,51 @@ pragma solidity ^0.8.7;
 import "forge-std/Test.sol";
 
 import "../fixtures/Constants.sol";
-
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "contracts/interfaces/IBaseLocker.sol";
+import "contracts/interfaces/IBaseDepositor.sol";
 
-contract BaseLockerTest is Test {
+contract BaseTest is Test {
 	address public token;
 	address public veToken;
 	address public locker;
+	address public depositor;
+	address public sdtoken;
 	address[] public rewardsToken;
 	address public rewardDistributor;
 
 	uint256 public initialLockAmount;
-	uint256 public extraLockAmount;
 	uint256 public initialLockTime;
+	uint256 public initialDepositAmount;
+	uint256 public extraLockAmount;
 	uint256 public extraLockTime;
+
 	uint256[] public rewardsAmount;
 
-	function initBaseLocker(
+	function initBase(
 		address _token,
 		address _veToken,
 		address _locker,
+		address _depositor,
+		address _sdtoken,
 		address[] memory _rewardsToken,
 		address _rewardDistributor,
 		uint256 _initialLockAmount,
 		uint256 _initialLockTime,
+		uint256 _initialDepositAmount,
 		uint256 _extraLockAmount,
 		uint256 _extraLockTime,
 		uint256[] memory _rewardsAmount
-	) public {
+	) internal {
 		token = _token;
 		veToken = _veToken;
 		locker = _locker;
+		depositor = _depositor;
+		sdtoken = _sdtoken;
 		initialLockAmount = _initialLockAmount;
 		initialLockTime = _initialLockTime;
+		initialDepositAmount = _initialDepositAmount;
 		extraLockAmount = _extraLockAmount;
 		extraLockTime = _extraLockTime;
 		rewardsToken = _rewardsToken;
@@ -47,6 +56,9 @@ contract BaseLockerTest is Test {
 		rewardsAmount = _rewardsAmount;
 	}
 
+	////////////////////////////////////////////////////////////////
+	/// --- LOCKER
+	///////////////////////////////////////////////////////////////
 	function createLock() internal {
 		deal(token, address(locker), initialLockAmount);
 		vm.startPrank(IBaseLocker(locker).governance());
@@ -106,6 +118,31 @@ contract BaseLockerTest is Test {
 		vm.startPrank(IBaseLocker(locker).governance());
 		IBaseLocker(locker).setAccumulator(address(0xA));
 		IBaseLocker(locker).setGovernance(address(0xA));
+	}
+
+	////////////////////////////////////////////////////////////////
+	/// --- DEPOSITOR
+	///////////////////////////////////////////////////////////////
+	function lockToken() internal {
+		createLock();
+		timeJump(60 * 60 * 24 * 30 * 2);
+		deal(token, locker, initialDepositAmount);
+		IBaseDepositor(depositor).lockToken();
+	}
+
+	// Needed to reach 100% coverage
+	function lock0Token() internal {
+		createLock();
+		timeJump(60 * 60 * 24 * 30);
+		deal(token, locker, 0);
+		IBaseDepositor(depositor).lockToken();
+	}
+
+	function depositNoLockNoIncentiveNoStakeNoGauge(address _user) internal {
+		deal(token, _user, initialDepositAmount);
+		vm.startPrank(_user);
+		IERC20(token).approve(depositor, initialDepositAmount);
+		IBaseDepositor(depositor).deposit(initialDepositAmount, false, false, _user);
 	}
 
 	function timeJump(uint256 _period) public returns (uint256, uint256) {

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.7;
 
 // Base Tests
-import "./baseTest/BaseLocker.t.sol";
+import "./baseTest/Base.t.sol";
 
 // Contract
 import "contracts/lockers/AngleLocker.sol";
@@ -10,8 +10,9 @@ import "contracts/lockers/AngleLocker.sol";
 // Interface
 import "contracts/interfaces/IVeANGLE.sol";
 import "contracts/interfaces/ISmartWalletChecker.sol";
+import "contracts/interfaces/IAngleGaugeController.sol";
 
-contract AngleTest is BaseLockerTest {
+contract AngleTest is BaseTest {
 	address internal constant LOCAL_DEPLOYER = address(0xDE);
 
 	AngleLocker internal angleLocker;
@@ -26,13 +27,17 @@ contract AngleTest is BaseLockerTest {
 		uint256[] memory rewardsAmount = new uint256[](1);
 		rewardsAmount[0] = 1e18;
 
-		initBaseLocker(
+		initBase(
 			// Token to lock address
 			Constants.ANGLE,
 			// veToken address
 			Constants.VEANGLE,
 			// Liquid Locker address
 			address(angleLocker),
+			// Depositor address
+			address(0),
+			// Wrapper address
+			address(0),
 			// rewards token list
 			rewardsToken,
 			// Fee/yield distributor address
@@ -41,6 +46,8 @@ contract AngleTest is BaseLockerTest {
 			1e18,
 			// Initial period to lock
 			125_798_400,
+			// Initial user deposit amount
+			1e18,
 			// Extra amount to lock
 			1e16,
 			// Extra period to lock
@@ -118,7 +125,15 @@ contract AngleTest is BaseLockerTest {
 		assertEq(angleLocker.gaugeController(), address(0xA));
 	}
 
-    function testLocker09Extra02VoteGauge() public {
-        
-    }
+	function testLocker09Extra02VoteGauge() public {
+		createLock();
+		address gauge = IAngleGaugeController(Constants.ANGLE_GAUGE_CONTROLLER).gauges(0);
+		uint256 voteBefore = IAngleGaugeController(Constants.ANGLE_GAUGE_CONTROLLER).last_user_vote(address(locker), gauge);
+		vm.startPrank(IBaseLocker(locker).governance());
+		angleLocker.voteGaugeWeight(gauge, 10000);
+		uint256 voteAfter = IAngleGaugeController(Constants.ANGLE_GAUGE_CONTROLLER).last_user_vote(address(locker), gauge);
+
+		assertEq(voteBefore, 0);
+		assertGt(voteAfter, voteBefore);
+	}
 }
