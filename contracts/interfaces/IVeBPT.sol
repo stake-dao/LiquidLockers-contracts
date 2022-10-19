@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-interface IVeANGLE {
+interface IVeBPT {
 	struct LockedBalance {
 		int128 amount;
 		uint256 end;
@@ -14,6 +14,8 @@ interface IVeANGLE {
 	function increase_unlock_time(uint256 _unlock_time) external;
 
 	function withdraw() external;
+
+	function deposit_for(address, uint256) external;
 
 	function locked(address) external returns (LockedBalance memory);
 
