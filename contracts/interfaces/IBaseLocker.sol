@@ -6,6 +6,12 @@ interface IBaseLocker {
 
 	function accumulator() external returns (address);
 
+	function feeDistributor() external returns (address);
+
+	function gaugeController() external returns (address);
+
+	function depositor() external returns (address);
+
 	function createLock(uint256 _value, uint256 _unlockTime) external;
 
 	function increaseAmount(uint256 _value) external;
@@ -21,6 +27,10 @@ interface IBaseLocker {
 	function setFeeDistributor(address _newFD) external;
 
 	function setAccumulator(address _accumulator) external;
+
+	function setDepositor(address _depositor) external;
+
+	function setGaugeController(address _gaugeController) external;
 
 	function execute(
 		address to,

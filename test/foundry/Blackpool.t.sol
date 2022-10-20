@@ -21,18 +21,30 @@ import "contracts/interfaces/ILiquidityGauge.sol";
 contract BlackpoolTest is BaseTest {
 	address internal constant LOCAL_DEPLOYER = address(0xDE);
 	address internal constant ALICE = address(0xAA);
+	address internal token = Constants.BPT;
+	address internal veToken = Constants.VEBPT;
+	address internal feeDistributor = Constants.BPT_FEE_DISTRIBUTOR;
+	address[] internal rewardsToken;
+
+	uint256 internal constant INITIAL_AMOUNT_TO_LOCK = 10e18;
+	uint256 internal constant INITIAL_PERIOD_TO_LOCK = 60 * 60 * 24 * 364 * 4;
+	uint256 internal constant EXTRA_AMOUNT_TO_LOCK = 1e18;
+	uint256 internal constant EXTRA_PERIOD_TO_LOCK = 60 * 60 * 24 * 364 * 1;
+	uint256[] internal rewardsAmount;
+
+	bytes internal BASE = abi.encodeWithSignature("base()");
 
 	sdToken internal sdBPT;
 	ProxyAdmin internal proxyAdmin;
-	BlackpoolLocker internal blackpoolLocker;
-	BlackpoolDepositor internal blackpoolDepositor;
+	BlackpoolLocker internal locker;
+	BlackpoolDepositor internal depositor;
 	TransparentUpgradeableProxy internal proxy;
 	ILiquidityGauge internal liquidityGauge;
 	ILiquidityGauge internal liquidityGaugeImpl;
 
 	function setUp() public {
 		vm.startPrank(LOCAL_DEPLOYER);
-		blackpoolLocker = new BlackpoolLocker(address(this));
+		locker = new BlackpoolLocker(address(this));
 		sdBPT = new sdToken("Stake DAO BPT", "sdBPT");
 		liquidityGaugeImpl = ILiquidityGauge(
 			deployCode("artifacts/contracts/staking/LiquidityGaugeV4.vy/LiquidityGaugeV4.json")
@@ -49,122 +61,159 @@ contract BlackpoolTest is BaseTest {
 		proxyAdmin = new ProxyAdmin();
 		proxy = new TransparentUpgradeableProxy(address(liquidityGaugeImpl), address(proxyAdmin), data);
 		liquidityGauge = ILiquidityGauge(address(proxy));
-		blackpoolDepositor = new BlackpoolDepositor(
-			address(Constants.BPT),
-			address(blackpoolLocker),
-			address(sdBPT),
-			Constants.VEBPT
-		);
+		depositor = new BlackpoolDepositor(address(Constants.BPT), address(locker), address(sdBPT), Constants.VEBPT);
 		vm.stopPrank();
 
-		address[] memory rewardsToken = new address[](1);
-		rewardsToken[0] = Constants.WETH;
-
-		uint256[] memory rewardsAmount = new uint256[](1);
-		rewardsAmount[0] = 1e18;
-
-		initBase(
-			// Token to lock address
-			Constants.BPT,
-			// veToken address
-			Constants.VEBPT,
-			// Liquid Locker address
-			address(blackpoolLocker),
-			// Depositor address
-			address(blackpoolDepositor),
-			// Wrapper address
-			address(sdBPT),
-			// rewards token list
-			rewardsToken,
-			// Fee/yield distributor address
-			Constants.BPT_FEE_DISTRIBUTOR,
-			// Initial amount to lock
-			1e18,
-			// Initial period to lock
-			125_798_400,
-			// Initial user deposit amount
-			1e18,
-			// Extra amount to lock
-			1e16,
-			// Extra period to lock
-			31_449_600,
-			// Amount for each rewards
-			rewardsAmount
-		);
+		rewardsToken.push(Constants.WETH);
+		rewardsAmount.push(1e18);
 
 		vm.prank(Constants.BPT_DAO);
 		ISmartWalletChecker(Constants.BPT_SMART_WALLET_CHECKER).approveWallet(address(locker));
 
 		vm.startPrank(LOCAL_DEPLOYER);
-		sdBPT.setOperator(depositor);
-		blackpoolLocker.setBptDepositor(depositor);
+		sdBPT.setOperator(address(depositor));
+		locker.setBptDepositor(address(depositor));
 		vm.stopPrank();
 	}
 
 	////////////////////////////////////////////////////////////////
 	/// --- LOCKER
 	///////////////////////////////////////////////////////////////
+
 	function testLocker01createLock() public {
-		createLock();
+		createLock(address(locker), token, veToken, INITIAL_AMOUNT_TO_LOCK, INITIAL_PERIOD_TO_LOCK, BASE);
+	}
 
-		IVeBPT.LockedBalance memory lockedBalance = IVeBPT(veToken).locked(address(locker));
-
-		assertEq(lockedBalance.amount, int256(initialLockAmount));
-		assertEq(lockedBalance.end, ((block.timestamp + initialLockTime) / Constants.WEEK) * Constants.WEEK);
-		assertApproxEqRel(IVeBPT(veToken).balanceOf(address(locker)), initialLockAmount, 1e16); // 1% Margin of Error
+	function testLocker01createLockSignature() public {
+		bytes memory data = abi.encodeWithSignature(
+			"createLock(uint256,uint256)",
+			INITIAL_AMOUNT_TO_LOCK,
+			block.timestamp + (INITIAL_PERIOD_TO_LOCK)
+		);
+		createLock(address(locker), token, veToken, INITIAL_AMOUNT_TO_LOCK, INITIAL_PERIOD_TO_LOCK, data);
 	}
 
 	function testLocker02IncreaseLockAmount() public {
-		increaseAmount();
+		increaseAmount(
+			address(locker),
+			token,
+			veToken,
+			INITIAL_AMOUNT_TO_LOCK,
+			INITIAL_PERIOD_TO_LOCK,
+			EXTRA_AMOUNT_TO_LOCK,
+			BASE,
+			BASE
+		);
+	}
 
-		IVeBPT.LockedBalance memory lockedBalance = IVeBPT(veToken).locked(address(locker));
-		assertApproxEqRel(lockedBalance.amount, int256(initialLockAmount + extraLockAmount), 0);
+	function testLocker02IncreaseLockAmountSignature01() public {
+		bytes memory createLockSign = abi.encodeWithSignature(
+			"createLock(uint256,uint256)",
+			INITIAL_AMOUNT_TO_LOCK,
+			block.timestamp + (INITIAL_PERIOD_TO_LOCK)
+		);
+		increaseAmount(
+			address(locker),
+			token,
+			veToken,
+			INITIAL_AMOUNT_TO_LOCK,
+			INITIAL_PERIOD_TO_LOCK,
+			EXTRA_AMOUNT_TO_LOCK,
+			createLockSign,
+			BASE
+		);
+	}
+
+	function testLocker02IncreaseLockAmountSignature02() public {
+		bytes memory increaseAmountSign = abi.encodeWithSignature("increaseAmount(uint256)", EXTRA_AMOUNT_TO_LOCK);
+		increaseAmount(
+			address(locker),
+			token,
+			veToken,
+			INITIAL_AMOUNT_TO_LOCK,
+			INITIAL_PERIOD_TO_LOCK,
+			EXTRA_AMOUNT_TO_LOCK,
+			BASE,
+			increaseAmountSign
+		);
+	}
+
+	function testLocker02IncreaseLockAmountSignature03() public {
+		bytes memory createLockSign = abi.encodeWithSignature(
+			"createLock(uint256,uint256)",
+			INITIAL_AMOUNT_TO_LOCK,
+			block.timestamp + (INITIAL_PERIOD_TO_LOCK)
+		);
+		bytes memory increaseAmountSign = abi.encodeWithSignature("increaseAmount(uint256)", EXTRA_AMOUNT_TO_LOCK);
+		increaseAmount(
+			address(locker),
+			token,
+			veToken,
+			INITIAL_AMOUNT_TO_LOCK,
+			INITIAL_PERIOD_TO_LOCK,
+			EXTRA_AMOUNT_TO_LOCK,
+			createLockSign,
+			increaseAmountSign
+		);
 	}
 
 	function testLocker03IncreaseLockDuration() public {
-		increaseLock();
-
-		IVeBPT.LockedBalance memory lockedBalance = IVeBPT(veToken).locked(address(locker));
-		assertApproxEqRel(lockedBalance.end, ((block.timestamp + initialLockTime) / Constants.WEEK) * Constants.WEEK, 0);
+		increaseLock(
+			address(locker),
+			token,
+			veToken,
+			INITIAL_AMOUNT_TO_LOCK,
+			INITIAL_PERIOD_TO_LOCK,
+			EXTRA_PERIOD_TO_LOCK,
+			BASE,
+			BASE
+		);
 	}
 
 	function testLocker04Release() public {
-		release();
-		assertEq(IERC20(token).balanceOf(address(this)), initialLockAmount);
+		release(address(locker), token, veToken, INITIAL_AMOUNT_TO_LOCK, INITIAL_PERIOD_TO_LOCK, BASE, BASE);
 	}
 
 	function testLocker05ClaimReward() public {
-		uint256 balanceBefore = IERC20(Constants.WETH).balanceOf(address(this));
-
-		claimReward();
-
-		assertEq(balanceBefore, 0);
-		assertGt(IERC20(Constants.WETH).balanceOf(address(this)), balanceBefore);
+		claimReward(
+			address(locker),
+			token,
+			veToken,
+			INITIAL_AMOUNT_TO_LOCK,
+			INITIAL_PERIOD_TO_LOCK,
+			rewardsToken,
+			rewardsAmount,
+			feeDistributor,
+			BASE,
+			BASE
+		);
 	}
 
 	function testLocker06Execute() public {
-		bool success = execute();
-
-		assertEq(success, true);
+		bytes memory data = abi.encodeWithSignature("name()");
+		bytes memory signature = abi.encodeWithSignature("execute(address,uint256,bytes)", token, 0, data);
+		execute(address(locker), token, 0, data, signature);
 	}
 
-	function testLocker07Setters() public {
-		setters();
-
-		assertEq(IBaseLocker(locker).accumulator(), address(0xA));
-		assertEq(IBaseLocker(locker).governance(), address(0xA));
+	function testLocker07SetAccumulator() public {
+		setAccumulator(address(locker), BASE, BASE);
 	}
 
-	function testLocker08Extra01() public {
-		vm.startPrank(IBaseLocker(locker).governance());
-		blackpoolLocker.setBptDepositor(address(0xA));
-		blackpoolLocker.setFeeDistributor(address(0xA));
-		vm.stopPrank();
-
-		assertEq(blackpoolLocker.bptDepositor(), address(0xA));
-		assertEq(blackpoolLocker.feeDistributor(), address(0xA));
+	function testLocker08SetGovernance() public {
+		setGovernance(address(locker), BASE, BASE);
 	}
 
+	function testLocker09SetDepositor() public {
+		bytes memory setterFuncSign = abi.encodeWithSignature("setBptDepositor(address)", address(0xA));
+		bytes memory setterSign = abi.encodeWithSignature("bptDepositor()");
+		setDepositor(address(locker), setterFuncSign, setterSign);
+	}
+
+	function testLocker10SetFeeDistributor() public {
+		setFeeDistributor(address(locker), BASE, BASE);
+	}
+
+	/*
 	////////////////////////////////////////////////////////////////
 	/// --- DEPOSITOR
 	///////////////////////////////////////////////////////////////
@@ -176,5 +225,5 @@ contract BlackpoolTest is BaseTest {
 		assertEq(IERC20(token).balanceOf(address(locker)), 0);
 		assertApproxEqRel(lockedBalanceAfter.amount, int256(initialDepositAmount + initialLockAmount), 1e14);
 		// Todo : check unlock time increase
-	}
+	}*/
 }

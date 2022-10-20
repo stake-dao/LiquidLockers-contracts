@@ -11,7 +11,7 @@ import "contracts/lockers/AngleLocker.sol";
 import "contracts/interfaces/IVeANGLE.sol";
 import "contracts/interfaces/ISmartWalletChecker.sol";
 import "contracts/interfaces/IAngleGaugeController.sol";
-
+/*
 contract AngleTest is BaseTest {
 	address internal constant LOCAL_DEPLOYER = address(0xDE);
 
@@ -137,3 +137,4 @@ contract AngleTest is BaseTest {
 		assertGt(voteAfter, voteBefore);
 	}
 }
+*/
