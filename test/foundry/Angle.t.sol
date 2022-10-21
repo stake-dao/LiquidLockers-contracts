@@ -11,50 +11,32 @@ import "contracts/lockers/AngleLocker.sol";
 import "contracts/interfaces/IVeANGLE.sol";
 import "contracts/interfaces/ISmartWalletChecker.sol";
 import "contracts/interfaces/IAngleGaugeController.sol";
-/*
+
 contract AngleTest is BaseTest {
 	address internal constant LOCAL_DEPLOYER = address(0xDE);
+	address internal constant ALICE = address(0xAA);
+	address internal token = Constants.ANGLE;
+	address internal veToken = Constants.VEANGLE;
+	address internal feeDistributor = Constants.ANGLE_FEE_DITRIBUTOR;
+	address internal gaugeController = Constants.ANGLE_GAUGE_CONTROLLER;
+	address[] internal rewardsToken;
 
-	AngleLocker internal angleLocker;
+	uint256 internal constant INITIAL_AMOUNT_TO_LOCK = 10e18;
+	uint256 internal constant INITIAL_PERIOD_TO_LOCK = 60 * 60 * 24 * 364 * 4;
+	uint256 internal constant EXTRA_AMOUNT_TO_LOCK = 1e18;
+	uint256 internal constant EXTRA_PERIOD_TO_LOCK = 60 * 60 * 24 * 364 * 1;
+	uint256[] internal rewardsAmount;
+
+	bytes internal BASE = abi.encodeWithSignature("base()");
+
+	AngleLocker internal locker;
 
 	function setUp() public {
 		vm.prank(LOCAL_DEPLOYER);
-		angleLocker = new AngleLocker(address(this));
+		locker = new AngleLocker(address(this));
 
-		address[] memory rewardsToken = new address[](1);
-		rewardsToken[0] = Constants.SAN_USDC_EUR;
-
-		uint256[] memory rewardsAmount = new uint256[](1);
-		rewardsAmount[0] = 1e18;
-
-		initBase(
-			// Token to lock address
-			Constants.ANGLE,
-			// veToken address
-			Constants.VEANGLE,
-			// Liquid Locker address
-			address(angleLocker),
-			// Depositor address
-			address(0),
-			// Wrapper address
-			address(0),
-			// rewards token list
-			rewardsToken,
-			// Fee/yield distributor address
-			Constants.ANGLE_FEE_DITRIBUTOR,
-			// Initial amount to lock
-			1e18,
-			// Initial period to lock
-			125_798_400,
-			// Initial user deposit amount
-			1e18,
-			// Extra amount to lock
-			1e16,
-			// Extra period to lock
-			31_449_600,
-			// Amount for each rewards
-			rewardsAmount
-		);
+		rewardsToken.push(Constants.SAN_USDC_EUR);
+		rewardsAmount.push(1e18);
 
 		vm.prank(ISmartWalletChecker(Constants.ANGLE_SMART_WALLET_CHECKER).admin());
 		ISmartWalletChecker(Constants.ANGLE_SMART_WALLET_CHECKER).approveWallet(address(locker));
@@ -63,78 +45,108 @@ contract AngleTest is BaseTest {
 	function testNothing() public {}
 
 	function testLocker01createLock() public {
-		createLock();
-
-		IVeANGLE.LockedBalance memory lockedBalance = IVeANGLE(veToken).locked(address(locker));
-
-		assertEq(lockedBalance.amount, int256(initialLockAmount));
-		assertEq(lockedBalance.end, ((block.timestamp + initialLockTime) / Constants.WEEK) * Constants.WEEK);
-		assertApproxEqRel(IVeANGLE(veToken).balanceOf(address(locker)), initialLockAmount, 1e16); // 1% Margin of Error
+		bytes memory createLockCallData = abi.encodePacked(
+			AngleLocker.createLock.selector,
+			INITIAL_AMOUNT_TO_LOCK,
+			block.timestamp + INITIAL_PERIOD_TO_LOCK
+		);
+		createLock(
+			LOCAL_DEPLOYER,
+			address(locker),
+			token,
+			veToken,
+			INITIAL_AMOUNT_TO_LOCK,
+			INITIAL_PERIOD_TO_LOCK,
+			createLockCallData
+		);
 	}
 
 	function testLocker02IncreaseLockAmount() public {
-		increaseAmount();
-
-		IVeANGLE.LockedBalance memory lockedBalance = IVeANGLE(veToken).locked(address(locker));
-		assertApproxEqRel(lockedBalance.amount, int256(initialLockAmount + extraLockAmount), 0);
+		testLocker01createLock();
+		bytes memory increaseAmountCallData = abi.encodePacked(AngleLocker.increaseAmount.selector, EXTRA_AMOUNT_TO_LOCK);
+		increaseAmount(
+			LOCAL_DEPLOYER,
+			address(locker),
+			token,
+			veToken,
+			INITIAL_AMOUNT_TO_LOCK,
+			EXTRA_AMOUNT_TO_LOCK,
+			increaseAmountCallData
+		);
 	}
 
 	function testLocker03IncreaseLockDuration() public {
-		increaseLock();
-
-		IVeANGLE.LockedBalance memory lockedBalance = IVeANGLE(veToken).locked(address(locker));
-		assertApproxEqRel(lockedBalance.end, ((block.timestamp + initialLockTime) / Constants.WEEK) * Constants.WEEK, 0);
+		testLocker01createLock();
+		timeJump(EXTRA_PERIOD_TO_LOCK);
+		bytes memory increaseLockCallData = abi.encodePacked(
+			AngleLocker.increaseUnlockTime.selector,
+			block.timestamp + INITIAL_PERIOD_TO_LOCK
+		);
+		increaseLock(
+			LOCAL_DEPLOYER,
+			address(locker),
+			veToken,
+			block.timestamp + INITIAL_PERIOD_TO_LOCK,
+			increaseLockCallData
+		);
 	}
 
 	function testLocker04Release() public {
-		release();
-		assertEq(IERC20(token).balanceOf(address(this)), initialLockAmount);
+		testLocker01createLock();
+		timeJump(INITIAL_PERIOD_TO_LOCK);
+		//bytes memory releaseCallData = abi.encodePacked(BlackpoolLocker.release.selector, address(this));
+		bytes memory releaseCallData = abi.encodeWithSignature("release(address)", address(this));
+		release(LOCAL_DEPLOYER, address(locker), token, address(this), INITIAL_AMOUNT_TO_LOCK, releaseCallData);
 	}
 
 	function testLocker05ClaimReward() public {
-		uint256 balanceBefore = IERC20(Constants.SAN_USDC_EUR).balanceOf(address(this));
-
-		claimReward();
-
-		assertEq(balanceBefore, 0);
-		assertGt(IERC20(Constants.SAN_USDC_EUR).balanceOf(address(this)), balanceBefore);
+		testLocker01createLock();
+		bytes[] memory listCallData = new bytes[](1);
+		//listCallData[0] = abi.encodePacked(BlackpoolLocker.claimRewards.selector, rewardsToken[0], address(this));
+		listCallData[0] = abi.encodeWithSignature("claimRewards(address,address)", rewardsToken[0], address(this));
+		claimReward(LOCAL_DEPLOYER, address(locker), rewardsToken, rewardsAmount, feeDistributor, listCallData);
 	}
 
 	function testLocker06Execute() public {
-		bool success = execute();
-
-		assertEq(success, true);
+		bytes memory data = abi.encodeWithSignature("name()");
+		bytes memory executeCallData = abi.encodeWithSignature("execute(address,uint256,bytes)", token, 0, data);
+		execute(LOCAL_DEPLOYER, address(locker), executeCallData);
 	}
 
-	function testLocker07Setters() public {
-		setters();
-
-		assertEq(IBaseLocker(locker).accumulator(), address(0xA));
-		assertEq(IBaseLocker(locker).governance(), address(0xA));
+	function testLocker07SetAccumulator() public {
+		bytes memory setAccumulatorCallData = abi.encodeWithSignature("setAccumulator(address)", address(0xA));
+		bytes memory accumulatorCallData = abi.encodeWithSignature("accumulator()");
+		setter(LOCAL_DEPLOYER, address(locker), address(0xA), setAccumulatorCallData, accumulatorCallData);
 	}
 
-	function testLocker08Extra01Setters() public {
-		vm.startPrank(IBaseLocker(locker).governance());
-		angleLocker.setAngleDepositor(address(0xA));
-		angleLocker.setFeeDistributor(address(0xA));
-		angleLocker.setGaugeController(address(0xA));
-		vm.stopPrank();
-
-		assertEq(angleLocker.angleDepositor(), address(0xA));
-		assertEq(angleLocker.feeDistributor(), address(0xA));
-		assertEq(angleLocker.gaugeController(), address(0xA));
+	function testLocker08SetGovernance() public {
+		bytes memory setGovernanceCallData = abi.encodeWithSignature("setGovernance(address)", address(0xA));
+		bytes memory governanceCallData = abi.encodeWithSignature("governance()");
+		setter(LOCAL_DEPLOYER, address(locker), address(0xA), setGovernanceCallData, governanceCallData);
 	}
 
-	function testLocker09Extra02VoteGauge() public {
-		createLock();
-		address gauge = IAngleGaugeController(Constants.ANGLE_GAUGE_CONTROLLER).gauges(0);
-		uint256 voteBefore = IAngleGaugeController(Constants.ANGLE_GAUGE_CONTROLLER).last_user_vote(address(locker), gauge);
-		vm.startPrank(IBaseLocker(locker).governance());
-		angleLocker.voteGaugeWeight(gauge, 10000);
-		uint256 voteAfter = IAngleGaugeController(Constants.ANGLE_GAUGE_CONTROLLER).last_user_vote(address(locker), gauge);
+	function testLocker09SetDepositor() public {
+		bytes memory setDepositorCallData = abi.encodeWithSignature("setAngleDepositor(address)", address(0xA));
+		bytes memory depositorCallData = abi.encodeWithSignature("angleDepositor()");
+		setter(LOCAL_DEPLOYER, address(locker), address(0xA), setDepositorCallData, depositorCallData);
+	}
 
-		assertEq(voteBefore, 0);
-		assertGt(voteAfter, voteBefore);
+	function testLocker10SetFeeDistributor() public {
+		bytes memory setFeeDistributorCallData = abi.encodeWithSignature("setFeeDistributor(address)", address(0xA));
+		bytes memory feeDistributorCallData = abi.encodeWithSignature("feeDistributor()");
+		setter(LOCAL_DEPLOYER, address(locker), address(0xA), setFeeDistributorCallData, feeDistributorCallData);
+	}
+
+	function testLocker12SetGaugeController() public {
+		bytes memory setGaugeControllerCallData = abi.encodeWithSignature("setGaugeController(address)", address(0xA));
+		bytes memory gaugeControllerCallData = abi.encodeWithSignature("gaugeController()");
+		setter(LOCAL_DEPLOYER, address(locker), address(0xA), setGaugeControllerCallData, gaugeControllerCallData);
+	}
+
+	function testLocker13VoteForGauge() public {
+		testLocker01createLock();
+		address gauge = IGaugeController(gaugeController).gauges(0);
+		bytes memory voteGaugeCallData = abi.encodeWithSignature("voteGaugeWeight(address,uint256)", gauge, 10000);
+		voteForGauge(LOCAL_DEPLOYER, address(locker), gaugeController, gauge, voteGaugeCallData);
 	}
 }
-*/

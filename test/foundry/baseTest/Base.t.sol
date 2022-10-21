@@ -7,6 +7,7 @@ import "../fixtures/Constants.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "contracts/interfaces/IVeToken.sol";
+import "contracts/interfaces/IGaugeController.sol";
 import "contracts/interfaces/IBaseLocker.sol";
 import "contracts/interfaces/IBaseDepositor.sol";
 
@@ -16,296 +17,169 @@ contract BaseTest is Test {
 	///////////////////////////////////////////////////////////////
 
 	function createLock(
-		address _locker,
-		address _token,
-		address _veToken,
-		uint256 _initialAmountToLock,
-		uint256 _initialPeriodToLock,
-		bytes memory _createLockSign
+		address caller,
+		address locker,
+		address token,
+		address veToken,
+		uint256 initialAmountToLock,
+		uint256 initialPeriodToLock,
+		bytes memory callData
 	) internal {
-		deal(_token, _locker, _initialAmountToLock);
-		vm.startPrank(IBaseLocker(_locker).governance());
-
-		if (keccak256(_createLockSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			IBaseLocker(_locker).createLock(_initialAmountToLock, block.timestamp + _initialPeriodToLock);
-		} else {
-			(bool success, ) = _locker.call(_createLockSign);
-			require(success, "low-level call failed");
-		}
+		deal(token, locker, initialAmountToLock);
+		vm.startPrank(caller);
+		(bool success, ) = locker.call(callData);
+		require(success, "low-level call failed");
 		vm.stopPrank();
 
-		IVeToken.LockedBalance memory lockedBalance = IVeToken(_veToken).locked(_locker);
+		IVeToken.LockedBalance memory lockedBalance = IVeToken(veToken).locked(locker);
 
-		assertEq(lockedBalance.amount, int256(_initialAmountToLock));
-		assertEq(lockedBalance.end, ((block.timestamp + _initialPeriodToLock) / Constants.WEEK) * Constants.WEEK);
-		assertApproxEqRel(IVeToken(_veToken).balanceOf(_locker), _initialAmountToLock, 1e16); // 1% Margin of Error
+		assertEq(lockedBalance.amount, int256(initialAmountToLock));
+		assertEq(lockedBalance.end, ((block.timestamp + initialPeriodToLock) / Constants.WEEK) * Constants.WEEK);
+		assertApproxEqRel(IVeToken(veToken).balanceOf(locker), initialAmountToLock, 1e16); // 1% Margin of Error
 	}
 
 	function increaseAmount(
-		address _locker,
-		address _token,
-		address _veToken,
-		uint256 _initialAmountToLock,
-		uint256 _initialPeriodToLock,
-		uint256 _extraAmountToLock,
-		bytes memory _createLockSign,
-		bytes memory _increaseAmountSign
+		address caller,
+		address locker,
+		address token,
+		address veToken,
+		uint256 initialAmountToLock,
+		uint256 extraAmountToLock,
+		bytes memory callData
 	) internal {
-		createLock(_locker, _token, _veToken, _initialAmountToLock, _initialPeriodToLock, _createLockSign);
-
-		deal(_token, address(_locker), _extraAmountToLock);
-		vm.startPrank(IBaseLocker(_locker).governance());
-		if (keccak256(_increaseAmountSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			IBaseLocker(_locker).increaseAmount(_extraAmountToLock);
-		} else {
-			(bool success, ) = _locker.call(_increaseAmountSign);
-			require(success, "low-level call failed");
-		}
+		deal(token, address(locker), extraAmountToLock);
+		vm.startPrank(caller);
+		(bool success, ) = locker.call(callData);
+		require(success, "low-level call failed");
 		vm.stopPrank();
 
-		IVeToken.LockedBalance memory lockedBalance = IVeToken(_veToken).locked(_locker);
+		IVeToken.LockedBalance memory lockedBalance = IVeToken(veToken).locked(locker);
 
-		assertEq(lockedBalance.amount, int256(_initialAmountToLock + _extraAmountToLock));
+		assertEq(lockedBalance.amount, int256(initialAmountToLock + extraAmountToLock));
 	}
 
 	function increaseLock(
-		address _locker,
-		address _token,
-		address _veToken,
-		uint256 _initialAmountToLock,
-		uint256 _initialPeriodToLock,
-		uint256 _extraPeriodToLock,
-		bytes memory _createLockSign,
-		bytes memory _increasePeriodSign
+		address caller,
+		address locker,
+		address veToken,
+		uint256 endPeriodLock,
+		bytes memory callData
 	) internal {
-		uint256 timestampBefore = block.timestamp;
-		createLock(_locker, _token, _veToken, _initialAmountToLock, _initialPeriodToLock, _createLockSign);
-		timeJump(_extraPeriodToLock);
-		vm.startPrank(IBaseLocker(_locker).governance());
-
-		if (keccak256(_increasePeriodSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			IBaseLocker(_locker).increaseUnlockTime(timestampBefore + _initialPeriodToLock + _extraPeriodToLock);
-		} else {
-			(bool success, ) = _locker.call(_increasePeriodSign);
-			require(success, "low-level call failed");
-		}
+		vm.startPrank(caller);
+		(bool success, ) = locker.call(callData);
+		require(success, "low-level call failed");
 		vm.stopPrank();
 
-		IVeToken.LockedBalance memory lockedBalance = IVeToken(_veToken).locked(address(_locker));
-		assertEq(lockedBalance.end, ((block.timestamp + _initialPeriodToLock) / Constants.WEEK) * Constants.WEEK);
+		IVeToken.LockedBalance memory lockedBalance = IVeToken(veToken).locked(address(locker));
+		assertEq(lockedBalance.end, (endPeriodLock / Constants.WEEK) * Constants.WEEK);
 	}
 
 	function release(
-		address _locker,
-		address _token,
-		address _veToken,
-		uint256 _initialAmountToLock,
-		uint256 _initialPeriodToLock,
-		bytes memory _createLockSign,
-		bytes memory _releaseSign
+		address caller,
+		address locker,
+		address token,
+		address receiver,
+		uint256 initialAmountToWithdraw,
+		bytes memory callData
 	) internal {
-		createLock(_locker, _token, _veToken, _initialAmountToLock, _initialPeriodToLock, _createLockSign);
-		timeJump(block.timestamp + _initialPeriodToLock);
-		vm.startPrank(IBaseLocker(_locker).governance());
-
-		if (keccak256(_releaseSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			IBaseLocker(_locker).release(address(this));
-		} else {
-			(bool success, ) = _locker.call(_releaseSign);
-			require(success, "low-level call failed");
-		}
+		vm.startPrank(caller);
+		(bool success, ) = locker.call(callData);
+		require(success, "low-level call failed");
 		vm.stopPrank();
 
-		assertEq(IERC20(_token).balanceOf(address(this)), _initialAmountToLock);
+		assertEq(IERC20(token).balanceOf(receiver), initialAmountToWithdraw);
 	}
 
 	function claimReward(
-		address _locker,
-		address _token,
-		address _veToken,
-		uint256 _initialAmountToLock,
-		uint256 _initialPeriodToLock,
-		address[] memory _rewardsToken,
-		uint256[] memory _rewardsAmount,
-		address _rewardsDistributor,
-		bytes memory _createLockSign,
-		bytes memory _claimRewardsSign
+		address caller,
+		address locker,
+		address[] memory rewardsToken,
+		uint256[] memory rewardsAmount,
+		address rewardsDistributor,
+		bytes[] memory callData
 	) internal {
-		uint256[] memory balancesBefore = new uint256[](_rewardsToken.length);
-		uint256[] memory balancesAfter = new uint256[](_rewardsToken.length);
+		uint256[] memory balancesBefore = new uint256[](rewardsToken.length);
+		uint256[] memory balancesAfter = new uint256[](rewardsToken.length);
 
 		// Check balances for rewards tokens before
-		for (uint8 i = 0; i < _rewardsToken.length; i++) {
-			balancesBefore[i] = IERC20(_rewardsToken[i]).balanceOf(address(this));
+		for (uint8 i = 0; i < rewardsToken.length; i++) {
+			balancesBefore[i] = IERC20(rewardsToken[i]).balanceOf(address(this));
 		}
 
-		createLock(_locker, _token, _veToken, _initialAmountToLock, _initialPeriodToLock, _createLockSign);
-
 		// Distribute rewards
-		for (uint8 i = 0; i < _rewardsToken.length; ++i) {
-			uint256 balanceBefore = IERC20(_rewardsToken[i]).balanceOf(address(this));
-			deal(_rewardsToken[i], address(this), _rewardsAmount[i]);
-			IERC20(_rewardsToken[i]).transfer(_rewardsDistributor, _rewardsAmount[i]);
-			require((balanceBefore - IERC20(_rewardsToken[i]).balanceOf(address(this))) == 0, "!not empty");
+		for (uint8 i = 0; i < rewardsToken.length; ++i) {
+			uint256 balanceBefore = IERC20(rewardsToken[i]).balanceOf(address(this));
+			deal(rewardsToken[i], address(this), rewardsAmount[i]);
+			IERC20(rewardsToken[i]).transfer(rewardsDistributor, rewardsAmount[i]);
+			require((balanceBefore - IERC20(rewardsToken[i]).balanceOf(address(this))) == 0, "!not empty");
 		}
 		timeJump(2 * Constants.WEEK);
 
 		// Claim rewards
-		vm.startPrank(IBaseLocker(_locker).governance());
-		if (keccak256(_claimRewardsSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			for (uint8 i = 0; i < _rewardsToken.length; ++i) {
-				IBaseLocker(_locker).claimRewards(_rewardsToken[i], address(this));
-			}
-		} else {
-			for (uint8 i = 0; i < _rewardsToken.length; ++i) {
-				(bool success, ) = _locker.call(_claimRewardsSign);
-				require(success, "low-level call failed");
-			}
+		vm.startPrank(caller);
+		for (uint8 i = 0; i < rewardsToken.length; ++i) {
+			(bool success, ) = locker.call(callData[i]);
+			require(success, "low-level call failed");
 		}
 		vm.stopPrank();
 
 		// Check rewards obtained
-		for (uint8 i = 0; i < _rewardsToken.length; i++) {
-			balancesAfter[i] = IERC20(_rewardsToken[i]).balanceOf(address(this));
+		for (uint8 i = 0; i < rewardsToken.length; i++) {
+			balancesAfter[i] = IERC20(rewardsToken[i]).balanceOf(address(this));
 
 			assertEq(balancesBefore[i], 0);
 			assertGt(balancesAfter[i], balancesBefore[i]);
 		}
 	}
 
-	function execute(
-		address _locker,
-		address _target,
-		uint256 _value,
-		bytes memory _data,
-		bytes memory _claimRewardsSign
+	function voteForGauge(
+		address caller,
+		address locker,
+		address gaugeController,
+		address gauge,
+		bytes memory callData
 	) internal {
-		vm.startPrank(IBaseLocker(_locker).governance());
-		bool success;
-		if (keccak256(_claimRewardsSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			(success, ) = IBaseLocker(_locker).execute(_target, _value, _data);
-		} else {
-			(success, ) = _locker.call{ value: _value }(_claimRewardsSign);
-		}
+		uint256 voteBefore = IGaugeController(gaugeController).last_user_vote(address(locker), gauge);
+		vm.startPrank(caller);
+		(bool success, ) = locker.call(callData);
+		require(success, "low-level call failed");
+		vm.stopPrank();
+		uint256 voteAfter = IGaugeController(gaugeController).last_user_vote(address(locker), gauge);
+
+		assertEq(voteBefore, 0);
+		assertGt(voteAfter, voteBefore);
+	}
+
+	function execute(
+		address caller,
+		address locker,
+		bytes memory callData
+	) internal {
+		vm.startPrank(caller);
+		(bool success, ) = locker.call(callData);
+		require(success, "low-level call failed");
 		vm.stopPrank();
 
 		assertEq(success, true);
 	}
 
-	function setAccumulator(
-		address _locker,
-		bytes memory _setterFuncSign,
-		bytes memory _setterSign
+	// All addresses setters
+	function setter(
+		address caller,
+		address locker,
+		address newAddress,
+		bytes memory callDataFun,
+		bytes memory callDataVar
 	) internal {
-		vm.startPrank(IBaseLocker(_locker).governance());
-		if (keccak256(_setterFuncSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			IBaseLocker(_locker).setAccumulator(address(0xA));
-		} else {
-			(bool success, ) = _locker.call(_setterFuncSign);
-			require(success, "low-level call failed");
-		}
+		vm.startPrank(caller);
+		(bool success, bytes memory data) = locker.call(callDataFun);
+		require(success, "low-level call failed");
 		vm.stopPrank();
 
-		if (keccak256(_setterSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			assertEq(IBaseLocker(_locker).accumulator(), address(0xA));
-		} else {
-			(bool success, bytes memory _data) = _locker.call(_setterSign);
-			require(success, "low-level call failed");
-			assertEq(keccak256(_data), keccak256(abi.encode(address(0xA))));
-		}
-	}
+		(success, data) = locker.call(callDataVar);
+		require(success, "low-level call failed");
 
-	function setGovernance(
-		address _locker,
-		bytes memory _setterFuncSign,
-		bytes memory _setterSign
-	) internal {
-		vm.startPrank(IBaseLocker(_locker).governance());
-		if (keccak256(_setterFuncSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			IBaseLocker(_locker).setGovernance(address(0xA));
-		} else {
-			(bool success, ) = _locker.call(_setterFuncSign);
-			require(success, "low-level call failed");
-		}
-		vm.stopPrank();
-
-		if (keccak256(_setterSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			assertEq(IBaseLocker(_locker).governance(), address(0xA));
-		} else {
-			(bool success, bytes memory _data) = _locker.call(_setterSign);
-			require(success, "low-level call failed");
-			assertEq(keccak256(_data), keccak256(abi.encode(address(0xA))));
-		}
-	}
-
-	
-	function setDepositor(
-		address _locker,
-		bytes memory _setterFuncSign,
-		bytes memory _setterSign
-	) internal {
-		vm.startPrank(IBaseLocker(_locker).governance());
-		if (keccak256(_setterFuncSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			IBaseLocker(_locker).setDepositor(address(0xA));
-		} else {
-			(bool success, ) = _locker.call(_setterFuncSign);
-			require(success, "low-level call failed");
-		}
-		vm.stopPrank();
-
-		if (keccak256(_setterSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			assertEq(IBaseLocker(_locker).depositor(), address(0xA));
-		} else {
-			(bool success, bytes memory _data) = _locker.call(_setterSign);
-			require(success, "low-level call failed");
-			assertEq(keccak256(_data), keccak256(abi.encode(address(0xA))));
-		}
-	}
-
-	function setFeeDistributor(
-		address _locker,
-		bytes memory _setterFuncSign,
-		bytes memory _setterSign
-	) internal {
-		vm.startPrank(IBaseLocker(_locker).governance());
-		if (keccak256(_setterFuncSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			IBaseLocker(_locker).setFeeDistributor(address(0xA));
-		} else {
-			(bool success, ) = _locker.call(_setterFuncSign);
-			require(success, "low-level call failed");
-		}
-		vm.stopPrank();
-
-		if (keccak256(_setterSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			assertEq(IBaseLocker(_locker).feeDistributor(), address(0xA));
-		} else {
-			(bool success, bytes memory _data) = _locker.call(_setterSign);
-			require(success, "low-level call failed");
-			assertEq(keccak256(_data), keccak256(abi.encode(address(0xA))));
-		}
-	}
-
-	function setGaugeController(
-		address _locker,
-		bytes memory _setterFuncSign,
-		bytes memory _setterSign
-	) internal {
-		vm.startPrank(IBaseLocker(_locker).governance());
-		if (keccak256(_setterFuncSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			IBaseLocker(_locker).setGaugeController(address(0xA));
-		} else {
-			(bool success, ) = _locker.call(_setterFuncSign);
-			require(success, "low-level call failed");
-		}
-		vm.stopPrank();
-
-		if (keccak256(_setterSign) == keccak256(abi.encodeWithSignature("base()"))) {
-			assertEq(IBaseLocker(_locker).gaugeController(), address(0xA));
-		} else {
-			(bool success, bytes memory _data) = _locker.call(_setterSign);
-			require(success, "low-level call failed");
-			assertEq(keccak256(_data), keccak256(abi.encode(address(0xA))));
-		}
+		assertEq(keccak256(data), keccak256(abi.encode(newAddress)));
 	}
 
 	/*

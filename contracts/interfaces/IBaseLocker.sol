@@ -22,6 +22,8 @@ interface IBaseLocker {
 
 	function claimRewards(address _token, address _recipient) external;
 
+	function voteGaugeWeight(address _gauge, uint256 _weight) external;
+
 	function setGovernance(address _governance) external;
 
 	function setFeeDistributor(address _newFD) external;
