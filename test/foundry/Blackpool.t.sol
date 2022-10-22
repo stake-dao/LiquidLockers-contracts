@@ -176,17 +176,40 @@ contract BlackpoolTest is BaseTest {
 		setter(LOCAL_DEPLOYER, address(locker), address(0xA), setFeeDistributorCallData, feeDistributorCallData);
 	}
 
-	/*
 	////////////////////////////////////////////////////////////////
 	/// --- DEPOSITOR
 	///////////////////////////////////////////////////////////////
 	function testDepositor01LockToken() public {
-		lockToken();
+		testLocker01createLock();
+		uint256 waitBeforeLock = 60 * 60 * 24 * 80;
+		deal(token, address(depositor), INITIAL_AMOUNT_TO_LOCK);
+		bytes memory lockTokenCallData = abi.encodeWithSignature("lockToken()");
+		lockToken(
+			LOCAL_DEPLOYER,
+			address(locker),
+			address(depositor),
+			token,
+			veToken,
+			INITIAL_AMOUNT_TO_LOCK,
+			waitBeforeLock,
+			lockTokenCallData
+		);
+	}
 
-		IVeBPT.LockedBalance memory lockedBalanceAfter = IVeBPT(veToken).locked(address(locker));
-
-		assertEq(IERC20(token).balanceOf(address(locker)), 0);
-		assertApproxEqRel(lockedBalanceAfter.amount, int256(initialDepositAmount + initialLockAmount), 1e14);
-		// Todo : check unlock time increase
-	}*/
+	function testDepositor01LockNoToken() public {
+		testLocker01createLock();
+		uint256 waitBeforeLock = 60 * 60 * 24 * 80;
+		deal(token, address(depositor), 0);
+		bytes memory lockTokenCallData = abi.encodeWithSignature("lockToken()");
+		lockToken(
+			LOCAL_DEPLOYER,
+			address(locker),
+			address(depositor),
+			token,
+			veToken,
+			0,
+			waitBeforeLock,
+			lockTokenCallData
+		);
+	}
 }

@@ -182,17 +182,37 @@ contract BaseTest is Test {
 		assertEq(keccak256(data), keccak256(abi.encode(newAddress)));
 	}
 
-	/*
 	////////////////////////////////////////////////////////////////
 	/// --- DEPOSITOR
 	///////////////////////////////////////////////////////////////
-	function lockToken() internal {
-		createLock();
-		timeJump(60 * 60 * 24 * 30 * 2);
-		deal(token, locker, initialDepositAmount);
-		IBaseDepositor(depositor).lockToken();
+	function lockToken(
+		address caller,
+		address locker,
+		address depositor,
+		address token,
+		address veToken,
+		uint256 amountToLock,
+		uint256 waitBeforeLock,
+		bytes memory callData
+	) internal {
+		timeJump(waitBeforeLock);
+		IVeToken.LockedBalance memory lockedBalanceBefore = IVeToken(veToken).locked(locker);
+		vm.startPrank(caller);
+		(bool success, ) = depositor.call(callData);
+		require(success, "low-level call failed");
+		vm.stopPrank();
+
+		IVeToken.LockedBalance memory lockedBalanceAfter = IVeToken(veToken).locked(locker);
+
+		assertEq(IERC20(token).balanceOf(locker), 0);
+		assertEq(IERC20(token).balanceOf(depositor), 0);
+		assertEq(lockedBalanceAfter.amount, lockedBalanceBefore.amount + int256(amountToLock));
+		if (amountToLock != 0) {
+			assertEq(lockedBalanceAfter.end, lockedBalanceBefore.end + ((waitBeforeLock / Constants.WEEK) * Constants.WEEK));
+		}
 	}
 
+	/*
 	// Needed to reach 100% coverage
 	function lock0Token() internal {
 		createLock();
