@@ -32,8 +32,6 @@ contract BlackpoolTest is BaseTest {
 	uint256 internal constant EXTRA_PERIOD_TO_LOCK = 60 * 60 * 24 * 364 * 1;
 	uint256[] internal rewardsAmount;
 
-	bytes internal BASE = abi.encodeWithSignature("base()");
-
 	sdToken internal sdBPT;
 	ProxyAdmin internal proxyAdmin;
 	BlackpoolLocker internal locker;
@@ -73,6 +71,7 @@ contract BlackpoolTest is BaseTest {
 		vm.startPrank(LOCAL_DEPLOYER);
 		sdBPT.setOperator(address(depositor));
 		locker.setBptDepositor(address(depositor));
+		depositor.setGauge(address(liquidityGauge));
 		vm.stopPrank();
 	}
 
@@ -155,25 +154,32 @@ contract BlackpoolTest is BaseTest {
 	function testLocker07SetAccumulator() public {
 		bytes memory setAccumulatorCallData = abi.encodeWithSignature("setAccumulator(address)", address(0xA));
 		bytes memory accumulatorCallData = abi.encodeWithSignature("accumulator()");
-		setter(LOCAL_DEPLOYER, address(locker), address(0xA), setAccumulatorCallData, accumulatorCallData);
+		setter(LOCAL_DEPLOYER, address(locker), address(locker), address(0xA), setAccumulatorCallData, accumulatorCallData);
 	}
 
 	function testLocker08SetGovernance() public {
 		bytes memory setGovernanceCallData = abi.encodeWithSignature("setGovernance(address)", address(0xA));
 		bytes memory governanceCallData = abi.encodeWithSignature("governance()");
-		setter(LOCAL_DEPLOYER, address(locker), address(0xA), setGovernanceCallData, governanceCallData);
+		setter(LOCAL_DEPLOYER, address(locker), address(locker), address(0xA), setGovernanceCallData, governanceCallData);
 	}
 
 	function testLocker09SetDepositor() public {
 		bytes memory setDepositorCallData = abi.encodeWithSignature("setBptDepositor(address)", address(0xA));
 		bytes memory depositorCallData = abi.encodeWithSignature("bptDepositor()");
-		setter(LOCAL_DEPLOYER, address(locker), address(0xA), setDepositorCallData, depositorCallData);
+		setter(LOCAL_DEPLOYER, address(locker), address(locker), address(0xA), setDepositorCallData, depositorCallData);
 	}
 
 	function testLocker10SetFeeDistributor() public {
 		bytes memory setFeeDistributorCallData = abi.encodeWithSignature("setFeeDistributor(address)", address(0xA));
 		bytes memory feeDistributorCallData = abi.encodeWithSignature("feeDistributor()");
-		setter(LOCAL_DEPLOYER, address(locker), address(0xA), setFeeDistributorCallData, feeDistributorCallData);
+		setter(
+			LOCAL_DEPLOYER,
+			address(locker),
+			address(locker),
+			address(0xA),
+			setFeeDistributorCallData,
+			feeDistributorCallData
+		);
 	}
 
 	////////////////////////////////////////////////////////////////
@@ -182,6 +188,7 @@ contract BlackpoolTest is BaseTest {
 	function testDepositor01LockToken() public {
 		testLocker01createLock();
 		uint256 waitBeforeLock = 60 * 60 * 24 * 80;
+		uint256 incentiveAmount = 2e16;
 		deal(token, address(depositor), INITIAL_AMOUNT_TO_LOCK);
 		bytes memory lockTokenCallData = abi.encodeWithSignature("lockToken()");
 		lockToken(
@@ -190,7 +197,9 @@ contract BlackpoolTest is BaseTest {
 			address(depositor),
 			token,
 			veToken,
+			address(sdBPT),
 			INITIAL_AMOUNT_TO_LOCK,
+			incentiveAmount,
 			waitBeforeLock,
 			lockTokenCallData
 		);
@@ -207,9 +216,89 @@ contract BlackpoolTest is BaseTest {
 			address(depositor),
 			token,
 			veToken,
+			address(sdBPT),
+			0,
 			0,
 			waitBeforeLock,
 			lockTokenCallData
 		);
 	}
+
+	function testDepositor02Deposit() public {
+		testLocker01createLock();
+		uint256 waitBeforeLock = 60 * 60 * 24 * 80;
+		uint256 amountToDeposit = 1e18;
+		uint256 incentiveAmount = 2e16;
+		bool lock = true;
+		bool stake = false;
+		address user = ALICE;
+		bytes memory depositCallData = abi.encodeWithSignature(
+			"deposit(uint256,bool,bool,address)",
+			amountToDeposit,
+			lock,
+			stake,
+			user
+		);
+		deposit(
+			ALICE,
+			address(depositor),
+			token,
+			address(sdBPT),
+			user,
+			amountToDeposit,
+			incentiveAmount,
+			waitBeforeLock,
+			lock,
+			stake,
+			depositCallData
+		);
+	}
+
+	function testDepositor03SetGovernance() public {
+		bytes memory setGovernanceCallData = abi.encodeWithSignature("setGovernance(address)", address(0xA));
+		bytes memory governanceCallData = abi.encodeWithSignature("governance()");
+		setter(
+			LOCAL_DEPLOYER,
+			address(depositor),
+			address(depositor),
+			address(0xA),
+			setGovernanceCallData,
+			governanceCallData
+		);
+	}
+
+	function testDepositor04SetSdTokenOperator() public {
+		bytes memory setSdTokenOperatorCallData = abi.encodeWithSignature("setSdTokenOperator(address)", address(0xA));
+		bytes memory sdTokenOperatorCallData = abi.encodeWithSignature("operator()");
+		setter(
+			LOCAL_DEPLOYER,
+			address(depositor),
+			address(sdBPT),
+			address(0xA),
+			setSdTokenOperatorCallData,
+			sdTokenOperatorCallData
+		);
+	}
+
+	function testDepositor05SetRelock() public {
+		bytes memory setRelockCallData = abi.encodeWithSignature("setRelock(bool)", false);
+		bytes memory relockCallData = abi.encodeWithSignature("relock()");
+		setter(LOCAL_DEPLOYER, address(depositor), address(depositor), false, setRelockCallData, relockCallData);
+	}
+
+	function testDepositor06SetGauge() public {
+		bytes memory setGaugeCallData = abi.encodeWithSignature("setGauge(address)", address(0xA));
+		bytes memory gaugeCallData = abi.encodeWithSignature("gauge()");
+		setter(LOCAL_DEPLOYER, address(depositor), address(depositor), address(0xA), setGaugeCallData, gaugeCallData);
+	}
+
+	function testDepositor07SetFees() public {
+		bytes memory setFeesCallData = abi.encodeWithSignature("setFees(uint256)", 10);
+		bytes memory feesCallData = abi.encodeWithSignature("lockIncentive()");
+		setter(LOCAL_DEPLOYER, address(depositor), address(depositor), 10, setFeesCallData, feesCallData);
+	}
+
+	////////////////////////////////////////////////////////////////
+	/// --- HELPERS
+	///////////////////////////////////////////////////////////////
 }

@@ -116,31 +116,45 @@ contract AngleTest is BaseTest {
 	function testLocker07SetAccumulator() public {
 		bytes memory setAccumulatorCallData = abi.encodeWithSignature("setAccumulator(address)", address(0xA));
 		bytes memory accumulatorCallData = abi.encodeWithSignature("accumulator()");
-		setter(LOCAL_DEPLOYER, address(locker), address(0xA), setAccumulatorCallData, accumulatorCallData);
+		setter(LOCAL_DEPLOYER, address(locker), address(locker), address(0xA), setAccumulatorCallData, accumulatorCallData);
 	}
 
 	function testLocker08SetGovernance() public {
 		bytes memory setGovernanceCallData = abi.encodeWithSignature("setGovernance(address)", address(0xA));
 		bytes memory governanceCallData = abi.encodeWithSignature("governance()");
-		setter(LOCAL_DEPLOYER, address(locker), address(0xA), setGovernanceCallData, governanceCallData);
+		setter(LOCAL_DEPLOYER, address(locker), address(locker), address(0xA), setGovernanceCallData, governanceCallData);
 	}
 
 	function testLocker09SetDepositor() public {
 		bytes memory setDepositorCallData = abi.encodeWithSignature("setAngleDepositor(address)", address(0xA));
 		bytes memory depositorCallData = abi.encodeWithSignature("angleDepositor()");
-		setter(LOCAL_DEPLOYER, address(locker), address(0xA), setDepositorCallData, depositorCallData);
+		setter(LOCAL_DEPLOYER, address(locker), address(locker), address(0xA), setDepositorCallData, depositorCallData);
 	}
 
 	function testLocker10SetFeeDistributor() public {
 		bytes memory setFeeDistributorCallData = abi.encodeWithSignature("setFeeDistributor(address)", address(0xA));
 		bytes memory feeDistributorCallData = abi.encodeWithSignature("feeDistributor()");
-		setter(LOCAL_DEPLOYER, address(locker), address(0xA), setFeeDistributorCallData, feeDistributorCallData);
+		setter(
+			LOCAL_DEPLOYER,
+			address(locker),
+			address(locker),
+			address(0xA),
+			setFeeDistributorCallData,
+			feeDistributorCallData
+		);
 	}
 
 	function testLocker12SetGaugeController() public {
 		bytes memory setGaugeControllerCallData = abi.encodeWithSignature("setGaugeController(address)", address(0xA));
 		bytes memory gaugeControllerCallData = abi.encodeWithSignature("gaugeController()");
-		setter(LOCAL_DEPLOYER, address(locker), address(0xA), setGaugeControllerCallData, gaugeControllerCallData);
+		setter(
+			LOCAL_DEPLOYER,
+			address(locker),
+			address(locker),
+			address(0xA),
+			setGaugeControllerCallData,
+			gaugeControllerCallData
+		);
 	}
 
 	function testLocker13VoteForGauge() public {

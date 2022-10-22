@@ -7,6 +7,7 @@ import "../fixtures/Constants.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "contracts/interfaces/IVeToken.sol";
+import "contracts/interfaces/ILiquidityGauge.sol";
 import "contracts/interfaces/IGaugeController.sol";
 import "contracts/interfaces/IBaseLocker.sol";
 import "contracts/interfaces/IBaseDepositor.sol";
@@ -166,20 +167,56 @@ contract BaseTest is Test {
 	// All addresses setters
 	function setter(
 		address caller,
-		address locker,
-		address newAddress,
+		address targetCall,
+		address targetCheck,
+		address newValue,
+		bytes memory callDataFun,
+		bytes memory callDataVar
+	) internal {
+		_setter(caller, targetCall, targetCheck, abi.encode(newValue), callDataFun, callDataVar);
+	}
+
+	// All bool setters
+	function setter(
+		address caller,
+		address targetCall,
+		address targetCheck,
+		bool newValue,
+		bytes memory callDataFun,
+		bytes memory callDataVar
+	) internal {
+		_setter(caller, targetCall, targetCheck, abi.encode(newValue), callDataFun, callDataVar);
+	}
+
+	// All uint setters
+	function setter(
+		address caller,
+		address targetCall,
+		address targetCheck,
+		uint256 newValue,
+		bytes memory callDataFun,
+		bytes memory callDataVar
+	) internal {
+		_setter(caller, targetCall, targetCheck, abi.encode(newValue), callDataFun, callDataVar);
+	}
+
+	function _setter(
+		address caller,
+		address targetCall,
+		address targetCheck,
+		bytes memory newValue,
 		bytes memory callDataFun,
 		bytes memory callDataVar
 	) internal {
 		vm.startPrank(caller);
-		(bool success, bytes memory data) = locker.call(callDataFun);
+		(bool success, bytes memory data) = targetCall.call(callDataFun);
 		require(success, "low-level call failed");
 		vm.stopPrank();
 
-		(success, data) = locker.call(callDataVar);
+		(success, data) = targetCheck.call(callDataVar);
 		require(success, "low-level call failed");
 
-		assertEq(keccak256(data), keccak256(abi.encode(newAddress)));
+		assertEq(keccak256(data), keccak256(newValue));
 	}
 
 	////////////////////////////////////////////////////////////////
@@ -191,12 +228,19 @@ contract BaseTest is Test {
 		address depositor,
 		address token,
 		address veToken,
+		address sdToken,
 		uint256 amountToLock,
+		uint256 incentiveAmount,
 		uint256 waitBeforeLock,
 		bytes memory callData
 	) internal {
 		timeJump(waitBeforeLock);
 		IVeToken.LockedBalance memory lockedBalanceBefore = IVeToken(veToken).locked(locker);
+
+		// Force incentive token amount
+		vm.store(depositor, bytes32(uint256(4)), bytes32(incentiveAmount));
+		require(IBaseDepositor(depositor).incentiveToken() == incentiveAmount, "Force to incentive failed");
+
 		vm.startPrank(caller);
 		(bool success, ) = depositor.call(callData);
 		require(success, "low-level call failed");
@@ -207,27 +251,70 @@ contract BaseTest is Test {
 		assertEq(IERC20(token).balanceOf(locker), 0);
 		assertEq(IERC20(token).balanceOf(depositor), 0);
 		assertEq(lockedBalanceAfter.amount, lockedBalanceBefore.amount + int256(amountToLock));
+		assertEq(IERC20(sdToken).balanceOf(caller), incentiveAmount);
 		if (amountToLock != 0) {
 			assertEq(lockedBalanceAfter.end, lockedBalanceBefore.end + ((waitBeforeLock / Constants.WEEK) * Constants.WEEK));
 		}
 	}
 
-	/*
-	// Needed to reach 100% coverage
-	function lock0Token() internal {
-		createLock();
-		timeJump(60 * 60 * 24 * 30);
-		deal(token, locker, 0);
-		IBaseDepositor(depositor).lockToken();
+	function deposit(
+		address caller,
+		address depositor,
+		address token,
+		address sdToken,
+		address user,
+		uint256 amountToDeposit,
+		uint256 incentiveAmount,
+		uint256 waitBeforeLock,
+		bool lock,
+		bool stake,
+		bytes memory callData
+	) public {
+		timeJump(waitBeforeLock);
+		deal(token, user, amountToDeposit);
+		vm.prank(user);
+		IERC20(token).approve(depositor, amountToDeposit);
+
+		// Force incentive token amount
+		vm.store(depositor, bytes32(uint256(4)), bytes32(incentiveAmount));
+		require(IBaseDepositor(depositor).incentiveToken() == incentiveAmount, "Force to incentive failed");
+
+		uint256 balanceDepositorBefore = IERC20(token).balanceOf(depositor);
+		uint256 incentiveTokenBefore = IBaseDepositor(depositor).incentiveToken();
+
+		vm.startPrank(caller);
+		(bool success, ) = depositor.call(callData);
+		require(success, "low-level call failed");
+		vm.stopPrank();
+
+		if (lock) {
+			amountToDeposit += incentiveAmount;
+			assertEq(IBaseDepositor(depositor).incentiveToken(), 0);
+		} else {
+			//uint256 callIncentive = (amountToDeposit * IBaseDepositor(depositor).lockIncentive()) /
+			//	IBaseDepositor(depositor).FEE_DENOMINATOR(); //not use because stack too deep.
+
+			assertEq(IERC20(token).balanceOf(depositor), balanceDepositorBefore + amountToDeposit);
+			assertEq(
+				IBaseDepositor(depositor).incentiveToken(),
+				incentiveTokenBefore +
+					(amountToDeposit * IBaseDepositor(depositor).lockIncentive()) /
+					IBaseDepositor(depositor).FEE_DENOMINATOR()
+			);
+			amountToDeposit -=
+				(amountToDeposit * IBaseDepositor(depositor).lockIncentive()) /
+				IBaseDepositor(depositor).FEE_DENOMINATOR();
+		}
+		if (stake && IBaseDepositor(depositor).gauge() != address(0)) {
+			assertEq(ILiquidityGauge(IBaseDepositor(depositor).gauge()).balanceOf(user), amountToDeposit);
+		} else {
+			assertEq(IERC20(sdToken).balanceOf(user), amountToDeposit);
+		}
 	}
 
-	function depositNoLockNoIncentiveNoStakeNoGauge(address _user) internal {
-		deal(token, _user, initialDepositAmount);
-		vm.startPrank(_user);
-		IERC20(token).approve(depositor, initialDepositAmount);
-		IBaseDepositor(depositor).deposit(initialDepositAmount, false, false, _user);
-	}*/
-
+	////////////////////////////////////////////////////////////////
+	/// --- HELPERS
+	///////////////////////////////////////////////////////////////
 	function timeJump(uint256 _period) public returns (uint256, uint256) {
 		skip(_period);
 		vm.roll(block.number + _period / 12);

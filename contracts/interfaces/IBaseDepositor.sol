@@ -28,4 +28,14 @@ interface IBaseDepositor {
 	) external;
 
 	function governance() external view returns (address);
+
+	function gauge() external view returns (address);
+
+	function token() external view returns (address);
+
+	function incentiveToken() external view returns (uint256);
+
+	function lockIncentive() external view returns (uint256);
+
+	function FEE_DENOMINATOR() external view returns (uint256);
 }
