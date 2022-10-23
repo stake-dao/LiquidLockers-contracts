@@ -269,7 +269,7 @@ contract BaseTest is Test {
 		bool lock,
 		bool stake,
 		bytes memory callData
-	) public {
+	) internal {
 		timeJump(waitBeforeLock);
 		deal(token, user, amountToDeposit);
 		vm.prank(user);
@@ -310,6 +310,46 @@ contract BaseTest is Test {
 		} else {
 			assertEq(IERC20(sdToken).balanceOf(user), amountToDeposit);
 		}
+	}
+
+	////////////////////////////////////////////////////////////////
+	/// --- SDTOKEN
+	///////////////////////////////////////////////////////////////
+	function mint(
+		address caller,
+		address sdToken,
+		address to,
+		uint256 mintAmount,
+		bytes memory callData
+	) internal {
+		uint256 balanceBefore = IERC20(sdToken).balanceOf(to);
+		uint256 supplyBefore = IERC20(sdToken).totalSupply();
+
+		vm.startPrank(caller);
+		(bool success, ) = sdToken.call(callData);
+		require(success, "low-level call failed");
+		vm.stopPrank();
+
+		assertEq(IERC20(sdToken).balanceOf(to), balanceBefore + mintAmount);
+		assertEq(IERC20(sdToken).totalSupply(), supplyBefore + mintAmount);
+	}
+
+	function burn(
+		address caller,
+		address sdToken,
+		address from,
+		uint256 burnAmount,
+		bytes memory callData
+	) internal {
+		uint256 balanceBefore = IERC20(sdToken).balanceOf(from);
+		uint256 supplyBefore = IERC20(sdToken).totalSupply();
+		vm.startPrank(caller);
+		(bool success, ) = sdToken.call(callData);
+		require(success, "low-level call failed");
+		vm.stopPrank();
+
+		assertEq(IERC20(sdToken).balanceOf(from), balanceBefore - burnAmount);
+		assertEq(IERC20(sdToken).totalSupply(), supplyBefore - burnAmount);
 	}
 
 	////////////////////////////////////////////////////////////////

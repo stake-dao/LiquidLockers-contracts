@@ -299,6 +299,30 @@ contract BlackpoolTest is BaseTest {
 	}
 
 	////////////////////////////////////////////////////////////////
+	/// --- SDTOKEN
+	///////////////////////////////////////////////////////////////
+	function testSdToken01Mint() public {
+		address to = ALICE;
+		uint256 mintAmount = 1e18;
+		bytes memory mintCallData = abi.encodeWithSignature("mint(address,uint256)", to, mintAmount);
+		mint(address(depositor), address(sdBPT), to, mintAmount, mintCallData);
+	}
+
+	function testSdToken02Burn() public {
+		testSdToken01Mint();
+		address from = ALICE;
+		uint256 burnAmount = 1e18;
+		bytes memory burnCallData = abi.encodeWithSignature("burn(address,uint256)", from, burnAmount);
+		burn(address(depositor), address(sdBPT), from, burnAmount, burnCallData);
+	}
+
+	function testSdToken03SetOperator() public {
+		bytes memory setOperatorCallData = abi.encodeWithSignature("setOperator(address)", address(0xA));
+		bytes memory operatorCallData = abi.encodeWithSignature("operator()");
+		setter(address(depositor), address(sdBPT), address(sdBPT), address(0xA), setOperatorCallData, operatorCallData);
+	}
+
+	////////////////////////////////////////////////////////////////
 	/// --- HELPERS
 	///////////////////////////////////////////////////////////////
 }
