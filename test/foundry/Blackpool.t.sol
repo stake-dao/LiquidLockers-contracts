@@ -14,6 +14,7 @@ import "contracts/external/TransparentUpgradeableProxy.sol";
 import "contracts/depositors/BlackpoolDepositor.sol";
 import "contracts/sdtDistributor/SdtDistributorV2.sol";
 import "contracts/sdtDistributor/MasterchefMasterToken.sol";
+import "contracts/accumulators/BlackPoolAccumulator.sol";
 
 // Interface
 import "contracts/interfaces/IVeBPT.sol";
@@ -40,6 +41,7 @@ contract BlackpoolTest is BaseTest {
 	ProxyAdmin internal proxyAdmin;
 	BlackpoolLocker internal locker;
 	BlackpoolDepositor internal depositor;
+	BlackpoolAccumulator internal accumulator;
 	SdtDistributorV2 internal sdtDistributor;
 	SdtDistributorV2 internal sdtDistributorImpl;
 	MasterchefMasterToken internal masterChefToken;
@@ -64,7 +66,10 @@ contract BlackpoolTest is BaseTest {
 		sdBPT = new sdToken("Stake DAO BPT", "sdBPT");
 
 		// Deploy Depositor
-		depositor = new BlackpoolDepositor(address(Constants.BPT), address(locker), address(sdBPT), Constants.VEBPT);
+		depositor = new BlackpoolDepositor(address(token), address(locker), address(sdBPT), veToken);
+
+		// Deploy Accumulator
+		accumulator = new BlackpoolAccumulator(token, address(0));
 
 		// Deploy Gauge Controller
 		gaugeController = IGaugeController(
@@ -357,6 +362,19 @@ contract BlackpoolTest is BaseTest {
 		bytes memory feesCallData = abi.encodeWithSignature("lockIncentive()");
 		setter(LOCAL_DEPLOYER, address(depositor), address(depositor), 10, setFeesCallData, feesCallData);
 	}
+
+	////////////////////////////////////////////////////////////////
+	/// --- ACCUMULATOR
+	///////////////////////////////////////////////////////////////
+	// Accumulator
+	// function claimAndNotify(uint256 _amount)
+	// function claimAndNotifyAll()
+
+	// Base Accumulator
+	// notifyExtraReward(address _tokenReward, uint256 _amount)
+	// notifyExtraReward(address[] calldata _tokens, uint256[] calldata amounts)
+	// notifyAllExtraReward(address _tokenReward)
+	// notifyAllExtraReward(address[] calldata _tokens)
 
 	////////////////////////////////////////////////////////////////
 	/// --- SDTOKEN
