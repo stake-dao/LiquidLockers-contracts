@@ -12,11 +12,15 @@ import "contracts/tokens/sdToken.sol";
 import "contracts/external/ProxyAdmin.sol";
 import "contracts/external/TransparentUpgradeableProxy.sol";
 import "contracts/depositors/BlackpoolDepositor.sol";
+import "contracts/sdtDistributor/SdtDistributorV2.sol";
+import "contracts/sdtDistributor/MasterchefMasterToken.sol";
 
 // Interface
 import "contracts/interfaces/IVeBPT.sol";
 import "contracts/interfaces/ISmartWalletChecker.sol";
 import "contracts/interfaces/ILiquidityGauge.sol";
+import "contracts/interfaces/IGaugeController.sol";
+import "contracts/interfaces/IMasterchef.sol";
 
 contract BlackpoolTest is BaseTest {
 	address internal constant LOCAL_DEPLOYER = address(0xDE);
@@ -36,39 +40,95 @@ contract BlackpoolTest is BaseTest {
 	ProxyAdmin internal proxyAdmin;
 	BlackpoolLocker internal locker;
 	BlackpoolDepositor internal depositor;
+	SdtDistributorV2 internal sdtDistributor;
+	SdtDistributorV2 internal sdtDistributorImpl;
+	MasterchefMasterToken internal masterChefToken;
 	TransparentUpgradeableProxy internal proxy;
 	ILiquidityGauge internal liquidityGauge;
 	ILiquidityGauge internal liquidityGaugeImpl;
+	IGaugeController internal gaugeController;
+	IMasterchef internal masterchef;
 
 	function setUp() public {
 		vm.startPrank(LOCAL_DEPLOYER);
+
+		////////////////////////////////////////////////////////////////
+		/// --- START DEPLOYEMENT
+		///////////////////////////////////////////////////////////////
+		proxyAdmin = new ProxyAdmin();
+
+		// Deploy Locker
 		locker = new BlackpoolLocker(address(this));
+
+		// Deploy sdToken
 		sdBPT = new sdToken("Stake DAO BPT", "sdBPT");
-		liquidityGaugeImpl = ILiquidityGauge(
-			deployCode("artifacts/contracts/staking/LiquidityGaugeV4.vy/LiquidityGaugeV4.json")
+
+		// Deploy Depositor
+		depositor = new BlackpoolDepositor(address(Constants.BPT), address(locker), address(sdBPT), Constants.VEBPT);
+
+		// Deploy Gauge Controller
+		gaugeController = IGaugeController(
+			deployCode(
+				"artifacts/contracts/staking/BoostDelegationV2.vy/BoostDelegationV2.json",
+				abi.encode(Constants.SDT, Constants.VE_SDT, LOCAL_DEPLOYER)
+			)
 		);
-		bytes memory data = abi.encodeWithSignature(
+
+		// Deploy SDT Distributor
+		bytes memory sdtDistributorData = abi.encodeWithSignature(
+			"initialize(address,address,address,address)",
+			address(gaugeController),
+			LOCAL_DEPLOYER,
+			LOCAL_DEPLOYER,
+			LOCAL_DEPLOYER
+		);
+		sdtDistributorImpl = new SdtDistributorV2();
+		proxy = new TransparentUpgradeableProxy(address(sdtDistributorImpl), address(proxyAdmin), sdtDistributorData);
+		sdtDistributor = SdtDistributorV2(address(proxy));
+
+		// Masterchef
+		masterchef = IMasterchef(Constants.MASTERCHEF);
+		masterChefToken = MasterchefMasterToken(address(sdtDistributor.masterchefToken()));
+
+		// Deploy Liquidity Gauge V4
+		bytes memory lgData = abi.encodeWithSignature(
 			"initialize(address,address,address,address,address,address)",
 			address(sdBPT),
 			LOCAL_DEPLOYER,
 			Constants.SDT,
 			Constants.VE_SDT,
 			Constants.VE_SDT_BOOST_PROXY, // to mock
-			Constants.SDT_DISTRIBUTOR // to mock
+			address(sdtDistributor)
 		);
-		proxyAdmin = new ProxyAdmin();
-		proxy = new TransparentUpgradeableProxy(address(liquidityGaugeImpl), address(proxyAdmin), data);
+		liquidityGaugeImpl = ILiquidityGauge(
+			deployCode("artifacts/contracts/staking/LiquidityGaugeV4.vy/LiquidityGaugeV4.json")
+		);
+		proxy = new TransparentUpgradeableProxy(address(liquidityGaugeImpl), address(proxyAdmin), lgData);
 		liquidityGauge = ILiquidityGauge(address(proxy));
-		depositor = new BlackpoolDepositor(address(Constants.BPT), address(locker), address(sdBPT), Constants.VEBPT);
+
+		////////////////////////////////////////////////////////////////
+		/// --- END DEPLOYEMENT
+		///////////////////////////////////////////////////////////////
+
 		vm.stopPrank();
 
 		rewardsToken.push(Constants.WETH);
 		rewardsAmount.push(1e18);
 
+		////////////////////////////////////////////////////////////////
+		/// --- SETTERS
+		///////////////////////////////////////////////////////////////
+		// White list locker
 		vm.prank(Constants.BPT_DAO);
 		ISmartWalletChecker(Constants.BPT_SMART_WALLET_CHECKER).approveWallet(address(locker));
 
+		// Add masterchef token to masterchef
+		vm.prank(masterchef.owner());
+		masterchef.add(1000, IERC20(address(masterChefToken)), false);
+
 		vm.startPrank(LOCAL_DEPLOYER);
+		sdtDistributor.initializeMasterchef(masterchef.poolLength() - 1);
+		sdtDistributor.setDistribution(true);
 		sdBPT.setOperator(address(depositor));
 		locker.setBptDepositor(address(depositor));
 		depositor.setGauge(address(liquidityGauge));
