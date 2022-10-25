@@ -20,4 +20,6 @@ interface IVeToken {
 	function locked(address) external returns (LockedBalance memory);
 
 	function balanceOf(address) external returns (uint256);
+
+	function admin() external returns (address);
 }

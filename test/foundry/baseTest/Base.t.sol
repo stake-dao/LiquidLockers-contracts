@@ -11,6 +11,7 @@ import "contracts/interfaces/ILiquidityGauge.sol";
 import "contracts/interfaces/IGaugeController.sol";
 import "contracts/interfaces/IBaseLocker.sol";
 import "contracts/interfaces/IBaseDepositor.sol";
+import "contracts/interfaces/IBaseAccumulator.sol";
 
 contract BaseTest is Test {
 	////////////////////////////////////////////////////////////////
@@ -164,61 +165,6 @@ contract BaseTest is Test {
 		assertEq(success, true);
 	}
 
-	// All addresses setters
-	function setter(
-		address caller,
-		address targetCall,
-		address targetCheck,
-		address newValue,
-		bytes memory callDataFun,
-		bytes memory callDataVar
-	) internal {
-		_setter(caller, targetCall, targetCheck, abi.encode(newValue), callDataFun, callDataVar);
-	}
-
-	// All bool setters
-	function setter(
-		address caller,
-		address targetCall,
-		address targetCheck,
-		bool newValue,
-		bytes memory callDataFun,
-		bytes memory callDataVar
-	) internal {
-		_setter(caller, targetCall, targetCheck, abi.encode(newValue), callDataFun, callDataVar);
-	}
-
-	// All uint setters
-	function setter(
-		address caller,
-		address targetCall,
-		address targetCheck,
-		uint256 newValue,
-		bytes memory callDataFun,
-		bytes memory callDataVar
-	) internal {
-		_setter(caller, targetCall, targetCheck, abi.encode(newValue), callDataFun, callDataVar);
-	}
-
-	function _setter(
-		address caller,
-		address targetCall,
-		address targetCheck,
-		bytes memory newValue,
-		bytes memory callDataFun,
-		bytes memory callDataVar
-	) internal {
-		vm.startPrank(caller);
-		(bool success, bytes memory data) = targetCall.call(callDataFun);
-		require(success, "low-level call failed");
-		vm.stopPrank();
-
-		(success, data) = targetCheck.call(callDataVar);
-		require(success, "low-level call failed");
-
-		assertEq(keccak256(data), keccak256(newValue));
-	}
-
 	////////////////////////////////////////////////////////////////
 	/// --- DEPOSITOR
 	///////////////////////////////////////////////////////////////
@@ -313,6 +259,91 @@ contract BaseTest is Test {
 	}
 
 	////////////////////////////////////////////////////////////////
+	/// --- ACCUMULATOR
+	///////////////////////////////////////////////////////////////
+	function notifyExtraReward(
+		address caller,
+		address accumulator,
+		address rewardToken,
+		address gauge,
+		uint256 rewardAmount,
+		bytes memory callData
+	) internal {
+		deal(rewardToken, accumulator, rewardAmount);
+
+		vm.startPrank(caller);
+		(bool success, ) = accumulator.call(callData);
+		require(success, "low-level call failed");
+		vm.stopPrank();
+
+		if (rewardAmount > 0) {
+			uint256 fees = IBaseAccumulator(accumulator).claimerFee();
+			assertEq(IERC20(rewardToken).balanceOf(gauge), (rewardAmount * (10000 - fees)) / 10000);
+			assertEq(IERC20(rewardToken).balanceOf(caller), (rewardAmount * fees) / 10000);
+		}
+		assertGt(IERC20(Constants.SDT).balanceOf(gauge), 0);
+	}
+
+	function notifyExtraReward(
+		address caller,
+		address accumulator,
+		address[] memory rewardToken,
+		address gauge,
+		uint256[] memory rewardAmount,
+		bytes memory callData
+	) internal {
+		for (uint8 i; i < rewardToken.length; ++i) {
+			deal(rewardToken[i], accumulator, rewardAmount[0]);
+		}
+
+		vm.startPrank(caller);
+		(bool success, ) = accumulator.call(callData);
+		require(success, "low-level call failed");
+		vm.stopPrank();
+
+		uint256 fees = IBaseAccumulator(accumulator).claimerFee();
+		for (uint8 i; i < rewardToken.length; ++i) {
+			assertEq(IERC20(rewardToken[i]).balanceOf(gauge), (rewardAmount[i] * (10000 - fees)) / 10000);
+			assertEq(IERC20(rewardToken[i]).balanceOf(caller), (rewardAmount[i] * fees) / 10000);
+		}
+		assertGt(IERC20(Constants.SDT).balanceOf(gauge), 0);
+	}
+
+	function depositToken(
+		address caller,
+		address accumulator,
+		address token,
+		uint256 amount,
+		bytes memory callData
+	) internal {
+		deal(token, caller, amount);
+		vm.startPrank(caller);
+		IERC20(token).approve(accumulator, amount);
+		(bool success, ) = accumulator.call(callData);
+		require(success, "low-level call failed");
+		vm.stopPrank();
+
+		assertEq(IERC20(token).balanceOf(accumulator), amount);
+	}
+
+	function rescueToken(
+		address caller,
+		address accumulator,
+		address token,
+		address receipient,
+		uint256 amount,
+		bytes memory callData
+	) internal {
+		deal(token, accumulator, amount);
+		vm.startPrank(caller);
+		(bool success, ) = accumulator.call(callData);
+		require(success, "low-level call failed");
+		vm.stopPrank();
+
+		assertEq(IERC20(token).balanceOf(receipient), amount);
+	}
+
+	////////////////////////////////////////////////////////////////
 	/// --- SDTOKEN
 	///////////////////////////////////////////////////////////////
 	function mint(
@@ -350,6 +381,64 @@ contract BaseTest is Test {
 
 		assertEq(IERC20(sdToken).balanceOf(from), balanceBefore - burnAmount);
 		assertEq(IERC20(sdToken).totalSupply(), supplyBefore - burnAmount);
+	}
+
+	////////////////////////////////////////////////////////////////
+	/// --- SETTERS
+	///////////////////////////////////////////////////////////////
+	// All addresses setters
+	function setter(
+		address caller,
+		address targetCall,
+		address targetCheck,
+		address newValue,
+		bytes memory callDataFun,
+		bytes memory callDataVar
+	) internal {
+		_setter(caller, targetCall, targetCheck, abi.encode(newValue), callDataFun, callDataVar);
+	}
+
+	// All bool setters
+	function setter(
+		address caller,
+		address targetCall,
+		address targetCheck,
+		bool newValue,
+		bytes memory callDataFun,
+		bytes memory callDataVar
+	) internal {
+		_setter(caller, targetCall, targetCheck, abi.encode(newValue), callDataFun, callDataVar);
+	}
+
+	// All uint setters
+	function setter(
+		address caller,
+		address targetCall,
+		address targetCheck,
+		uint256 newValue,
+		bytes memory callDataFun,
+		bytes memory callDataVar
+	) internal {
+		_setter(caller, targetCall, targetCheck, abi.encode(newValue), callDataFun, callDataVar);
+	}
+
+	function _setter(
+		address caller,
+		address targetCall,
+		address targetCheck,
+		bytes memory newValue,
+		bytes memory callDataFun,
+		bytes memory callDataVar
+	) internal {
+		vm.startPrank(caller);
+		(bool success, bytes memory data) = targetCall.call(callDataFun);
+		require(success, "low-level call failed");
+		vm.stopPrank();
+
+		(success, data) = targetCheck.call(callDataVar);
+		require(success, "low-level call failed");
+
+		assertEq(keccak256(data), keccak256(newValue));
 	}
 
 	////////////////////////////////////////////////////////////////
