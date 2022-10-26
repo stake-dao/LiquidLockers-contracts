@@ -36,6 +36,7 @@ contract BlackpoolTest is BaseTest {
 	uint256 internal constant EXTRA_AMOUNT_TO_LOCK = 1e18;
 	uint256 internal constant EXTRA_PERIOD_TO_LOCK = 60 * 60 * 24 * 364 * 1;
 	uint256 internal constant ACCUMULATOR_CLAIMER_FEE = 100; // 1%
+	uint256 internal constant LOCK_MULTIPLIER = 1;
 	uint256[] internal rewardsAmount;
 
 	sdToken internal sdBPT;
@@ -55,8 +56,10 @@ contract BlackpoolTest is BaseTest {
 	IGaugeController internal gaugeController;
 
 	function setUp() public {
-		vm.startPrank(LOCAL_DEPLOYER);
+		rewardsToken.push(Constants.WETH);
+		rewardsAmount.push(1e18);
 
+		vm.startPrank(LOCAL_DEPLOYER);
 		////////////////////////////////////////////////////////////////
 		/// --- START DEPLOYEMENT
 		///////////////////////////////////////////////////////////////
@@ -72,7 +75,7 @@ contract BlackpoolTest is BaseTest {
 		depositor = new BlackpoolDepositor(address(token), address(locker), address(sdBPT), veToken);
 
 		// Deploy Accumulator
-		accumulator = new BlackpoolAccumulator(token, address(0));
+		accumulator = new BlackpoolAccumulator(rewardsToken[0], address(0));
 
 		// Deploy Gauge Controller
 		gaugeController = IGaugeController(
@@ -118,11 +121,7 @@ contract BlackpoolTest is BaseTest {
 		////////////////////////////////////////////////////////////////
 		/// --- END DEPLOYEMENT
 		///////////////////////////////////////////////////////////////
-
 		vm.stopPrank();
-
-		rewardsToken.push(Constants.WETH);
-		rewardsAmount.push(1e18);
 
 		////////////////////////////////////////////////////////////////
 		/// --- SETTERS
@@ -146,10 +145,12 @@ contract BlackpoolTest is BaseTest {
 		sdtDistributor.approveGauge(address(liquidityGauge));
 		sdBPT.setOperator(address(depositor));
 		locker.setBptDepositor(address(depositor));
+		locker.setAccumulator(address(accumulator));
 		depositor.setGauge(address(liquidityGauge));
 		accumulator.setGauge(address(liquidityGauge));
 		accumulator.setClaimerFee(ACCUMULATOR_CLAIMER_FEE);
 		accumulator.setSdtDistributor(address(sdtDistributor));
+		accumulator.setLocker(address(locker));
 		liquidityGauge.add_reward(rewardsToken[0], address(accumulator));
 		gaugeController.add_type("Mainnet staking", 1e18);
 		gaugeController.add_gauge(address(liquidityGauge), 0, 0);
@@ -167,13 +168,14 @@ contract BlackpoolTest is BaseTest {
 			INITIAL_AMOUNT_TO_LOCK,
 			block.timestamp + INITIAL_PERIOD_TO_LOCK
 		);
+		deal(token, address(locker), INITIAL_AMOUNT_TO_LOCK);
 		createLock(
 			LOCAL_DEPLOYER,
 			address(locker),
-			token,
 			veToken,
 			INITIAL_AMOUNT_TO_LOCK,
 			INITIAL_PERIOD_TO_LOCK,
+			LOCK_MULTIPLIER,
 			createLockCallData
 		);
 	}
@@ -184,15 +186,8 @@ contract BlackpoolTest is BaseTest {
 			BlackpoolLocker.increaseAmount.selector,
 			EXTRA_AMOUNT_TO_LOCK
 		);
-		increaseAmount(
-			LOCAL_DEPLOYER,
-			address(locker),
-			token,
-			veToken,
-			INITIAL_AMOUNT_TO_LOCK,
-			EXTRA_AMOUNT_TO_LOCK,
-			increaseAmountCallData
-		);
+		deal(token, address(locker), EXTRA_AMOUNT_TO_LOCK);
+		increaseAmount(LOCAL_DEPLOYER, address(locker), veToken, EXTRA_AMOUNT_TO_LOCK, increaseAmountCallData);
 	}
 
 	function testLocker03IncreaseLockDuration() public {
@@ -202,13 +197,7 @@ contract BlackpoolTest is BaseTest {
 			BlackpoolLocker.increaseUnlockTime.selector,
 			block.timestamp + INITIAL_PERIOD_TO_LOCK
 		);
-		increaseLock(
-			LOCAL_DEPLOYER,
-			address(locker),
-			veToken,
-			block.timestamp + INITIAL_PERIOD_TO_LOCK,
-			increaseLockCallData
-		);
+		increaseLock(LOCAL_DEPLOYER, address(locker), veToken, EXTRA_PERIOD_TO_LOCK, increaseLockCallData);
 	}
 
 	function testLocker04Release() public {
@@ -222,9 +211,11 @@ contract BlackpoolTest is BaseTest {
 	function testLocker05ClaimReward() public {
 		testLocker01createLock();
 		bytes[] memory listCallData = new bytes[](1);
-		//listCallData[0] = abi.encodePacked(BlackpoolLocker.claimRewards.selector, rewardsToken[0], address(this));
-		listCallData[0] = abi.encodeWithSignature("claimRewards(address,address)", rewardsToken[0], address(this));
-		claimReward(LOCAL_DEPLOYER, address(locker), rewardsToken, rewardsAmount, feeDistributor, listCallData);
+		address rewardsReceiver = address(this);
+		listCallData[0] = abi.encodeWithSignature("claimRewards(address,address)", rewardsToken[0], rewardsReceiver);
+		simulateRewards(feeDistributor);
+		timeJump(2 * Constants.WEEK);
+		claimReward(LOCAL_DEPLOYER, address(locker), rewardsToken, rewardsReceiver, listCallData);
 	}
 
 	function testLocker06Execute() public {
@@ -269,7 +260,7 @@ contract BlackpoolTest is BaseTest {
 	///////////////////////////////////////////////////////////////
 	function testDepositor01LockToken() public {
 		testLocker01createLock();
-		uint256 waitBeforeLock = 60 * 60 * 24 * 80;
+		uint256 waitBeforeLock = 60 * 60 * 24 * 8;
 		uint256 incentiveAmount = 2e16;
 		deal(token, address(depositor), INITIAL_AMOUNT_TO_LOCK);
 		bytes memory lockTokenCallData = abi.encodeWithSignature("lockToken()");
@@ -306,7 +297,73 @@ contract BlackpoolTest is BaseTest {
 		);
 	}
 
-	function testDepositor02Deposit() public {
+	function testDepositor02DepositLockStake() public {
+		testLocker01createLock();
+		uint256 waitBeforeLock = 60 * 60 * 24 * 80;
+		uint256 amountToDeposit = 1e18;
+		uint256 incentiveAmount = 2e16;
+		bool lock = true;
+		bool stake = true;
+		address user = ALICE;
+		bytes memory depositCallData = abi.encodeWithSignature(
+			"deposit(uint256,bool,bool,address)",
+			amountToDeposit,
+			lock,
+			stake,
+			user
+		);
+		deal(token, user, amountToDeposit);
+		vm.prank(user);
+		IERC20(token).approve(address(depositor), amountToDeposit);
+		deposit(
+			ALICE,
+			address(depositor),
+			token,
+			address(sdBPT),
+			user,
+			amountToDeposit,
+			incentiveAmount,
+			waitBeforeLock,
+			lock,
+			stake,
+			depositCallData
+		);
+	}
+
+	function testDepositor02DepositNoLockStake() public {
+		testLocker01createLock();
+		uint256 waitBeforeLock = 60 * 60 * 24 * 80;
+		uint256 amountToDeposit = 1e18;
+		uint256 incentiveAmount = 2e16;
+		bool lock = false;
+		bool stake = true;
+		address user = ALICE;
+		bytes memory depositCallData = abi.encodeWithSignature(
+			"deposit(uint256,bool,bool,address)",
+			amountToDeposit,
+			lock,
+			stake,
+			user
+		);
+		deal(token, user, amountToDeposit);
+		vm.prank(user);
+		IERC20(token).approve(address(depositor), amountToDeposit);
+		deposit(
+			ALICE,
+			address(depositor),
+			token,
+			address(sdBPT),
+			user,
+			amountToDeposit,
+			incentiveAmount,
+			waitBeforeLock,
+			lock,
+			stake,
+			depositCallData
+		);
+	}
+
+	function testDepositor02DepositLockNoStake() public {
 		testLocker01createLock();
 		uint256 waitBeforeLock = 60 * 60 * 24 * 80;
 		uint256 amountToDeposit = 1e18;
@@ -321,6 +378,69 @@ contract BlackpoolTest is BaseTest {
 			stake,
 			user
 		);
+		deal(token, user, amountToDeposit);
+		vm.prank(user);
+		IERC20(token).approve(address(depositor), amountToDeposit);
+		deposit(
+			ALICE,
+			address(depositor),
+			token,
+			address(sdBPT),
+			user,
+			amountToDeposit,
+			incentiveAmount,
+			waitBeforeLock,
+			lock,
+			stake,
+			depositCallData
+		);
+	}
+
+	function testDepositor02DepositNoLockNoStake() public {
+		testLocker01createLock();
+		uint256 waitBeforeLock = 60 * 60 * 24 * 80;
+		uint256 amountToDeposit = 1e18;
+		uint256 incentiveAmount = 2e16;
+		bool lock = false;
+		bool stake = false;
+		address user = ALICE;
+		bytes memory depositCallData = abi.encodeWithSignature(
+			"deposit(uint256,bool,bool,address)",
+			amountToDeposit,
+			lock,
+			stake,
+			user
+		);
+		deal(token, user, amountToDeposit);
+		vm.prank(user);
+		IERC20(token).approve(address(depositor), amountToDeposit);
+		deposit(
+			ALICE,
+			address(depositor),
+			token,
+			address(sdBPT),
+			user,
+			amountToDeposit,
+			incentiveAmount,
+			waitBeforeLock,
+			lock,
+			stake,
+			depositCallData
+		);
+	}
+
+	function testDepositor03DepositAll() public {
+		testLocker01createLock();
+		uint256 waitBeforeLock = 60 * 60 * 24 * 80;
+		uint256 amountToDeposit = 1e18;
+		uint256 incentiveAmount = 2e16;
+		bool lock = true;
+		bool stake = false;
+		address user = ALICE;
+		bytes memory depositCallData = abi.encodeWithSignature("depositAll(bool,bool,address)", lock, stake, user);
+		deal(token, user, amountToDeposit);
+		vm.prank(user);
+		IERC20(token).approve(address(depositor), amountToDeposit);
 		deposit(
 			ALICE,
 			address(depositor),
@@ -381,12 +501,8 @@ contract BlackpoolTest is BaseTest {
 	}
 
 	////////////////////////////////////////////////////////////////
-	/// --- ACCUMULATOR
+	/// --- BASE ACCUMULATOR
 	///////////////////////////////////////////////////////////////
-	// Accumulator
-	// function claimAndNotify(uint256 _amount)
-	// function claimAndNotifyAll()
-
 	// Needed for 100% coverage
 	function testAccumulator00NotifyExtraReward0() public {
 		uint256 amountToNotify = 0;
@@ -414,6 +530,7 @@ contract BlackpoolTest is BaseTest {
 			amountToNotify
 		);
 		timeJump(60 * 60 * 24 * 7);
+		deal(rewardsToken[0], address(accumulator), amountToNotify);
 		notifyExtraReward(
 			LOCAL_DEPLOYER,
 			address(accumulator),
@@ -428,6 +545,7 @@ contract BlackpoolTest is BaseTest {
 		uint256 amountToNotify = 1e18;
 		bytes memory notityExtraRewardCallData = abi.encodeWithSignature("notifyAllExtraReward(address)", rewardsToken[0]);
 		timeJump(60 * 60 * 24 * 7);
+		deal(rewardsToken[0], address(accumulator), amountToNotify);
 		notifyExtraReward(
 			LOCAL_DEPLOYER,
 			address(accumulator),
@@ -445,6 +563,7 @@ contract BlackpoolTest is BaseTest {
 			rewardsAmount
 		);
 		timeJump(60 * 60 * 24 * 7);
+		simulateRewards(address(accumulator));
 		notifyExtraReward(
 			LOCAL_DEPLOYER,
 			address(accumulator),
@@ -458,6 +577,7 @@ contract BlackpoolTest is BaseTest {
 	function testAccumulator04NotifyExtraRewards() public {
 		bytes memory notityExtraRewardCallData = abi.encodeWithSignature("notifyAllExtraReward(address[])", rewardsToken);
 		timeJump(60 * 60 * 24 * 7);
+		simulateRewards(address(accumulator));
 		notifyExtraReward(
 			LOCAL_DEPLOYER,
 			address(accumulator),
@@ -469,8 +589,10 @@ contract BlackpoolTest is BaseTest {
 	}
 
 	function testAccumulator05DepositToken() public {
+		uint256 amount = 1e18;
 		bytes memory depositTokenCallData = abi.encodeWithSignature("depositToken(address,uint256)", token, 1e18);
-		depositToken(LOCAL_DEPLOYER, address(accumulator), token, 1e18, depositTokenCallData);
+		deal(token, LOCAL_DEPLOYER, amount);
+		depositToken(LOCAL_DEPLOYER, address(accumulator), token, amount, depositTokenCallData);
 	}
 
 	function testAccumulator06SetGauge() public {
@@ -531,13 +653,75 @@ contract BlackpoolTest is BaseTest {
 	}
 
 	function testAccumulator12RescueToken() public {
+		uint256 amount = 1e18;
 		bytes memory rescueTokenCallData = abi.encodeWithSignature(
 			"rescueERC20(address,uint256,address)",
 			token,
 			1e18,
 			address(0xA)
 		);
-		rescueToken(LOCAL_DEPLOYER, address(accumulator), token, address(0xA), 1e18, rescueTokenCallData);
+		deal(token, address(accumulator), amount);
+		rescueToken(LOCAL_DEPLOYER, address(accumulator), token, address(0xA), amount, rescueTokenCallData);
+	}
+
+	////////////////////////////////////////////////////////////////
+	/// --- ACCUMULATOR
+	///////////////////////////////////////////////////////////////
+	// Accumulator
+	// function claimAndNotify(uint256 _amount)
+	// function claimAndNotifyAll()
+
+	function testAccumulator01ClaimAndNotify() public {
+		testLocker01createLock();
+		bytes[] memory listCallData = new bytes[](1);
+		address rewardsReceiver = address(liquidityGauge);
+		listCallData[0] = abi.encodeWithSignature("claimAndNotify(uint256)", rewardsAmount[0] / (10**8));
+		simulateRewards(feeDistributor);
+		timeJump(2 * Constants.WEEK);
+		claimRewardAndNotify(
+			LOCAL_DEPLOYER,
+			address(accumulator),
+			rewardsToken,
+			rewardsReceiver,
+			address(liquidityGauge),
+			listCallData
+		);
+	}
+
+	function testAccumulator02ClaimAndNotifyAll() public {
+		testLocker01createLock();
+		bytes[] memory listCallData = new bytes[](1);
+		address rewardsReceiver = address(liquidityGauge);
+		listCallData[0] = abi.encodeWithSignature("claimAndNotifyAll()");
+		simulateRewards(feeDistributor);
+		timeJump(2 * Constants.WEEK);
+		claimRewardAndNotify(
+			LOCAL_DEPLOYER,
+			address(accumulator),
+			rewardsToken,
+			rewardsReceiver,
+			address(liquidityGauge),
+			listCallData
+		);
+	}
+
+	function testAccumulator03SetFeeReceiver() public {
+		bytes memory setFeeReceiverCallData = abi.encodeWithSignature("setFeeReceiver(address)", address(0xA));
+		bytes memory feeReceiverCallData = abi.encodeWithSignature("feeReceiver()");
+		setter(
+			LOCAL_DEPLOYER,
+			address(accumulator),
+			address(accumulator),
+			address(0xA),
+			setFeeReceiverCallData,
+			feeReceiverCallData
+		);
+	}
+
+	function testAccumulator04SetLockerFee() public {
+		bytes memory setLockerFeeCallData = abi.encodeWithSignature("setLockerFee(uint256)", 10);
+		bytes memory lockerFeeCallData = abi.encodeWithSignature("lockerFee()");
+		setter(LOCAL_DEPLOYER, address(accumulator), address(accumulator), 10, setLockerFeeCallData, lockerFeeCallData);
 	}
 
 	////////////////////////////////////////////////////////////////
@@ -576,5 +760,14 @@ contract BlackpoolTest is BaseTest {
 		vm.stopPrank();
 
 		assertApproxEqRel(veSDT.balanceOf(caller), 1_000_000e18, 1e16);
+	}
+
+	function simulateRewards(address rewardReceiver) internal {
+		for (uint8 i = 0; i < rewardsToken.length; ++i) {
+			uint256 balanceBefore = IERC20(rewardsToken[i]).balanceOf(address(this));
+			deal(rewardsToken[i], address(this), rewardsAmount[i]);
+			IERC20(rewardsToken[i]).transfer(rewardReceiver, rewardsAmount[i]);
+			require((balanceBefore - IERC20(rewardsToken[i]).balanceOf(address(this))) == 0, "!not empty");
+		}
 	}
 }
