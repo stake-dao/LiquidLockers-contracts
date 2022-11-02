@@ -48,6 +48,7 @@ contract VeSDTFeeAngleProxyV2Test is Test {
 		uint256 proxyAngleBalanceBefore = IERC20(angle).balanceOf(address(proxyV2));
 		assertEq(proxyAngleBalanceBefore, 0);
 		angleStrategy.claim(agEurAngleSLP);
+		uint256 claimableByKeeper = proxyV2.claimableByKeeper();
 		uint256 proxyAngleBalanceAfter = IERC20(angle).balanceOf(address(proxyV2));
 		// check that ANGLE tokens have been received by the proxyV2
 		assertGt(proxyAngleBalanceAfter, proxyAngleBalanceBefore);
@@ -55,6 +56,8 @@ contract VeSDTFeeAngleProxyV2Test is Test {
 		uint256 callerFraxBalanceBefore = IERC20(frax).balanceOf(alice);
 		uint256 feeDBalanceBefore = IERC20(sdFrax3Crv).balanceOf(feeD);
 		proxyV2.sendRewards();
+		uint256 fraxClaimedByKeeper = IERC20(frax).balanceOf(alice);
+		assertEq(claimableByKeeper, fraxClaimedByKeeper);
 		uint256 callerFraxBalanceAfter = IERC20(frax).balanceOf(alice);
 		uint256 angleBalance = IERC20(angle).balanceOf(address(proxyV2));
 		uint256 agEurBalance = IERC20(agEur).balanceOf(address(proxyV2));

@@ -93,6 +93,9 @@ contract VeSDTFeeAngleProxyV2 is Ownable {
     /// @notice function to calculate the amount reserved for keepers
 	function claimableByKeeper() public view returns (uint256) {
 		uint256 angleBalance = IERC20(ANGLE).balanceOf(address(this));
+		if (angleBalance == 0) {
+			return 0;
+		}
 		uint256[] memory amounts = IUniswapRouter(SUSHI_ROUTER).getAmountsOut(angleBalance, angleToAgEurPath);
 
         uint256 fraxAmount = ICurveZapper(CURVE_ZAPPER).get_dy(
