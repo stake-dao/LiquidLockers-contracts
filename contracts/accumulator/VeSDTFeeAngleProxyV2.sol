@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-import "../interfaces/IFeeDistributor.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../interfaces/ICurvePool.sol";
 import "../interfaces/ICurveZapper.sol";
-import "../interfaces/IUniswapRouter.sol";
+import "../interfaces/IFeeDistributor.sol";
 import "../interfaces/ISdFraxVault.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "../interfaces/IUniswapRouter.sol";
 
 contract VeSDTFeeAngleProxyV2 is Ownable {
 	using SafeERC20 for IERC20;
@@ -28,9 +28,8 @@ contract VeSDTFeeAngleProxyV2 is Ownable {
 	address public constant SD_FRAX_3CRV = 0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7;
 	address public constant SUSHI_ROUTER = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
 	
-	uint256 public constant BASE = 10000; // used for fee and slippage
+	uint256 public constant BASE_FEE = 10000;
     uint256 public claimerFee = 100;
-	uint256 public maxSushiSlippage = 100;
 	address[] public angleToAgEurPath;
     CurveExchangeData public curveExchangeData;
 
@@ -39,9 +38,9 @@ contract VeSDTFeeAngleProxyV2 is Ownable {
         CurveExchangeData memory _curveExchangeData
     ) {
 		angleToAgEurPath = _angleToAgEurPath;
+		curveExchangeData = _curveExchangeData;
 		IERC20(ANGLE).safeApprove(SUSHI_ROUTER, type(uint256).max);
         IERC20(AG_EUR).safeApprove(CURVE_ZAPPER, type(uint256).max);
-        curveExchangeData = _curveExchangeData;
 	}
 
     /// @notice function to send reward
@@ -54,7 +53,7 @@ contract VeSDTFeeAngleProxyV2 is Ownable {
             // swap agEUR <-> FRAX on curve
             _swapOnCurve(agEurBalance);
 		    uint256 fraxBalance = IERC20(FRAX).balanceOf(address(this));
-		    uint256 claimerPart = (fraxBalance * claimerFee) / BASE;
+		    uint256 claimerPart = (fraxBalance * claimerFee) / BASE_FEE;
 		    IERC20(FRAX).transfer(msg.sender, claimerPart);
 		    IERC20(FRAX).approve(FRAX_3CRV, fraxBalance - claimerPart);
 		    ICurvePool(FRAX_3CRV).add_liquidity([fraxBalance - claimerPart, 0], 0);
@@ -104,20 +103,13 @@ contract VeSDTFeeAngleProxyV2 is Ownable {
             curveExchangeData.toIndex, 
             amounts[angleToAgEurPath.length - 1]
         );
-		return (fraxAmount * claimerFee) / BASE;
-	}
-
-    /// @notice function to set a new max slippage for sushi swap
-	/// @param _sushiSlippage new slippage to set
-	function setSushiSlippage(uint256 _sushiSlippage) external onlyOwner {
-        require(_sushiSlippage <= BASE, ">100%");
-		maxSushiSlippage = _sushiSlippage;
+		return (fraxAmount * claimerFee) / BASE_FEE;
 	}
 
     /// @notice function to set a new claimer fee 
 	/// @param _claimerFee claimer fee
 	function setClaimerFee(uint256 _claimerFee) external onlyOwner {
-        require(_claimerFee <= BASE, ">100%");
+        require(_claimerFee <= BASE_FEE, ">100%");
 		claimerFee = _claimerFee;
 	}
 
