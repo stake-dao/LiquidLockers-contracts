@@ -15,6 +15,9 @@ pragma solidity 0.8.7;
     address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address public constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
+    address public constant ANGLE = 0x31429d1856aD1377A8A0079410B297e1a9e214c2;
+    address public constant AG_EUR = 0x1a7e4e63778B4f12a199C062f3eFdD288afCBce8;
+    address public constant FRAX = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
 
     ////////////////////////////////////////////////////////////////
     /// --- YEARN FINANCE
@@ -39,4 +42,11 @@ pragma solidity 0.8.7;
     address public constant MASTERCHEF = 0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c;
     address public constant FEE_D_SD = 0x29f3dd38dB24d3935CF1bf841e6b2B461A3E5D92;
     address public constant PROXY_ADMIN = 0xfE612c237A81527a86f2Cac1FD19939CF4F91B9B;
+
+    ////////////////////////////////////////////////////////////////
+    /// --- ANGLE LL
+    ///////////////////////////////////////////////////////////////
+
+    address public constant ANGLE_STRATEGY = 0x22635427C72e8b0028FeAE1B5e1957508d9D7CAF;
+    address public constant ANGLE_VOTER_V2 = 0xBabe5d223fB31A37ce184481678A6667AC8CD98B;
 }
