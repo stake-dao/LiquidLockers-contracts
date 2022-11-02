@@ -13,25 +13,35 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract VeSDTFeeAngleProxyV2 is Ownable {
 	using SafeERC20 for IERC20;
 
+    struct CurveExchangeData {
+        address pool;
+        uint256 fromIndex;
+        uint256 toIndex;
+    }
+
 	address public constant ANGLE = 0x31429d1856aD1377A8A0079410B297e1a9e214c2;
 	address public constant AG_EUR = 0x1a7e4e63778B4f12a199C062f3eFdD288afCBce8;
-    address public constant AG_EUR_FRAXBP = 0x58257e4291F95165184b4beA7793a1d6F8e7b627;
     address public constant CURVE_ZAPPER = 0x5De4EF4879F4fe3bBADF2227D2aC5d0E2D76C895;
 	address public constant FEE_D = 0x29f3dd38dB24d3935CF1bf841e6b2B461A3E5D92;
 	address public constant FRAX = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
 	address public constant FRAX_3CRV = 0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B;
 	address public constant SD_FRAX_3CRV = 0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7;
 	address public constant SUSHI_ROUTER = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
-
-	uint256 public claimerFee = 100;
-	uint256 public constant BASE_FEE = 10000;
+	
+	uint256 public constant BASE = 10000; // used for fee and slippage
+    uint256 public claimerFee = 100;
 	uint256 public maxSushiSlippage = 100;
 	address[] public angleToAgEurPath;
+    CurveExchangeData public curveExchangeData;
 
-	constructor(address[] memory _angleToAgEurPath) {
+	constructor(
+        address[] memory _angleToAgEurPath,
+        CurveExchangeData memory _curveExchangeData
+    ) {
 		angleToAgEurPath = _angleToAgEurPath;
 		IERC20(ANGLE).safeApprove(SUSHI_ROUTER, type(uint256).max);
         IERC20(AG_EUR).safeApprove(CURVE_ZAPPER, type(uint256).max);
+        curveExchangeData = _curveExchangeData;
 	}
 
     /// @notice function to send reward
@@ -44,7 +54,7 @@ contract VeSDTFeeAngleProxyV2 is Ownable {
             // swap agEUR <-> FRAX on curve
             _swapOnCurve(agEurBalance);
 		    uint256 fraxBalance = IERC20(FRAX).balanceOf(address(this));
-		    uint256 claimerPart = (fraxBalance * claimerFee) / BASE_FEE;
+		    uint256 claimerPart = (fraxBalance * claimerFee) / BASE;
 		    IERC20(FRAX).transfer(msg.sender, claimerPart);
 		    IERC20(FRAX).approve(FRAX_3CRV, fraxBalance - claimerPart);
 		    ICurvePool(FRAX_3CRV).add_liquidity([fraxBalance - claimerPart, 0], 0);
@@ -59,13 +69,9 @@ contract VeSDTFeeAngleProxyV2 is Ownable {
 	/// @dev slippageCRV = 100 for 1% max slippage
 	/// @param _amount amount to swap
 	function _swapOnSushi(uint256 _amount) internal {
-		uint256[] memory amounts = IUniswapRouter(SUSHI_ROUTER).getAmountsOut(_amount, angleToAgEurPath);
-
-		uint256 minAmount = (amounts[angleToAgEurPath.length - 1] * (10000 - maxSushiSlippage)) / (10000);
-
 		IUniswapRouter(SUSHI_ROUTER).swapExactTokensForTokens(
 			_amount,
-			minAmount,
+			0,
 			angleToAgEurPath,
 			address(this),
 			block.timestamp + 1800
@@ -75,31 +81,40 @@ contract VeSDTFeeAngleProxyV2 is Ownable {
     /// @notice internal function to swap agEUR to FRAX on curve
 	/// @param _amount amount to swap
     function _swapOnCurve(uint256 _amount) internal {
-        // token index 0 agEur
-        // token index 1 FRAX
-        ICurveZapper(CURVE_ZAPPER).exchange(AG_EUR_FRAXBP, 0, 1, _amount, 0);
+        ICurveZapper(CURVE_ZAPPER).exchange(
+            curveExchangeData.pool, 
+            curveExchangeData.fromIndex,
+            curveExchangeData.toIndex,
+            _amount,
+            0
+        );
     }
 
     /// @notice function to calculate the amount reserved for keepers
 	function claimableByKeeper() public view returns (uint256) {
 		uint256 angleBalance = IERC20(ANGLE).balanceOf(address(this));
 		uint256[] memory amounts = IUniswapRouter(SUSHI_ROUTER).getAmountsOut(angleBalance, angleToAgEurPath);
-		uint256 agEurMinAmount = (amounts[angleToAgEurPath.length - 1] * (10000 - maxSushiSlippage)) / (10000);
-        uint256 fraxAmount = ICurveZapper(CURVE_ZAPPER).get_dy(AG_EUR_FRAXBP, 0, 1, agEurMinAmount);
-		return (fraxAmount * claimerFee) / BASE_FEE;
+
+        uint256 fraxAmount = ICurveZapper(CURVE_ZAPPER).get_dy(
+            curveExchangeData.pool,
+            curveExchangeData.fromIndex, 
+            curveExchangeData.toIndex, 
+            amounts[angleToAgEurPath.length - 1]
+        );
+		return (fraxAmount * claimerFee) / BASE;
 	}
 
     /// @notice function to set a new max slippage for sushi swap
 	/// @param _sushiSlippage new slippage to set
 	function setSushiSlippage(uint256 _sushiSlippage) external onlyOwner {
-        require(_sushiSlippage <= 10000, ">100%");
+        require(_sushiSlippage <= BASE, ">100%");
 		maxSushiSlippage = _sushiSlippage;
 	}
 
     /// @notice function to set a new claimer fee 
 	/// @param _claimerFee claimer fee
 	function setClaimerFee(uint256 _claimerFee) external onlyOwner {
-        require(_claimerFee <= 10000, ">100%");
+        require(_claimerFee <= BASE, ">100%");
 		claimerFee = _claimerFee;
 	}
 
@@ -107,9 +122,19 @@ contract VeSDTFeeAngleProxyV2 is Ownable {
 	/// @param _path swap path
 	function setAngleAgEurPathOnSushi(address[] calldata _path) external onlyOwner {
         require(_path[0] == ANGLE, "wrong initial pair");
-        require(_path[_path.length - 1] == AG_EUR, "wrong final path");
+        require(_path[_path.length - 1] == AG_EUR, "wrong final pair");
 		angleToAgEurPath = _path;
 	}
+
+    /// @notice function to set curve exchange data
+	/// @param _exchangeData exchange data (pool, fromIndex, toIndex)
+    function setCurveExchangeData(CurveExchangeData calldata _exchangeData) external onlyOwner {
+        address pool = _exchangeData.pool;
+        require(pool != address(0), "zero address");
+        require(ICurvePool(pool).coins(_exchangeData.fromIndex) == AG_EUR, "wrong index from");
+        require(ICurvePool(pool).coins(_exchangeData.toIndex) == FRAX, "wrong index to");
+        curveExchangeData = _exchangeData;
+    }
     
     /// @notice function to recover any ERC20 and send them to the owner
 	/// @param _token token address

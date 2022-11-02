@@ -17,6 +17,7 @@ contract VeSDTFeeAngleProxyV2Test is Test {
 	AngleStrategy public angleStrategy;
     address[] public angleAgEurSushiPath;
 	address public feeD;
+	address public constant AG_EUR_FRAXBP_POOL = 0x58257e4291F95165184b4beA7793a1d6F8e7b627;
 
 	VeSDTFeeAngleProxyV2 public proxyV2;
 	
@@ -32,7 +33,8 @@ contract VeSDTFeeAngleProxyV2Test is Test {
 		angleAgEurSushiPath = [angle, agEur];
 		feeD = Constants.FEE_D_SD;
 		angleStrategy = AngleStrategy(Constants.ANGLE_STRATEGY);
-        proxyV2 = new VeSDTFeeAngleProxyV2(angleAgEurSushiPath);
+		VeSDTFeeAngleProxyV2.CurveExchangeData memory curveExData = VeSDTFeeAngleProxyV2.CurveExchangeData(AG_EUR_FRAXBP_POOL, 0, 1);
+        proxyV2 = new VeSDTFeeAngleProxyV2(angleAgEurSushiPath, curveExData);
 		// set new fee proxy
 		vm.prank(Constants.ANGLE_VOTER_V2);
 		angleStrategy.setVeSDTProxy(address(proxyV2));
