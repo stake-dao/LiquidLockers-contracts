@@ -134,8 +134,6 @@ contract VeSDTFeeAngleProxyV2 is Ownable {
     function setCurveExchangeData(CurveExchangeData calldata _exchangeData) external onlyOwner {
         address pool = _exchangeData.pool;
         require(pool != address(0), "zero address");
-        require(ICurvePool(pool).coins(_exchangeData.fromIndex) == AG_EUR, "wrong index from");
-        require(ICurvePool(pool).coins(_exchangeData.toIndex) == FRAX, "wrong index to");
         curveExchangeData = _exchangeData;
     }
     
