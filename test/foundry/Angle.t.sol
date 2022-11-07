@@ -60,7 +60,9 @@ contract AngleTest is BaseTest {
 
 	function setUp() public {
 		rewardsToken.push(Constants.SAN_USDC_EUR);
+		//rewardsToken.push(Constants.AG_EUR);
 		rewardsAmount.push(1e18);
+		//rewardsAmount.push(1e18);
 
 		vm.startPrank(LOCAL_DEPLOYER);
 		////////////////////////////////////////////////////////////////
@@ -681,7 +683,7 @@ contract AngleTest is BaseTest {
 	////////////////////////////////////////////////////////////////
 	/// --- ACCUMULATOR
 	///////////////////////////////////////////////////////////////
-	/*
+
 	function testAccumulator01ClaimAndNotify() public {
 		testLocker01createLock();
 		bytes[] memory listCallData = new bytes[](1);
@@ -699,6 +701,7 @@ contract AngleTest is BaseTest {
 		);
 	}
 
+	/*
 	function testAccumulator02ClaimAndNotifyAll() public {
 		testLocker01createLock();
 		bytes[] memory listCallData = new bytes[](1);
@@ -714,25 +717,6 @@ contract AngleTest is BaseTest {
 			address(liquidityGauge),
 			listCallData
 		);
-	}
-
-	function testAccumulator03SetFeeReceiver() public {
-		bytes memory setFeeReceiverCallData = abi.encodeWithSignature("setFeeReceiver(address)", address(0xA));
-		bytes memory feeReceiverCallData = abi.encodeWithSignature("feeReceiver()");
-		setter(
-			LOCAL_DEPLOYER,
-			address(accumulator),
-			address(accumulator),
-			address(0xA),
-			setFeeReceiverCallData,
-			feeReceiverCallData
-		);
-	}
-
-	function testAccumulator04SetLockerFee() public {
-		bytes memory setLockerFeeCallData = abi.encodeWithSignature("setLockerFee(uint256)", 10);
-		bytes memory lockerFeeCallData = abi.encodeWithSignature("lockerFee()");
-		setter(LOCAL_DEPLOYER, address(accumulator), address(accumulator), 10, setLockerFeeCallData, lockerFeeCallData);
 	}*/
 
 	////////////////////////////////////////////////////////////////
