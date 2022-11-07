@@ -477,4 +477,33 @@ contract BaseTest is Test {
 		vm.roll(block.number + _period / 12);
 		return (block.timestamp, block.number);
 	}
+
+	function lockSDT(address caller) internal {
+		vm.startPrank(caller);
+		deal(Constants.SDT, caller, 1_000_000e18);
+		IERC20(Constants.SDT).approve(Constants.VE_SDT, 1_000_000e18);
+		bytes memory createLockCallData = abi.encodeWithSignature(
+			"create_lock(uint256,uint256)",
+			1_000_000e18,
+			block.timestamp + 60 * 60 * 24 * 364 * 4
+		);
+		(bool success, ) = Constants.VE_SDT.call(createLockCallData);
+		require(success, "lock SDT failed");
+		vm.stopPrank();
+
+		assertApproxEqRel(IERC20(Constants.VE_SDT).balanceOf(caller), 1_000_000e18, 1e16);
+	}
+
+	function simulateRewards(
+		address[] memory rewardsToken,
+		uint256[] memory rewardsAmount,
+		address rewardReceiver
+	) internal {
+		for (uint8 i = 0; i < rewardsToken.length; ++i) {
+			uint256 balanceBefore = IERC20(rewardsToken[i]).balanceOf(address(this));
+			deal(rewardsToken[i], address(this), rewardsAmount[i]);
+			IERC20(rewardsToken[i]).transfer(rewardReceiver, rewardsAmount[i]);
+			require((balanceBefore - IERC20(rewardsToken[i]).balanceOf(address(this))) == 0, "!not empty");
+		}
+	}
 }
