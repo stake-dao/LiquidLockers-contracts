@@ -61,7 +61,7 @@ contract AngleTest is BaseTest {
 	function setUp() public {
 		rewardsToken.push(Constants.SAN_USDC_EUR);
 		//rewardsToken.push(Constants.AG_EUR);
-		rewardsAmount.push(1e18);
+		rewardsAmount.push(1_000_000e6);
 		//rewardsAmount.push(1e18);
 
 		vm.startPrank(LOCAL_DEPLOYER);
@@ -683,7 +683,7 @@ contract AngleTest is BaseTest {
 	////////////////////////////////////////////////////////////////
 	/// --- ACCUMULATOR
 	///////////////////////////////////////////////////////////////
-
+	/*
 	function testAccumulator01ClaimAndNotify() public {
 		testLocker01createLock();
 		bytes[] memory listCallData = new bytes[](1);
@@ -699,9 +699,16 @@ contract AngleTest is BaseTest {
 			address(liquidityGauge),
 			listCallData
 		);
-	}
+	}*/
 
 	/*
+	function testAccumulator01Mint() public {
+		// set _zap() as public on accumulator for this test
+		console.log(IERC20(Constants.SAN_USDC_EUR).balanceOf(address(accumulator)));
+		deal(Constants.SAN_USDC_EUR, address(accumulator), 53601);
+		accumulator._zap();
+	}
+
 	function testAccumulator02ClaimAndNotifyAll() public {
 		testLocker01createLock();
 		bytes[] memory listCallData = new bytes[](1);
