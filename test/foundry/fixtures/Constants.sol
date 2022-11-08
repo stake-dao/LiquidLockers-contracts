@@ -61,6 +61,18 @@ library Constants {
 	address public constant APWINE_SMART_WALLET_CHECKER = 0xb0463Ba57D6aADf85838f354057F9E4B69BfA4D6;
 
 	////////////////////////////////////////////////////////////////
+	/// --- BALANCER PROTOCOL
+	///////////////////////////////////////////////////////////////
+	address public constant BAL = 0xba100000625a3754423978a60c9317c58a424e3D;
+	address public constant BB_A_USD = 0xA13a9247ea42D743238089903570127DdA72fE44;
+	address public constant BALANCER_POOL_TOKEN = 0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56;
+	address public constant VE_BAL = 0xC128a9954e6c874eA3d62ce62B468bA073093F25;
+	address public constant BALANCER_FEE_DISTRIBUTOR = 0x26743984e3357eFC59f2fd6C1aFDC310335a61c9;
+	address public constant BALANCER_GAUGE_CONTROLLER = 0xC128468b7Ce63eA702C1f104D55A2566b13D3ABD;
+	address public constant BALANCER_SMART_WALLET_CHECKER = 0x7869296Efd0a76872fEE62A058C8fBca5c1c826C;
+	address public constant BALANCER_MULTI_SIG = 0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f;
+
+	////////////////////////////////////////////////////////////////
 	/// --- BLACKPOOL PROTOCOL
 	///////////////////////////////////////////////////////////////
 	address public constant BPT = 0x0eC9F76202a7061eB9b3a7D6B59D36215A7e37da;

@@ -45,9 +45,9 @@ contract BaseTest is Test {
 		assertApproxEqRel(
 			IVeToken(veToken).balanceOf(locker),
 			veBalanceBefore + (initialAmountToLock * lockMultiplier),
-			1e16,
+			2e16,
 			"veBalance"
-		); // 1% Margin of Error
+		); // 2% Margin of Error
 	}
 
 	function increaseAmount(
@@ -82,9 +82,10 @@ contract BaseTest is Test {
 		vm.stopPrank();
 
 		IVeToken.LockedBalance memory lockedBalance = IVeToken(veToken).locked(address(locker));
-		assertEq(
+		assertApproxEqAbs(
 			lockedBalance.end,
 			lockedBalanceBefore.end + (endPeriodLock / Constants.WEEK) * Constants.WEEK,
+			Constants.WEEK,
 			"locked end time"
 		);
 	}
@@ -117,24 +118,27 @@ contract BaseTest is Test {
 		uint256[] memory balancesAfter = new uint256[](rewardsToken.length);
 
 		// Check balances for rewards tokens before
-		for (uint8 i = 0; i < rewardsToken.length; i++) {
+		for (uint8 i = 0; i < rewardsToken.length; ++i) {
 			balancesBefore[i] = IERC20(rewardsToken[i]).balanceOf(rewardsReceiver);
 		}
 
 		// Claim rewards
 		vm.startPrank(caller);
-		for (uint8 i = 0; i < rewardsToken.length; ++i) {
+		for (uint8 i = 0; i < callData.length; ++i) {
 			(bool success, ) = locker.call(callData[i]);
 			require(success, "low-level call failed");
 		}
 		vm.stopPrank();
 
 		// Check rewards obtained
-		for (uint8 i = 0; i < rewardsToken.length; i++) {
+		for (uint8 i = 0; i < rewardsToken.length; ++i) {
 			balancesAfter[i] = IERC20(rewardsToken[i]).balanceOf(rewardsReceiver);
 
 			assertEq(balancesBefore[i], 0, "balance before != 0");
 			assertGt(balancesAfter[i], balancesBefore[i], "balance after =< before");
+			if (balancesAfter[i] <= balancesBefore[i]) {
+				console.log("Assert failed for token: ", rewardsToken[i]);
+			}
 		}
 	}
 
@@ -478,7 +482,7 @@ contract BaseTest is Test {
 		return (block.timestamp, block.number);
 	}
 
-	function lockSDT(address caller) internal {
+	function lockSDT(address caller) public {
 		vm.startPrank(caller);
 		deal(Constants.SDT, caller, 1_000_000e18);
 		IERC20(Constants.SDT).approve(Constants.VE_SDT, 1_000_000e18);
@@ -498,7 +502,7 @@ contract BaseTest is Test {
 		address[] memory rewardsToken,
 		uint256[] memory rewardsAmount,
 		address rewardReceiver
-	) internal {
+	) public {
 		for (uint8 i = 0; i < rewardsToken.length; ++i) {
 			uint256 balanceBefore = IERC20(rewardsToken[i]).balanceOf(address(this));
 			deal(rewardsToken[i], address(this), rewardsAmount[i]);
