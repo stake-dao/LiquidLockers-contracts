@@ -53,6 +53,14 @@ library Constants {
 	address public constant ANGLE_GAUGE_CONTROLLER = 0x9aD7e7b0877582E14c17702EecF49018DD6f2367;
 
 	////////////////////////////////////////////////////////////////
+	/// --- APWINE PROTOCOL
+	///////////////////////////////////////////////////////////////
+	address public constant APW = 0x4104b135DBC9609Fc1A9490E61369036497660c8;
+	address public constant VEAPW = 0xC5ca1EBF6e912E49A6a70Bb0385Ea065061a4F09;
+	address public constant APWINE_FEE_DISTRIBUTOR = 0x354743132e75E417344BcfDDed6a045140556414;
+	address public constant APWINE_SMART_WALLET_CHECKER = 0xb0463Ba57D6aADf85838f354057F9E4B69BfA4D6;
+
+	////////////////////////////////////////////////////////////////
 	/// --- BLACKPOOL PROTOCOL
 	///////////////////////////////////////////////////////////////
 	address public constant BPT = 0x0eC9F76202a7061eB9b3a7D6B59D36215A7e37da;
