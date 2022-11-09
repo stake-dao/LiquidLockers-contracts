@@ -40,8 +40,6 @@ contract AngleTest is BaseTest {
 	uint256 internal constant LOCK_MULTIPLIER = 1;
 	uint256[] internal rewardsAmount;
 
-	bytes internal BASE = abi.encodeWithSignature("base()");
-
 	sdToken internal _sdToken;
 	ProxyAdmin internal proxyAdmin;
 	AngleLocker internal locker;

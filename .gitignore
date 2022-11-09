@@ -1,4 +1,5 @@
 .env
+.DS_Store
 out/
 node_modules
 artifacts

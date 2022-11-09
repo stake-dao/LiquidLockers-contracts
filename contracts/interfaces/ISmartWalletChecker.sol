@@ -6,6 +6,8 @@ interface ISmartWalletChecker {
 
 	function dao() external returns (address);
 
+	function owner() external returns (address);
+
 	function approveWallet(address _address) external;
 
 	function allowlistAddress(address _address) external;

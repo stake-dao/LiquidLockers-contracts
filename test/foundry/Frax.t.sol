@@ -5,9 +5,9 @@ pragma solidity ^0.8.7;
 import "./baseTest/Base.t.sol";
 
 // Contract
-import "contracts/lockers/ApwineLocker.sol";
-import "contracts/accumulators/ApwineAccumulator.sol";
-import "contracts/depositors/ApWineDepositor.sol";
+import "contracts/lockers/FxsLocker.sol";
+import "contracts/accumulators/FxsAccumulator.sol";
+import "contracts/depositors/Depositor.sol";
 
 import "contracts/tokens/sdToken.sol";
 import "contracts/external/ProxyAdmin.sol";
@@ -16,36 +16,36 @@ import "contracts/sdtDistributor/SdtDistributorV2.sol";
 import "contracts/sdtDistributor/MasterchefMasterToken.sol";
 
 // Interface
-import "contracts/interfaces/IVeApw.sol";
-//import "contracts/interfaces/IAngleGaugeController.sol";
+import "contracts/interfaces/IVeFXS.sol";
 
 import "contracts/interfaces/ISmartWalletChecker.sol";
 import "contracts/interfaces/ILiquidityGauge.sol";
 import "contracts/interfaces/IGaugeController.sol";
 import "contracts/interfaces/IMasterchef.sol";
 
-contract ApwineTest is BaseTest {
+/// @dev `deal` function from foundry doesn't work properly with FXS token
+contract FraxTest is BaseTest {
 	address internal constant LOCAL_DEPLOYER = address(0xDE);
 	address internal constant ALICE = address(0xAA);
-	address internal token = Constants.APW;
-	address internal veToken = Constants.VEAPW;
-	address internal feeDistributor = Constants.APWINE_FEE_DISTRIBUTOR;
-	//address internal angleGaugeController = Constants.ANGLE_GAUGE_CONTROLLER;
+	address internal token = Constants.FXS;
+	address internal veToken = Constants.VE_FXS;
+	address internal yieldDistributor = Constants.FRAX_YIELD_DISTRIBUTOR;
+	address internal fraxGaugeController = Constants.FRAX_GAUGE_CONTROLLER;
 	address[] internal rewardsToken;
 
 	uint256 internal constant INITIAL_AMOUNT_TO_LOCK = 10e18;
-	uint256 internal constant INITIAL_PERIOD_TO_LOCK = 60 * 60 * 24 * 365 * 2;
+	uint256 internal constant INITIAL_PERIOD_TO_LOCK = 60 * 60 * 24 * 365 * 4;
 	uint256 internal constant EXTRA_AMOUNT_TO_LOCK = 1e18;
-	uint256 internal constant EXTRA_PERIOD_TO_LOCK = 60 * 60 * 24 * 364 * 1;
+	uint256 internal constant EXTRA_PERIOD_TO_LOCK = 60 * 60 * 24 * 365 * 1; //150 days
 	uint256 internal constant ACCUMULATOR_CLAIMER_FEE = 100; // 1%
-	uint256 internal constant LOCK_MULTIPLIER = 1;
+	uint256 internal constant LOCK_MULTIPLIER = 4;
 	uint256[] internal rewardsAmount;
 
 	sdToken internal _sdToken;
 	ProxyAdmin internal proxyAdmin;
-	ApwineLocker internal locker;
-	ApwineDepositor internal depositor;
-	ApwineAccumulator internal accumulator;
+	FxsLocker internal locker;
+	Depositor internal depositor;
+	FxsAccumulator internal accumulator;
 	SdtDistributorV2 internal sdtDistributor;
 	SdtDistributorV2 internal sdtDistributorImpl;
 	MasterchefMasterToken internal masterChefToken;
@@ -58,10 +58,8 @@ contract ApwineTest is BaseTest {
 	IGaugeController internal gaugeController;
 
 	function setUp() public {
-		rewardsToken.push(Constants.APW);
-		//rewardsToken.push(Constants.AG_EUR);
-		rewardsAmount.push(1e18);
-		//rewardsAmount.push(1e18);
+		rewardsToken.push(Constants.FXS);
+		rewardsAmount.push(2e18);
 
 		vm.startPrank(LOCAL_DEPLOYER);
 		////////////////////////////////////////////////////////////////
@@ -70,16 +68,16 @@ contract ApwineTest is BaseTest {
 		proxyAdmin = new ProxyAdmin();
 
 		// Deploy Locker
-		locker = new ApwineLocker(address(this));
+		locker = new FxsLocker(address(this));
 
 		// Deploy sdToken
-		_sdToken = new sdToken("Stake DAO BPT", "_sdToken");
+		_sdToken = new sdToken("Stake DAO FXS", "_sdToken");
 
-		// Deploy ApwineDepositor
-		depositor = new ApwineDepositor(address(token), address(locker), address(_sdToken), veToken);
+		// Deploy Depositor
+		depositor = new Depositor(token, address(locker), address(_sdToken));
 
 		// Deploy Accumulator
-		accumulator = new ApwineAccumulator(rewardsToken[0], address(0));
+		accumulator = new FxsAccumulator(rewardsToken[0], address(0));
 
 		// Deploy Gauge Controller
 		gaugeController = IGaugeController(
@@ -127,8 +125,8 @@ contract ApwineTest is BaseTest {
 		vm.stopPrank();
 		vm.prank(IVeToken(Constants.VE_SDT).admin());
 		ISmartWalletChecker(Constants.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
-		vm.prank(ISmartWalletChecker(Constants.APWINE_SMART_WALLET_CHECKER).dao());
-		ISmartWalletChecker(Constants.APWINE_SMART_WALLET_CHECKER).approveWallet(address(locker));
+		vm.prank(ISmartWalletChecker(Constants.FRAX_SMART_WALLET_CHECKER).owner());
+		ISmartWalletChecker(Constants.FRAX_SMART_WALLET_CHECKER).approveWallet(address(locker));
 
 		// Add masterchef token to masterchef
 		vm.prank(masterchef.owner());
@@ -140,13 +138,11 @@ contract ApwineTest is BaseTest {
 		sdtDistributor.setDistribution(true);
 		sdtDistributor.approveGauge(address(liquidityGauge));
 		_sdToken.setOperator(address(depositor));
-		locker.setApwDepositor(address(depositor));
+		locker.setFxsDepositor(address(depositor));
 		locker.setAccumulator(address(accumulator));
 		depositor.setGauge(address(liquidityGauge));
 		accumulator.setGauge(address(liquidityGauge));
 		accumulator.setClaimerFee(ACCUMULATOR_CLAIMER_FEE);
-		accumulator.setLockerFee(ACCUMULATOR_CLAIMER_FEE);
-		accumulator.setFeeReceiver(Constants.STAKE_DAO_MULTISIG);
 		accumulator.setSdtDistributor(address(sdtDistributor));
 		accumulator.setLocker(address(locker));
 		liquidityGauge.add_reward(rewardsToken[0], address(accumulator));
@@ -156,19 +152,18 @@ contract ApwineTest is BaseTest {
 		vm.stopPrank();
 	}
 
-	function testNothing() public {}
+	//function testNothing() public {}
 
 	////////////////////////////////////////////////////////////////
 	/// --- LOCKER
 	///////////////////////////////////////////////////////////////
-
 	function testLocker01createLock() public {
 		bytes memory createLockCallData = abi.encodePacked(
-			ApwineLocker.createLock.selector,
+			FxsLocker.createLock.selector,
 			INITIAL_AMOUNT_TO_LOCK,
 			block.timestamp + INITIAL_PERIOD_TO_LOCK
 		);
-		deal(token, address(locker), INITIAL_AMOUNT_TO_LOCK);
+		dealFXS(address(locker), INITIAL_AMOUNT_TO_LOCK);
 		createLock(
 			LOCAL_DEPLOYER,
 			address(locker),
@@ -182,8 +177,8 @@ contract ApwineTest is BaseTest {
 
 	function testLocker02IncreaseLockAmount() public {
 		testLocker01createLock();
-		bytes memory increaseAmountCallData = abi.encodePacked(ApwineLocker.increaseAmount.selector, EXTRA_AMOUNT_TO_LOCK);
-		deal(token, address(locker), EXTRA_AMOUNT_TO_LOCK);
+		bytes memory increaseAmountCallData = abi.encodePacked(FxsLocker.increaseAmount.selector, EXTRA_AMOUNT_TO_LOCK);
+		dealFXS(address(locker), EXTRA_AMOUNT_TO_LOCK);
 		increaseAmount(LOCAL_DEPLOYER, address(locker), veToken, EXTRA_AMOUNT_TO_LOCK, increaseAmountCallData);
 	}
 
@@ -191,7 +186,7 @@ contract ApwineTest is BaseTest {
 		testLocker01createLock();
 		timeJump(EXTRA_PERIOD_TO_LOCK);
 		bytes memory increaseLockCallData = abi.encodePacked(
-			ApwineLocker.increaseUnlockTime.selector,
+			FxsLocker.increaseUnlockTime.selector,
 			block.timestamp + INITIAL_PERIOD_TO_LOCK
 		);
 		increaseLock(LOCAL_DEPLOYER, address(locker), veToken, EXTRA_PERIOD_TO_LOCK, increaseLockCallData);
@@ -208,8 +203,9 @@ contract ApwineTest is BaseTest {
 		testLocker01createLock();
 		bytes[] memory listCallData = new bytes[](1);
 		address rewardsReceiver = address(this);
-		listCallData[0] = abi.encodeWithSignature("claimRewards(address,address)", rewardsToken[0], rewardsReceiver);
-		simulateRewards(rewardsToken, rewardsAmount, feeDistributor);
+		listCallData[0] = abi.encodeWithSignature("claimFXSRewards(address)", rewardsReceiver);
+		//simulateRewards(rewardsToken, rewardsAmount, yieldDistributor);
+		dealFXS(yieldDistributor, rewardsAmount[0]);
 		timeJump(2 * Constants.WEEK);
 		claimReward(LOCAL_DEPLOYER, address(locker), rewardsToken, rewardsReceiver, listCallData);
 	}
@@ -233,14 +229,14 @@ contract ApwineTest is BaseTest {
 	}
 
 	function testLocker09SetDepositor() public {
-		bytes memory setDepositorCallData = abi.encodeWithSignature("setApwDepositor(address)", address(0xA));
-		bytes memory depositorCallData = abi.encodeWithSignature("apwDepositor()");
+		bytes memory setDepositorCallData = abi.encodeWithSignature("setFxsDepositor(address)", address(0xA));
+		bytes memory depositorCallData = abi.encodeWithSignature("fxsDepositor()");
 		setter(LOCAL_DEPLOYER, address(locker), address(locker), address(0xA), setDepositorCallData, depositorCallData);
 	}
 
-	function testLocker10SetFeeDistributor() public {
-		bytes memory setFeeDistributorCallData = abi.encodeWithSignature("setFeeDistributor(address)", address(0xA));
-		bytes memory feeDistributorCallData = abi.encodeWithSignature("feeDistributor()");
+	function testLocker10SetYieldDistributor() public {
+		bytes memory setFeeDistributorCallData = abi.encodeWithSignature("setYieldDistributor(address)", address(0xA));
+		bytes memory feeDistributorCallData = abi.encodeWithSignature("yieldDistributor()");
 		setter(
 			LOCAL_DEPLOYER,
 			address(locker),
@@ -251,15 +247,34 @@ contract ApwineTest is BaseTest {
 		);
 	}
 
+	function testLocker12SetGaugeController() public {
+		bytes memory setGaugeControllerCallData = abi.encodeWithSignature("setGaugeController(address)", address(0xA));
+		bytes memory gaugeControllerCallData = abi.encodeWithSignature("gaugeController()");
+		setter(
+			LOCAL_DEPLOYER,
+			address(locker),
+			address(locker),
+			address(0xA),
+			setGaugeControllerCallData,
+			gaugeControllerCallData
+		);
+	}
+
+	function testLocker13VoteForGauge() public {
+		testLocker01createLock();
+		address gauge = IGaugeController(fraxGaugeController).gauges(0);
+		bytes memory voteGaugeCallData = abi.encodeWithSignature("voteGaugeWeight(address,uint256)", gauge, 10000);
+		voteForGauge(LOCAL_DEPLOYER, address(locker), fraxGaugeController, gauge, voteGaugeCallData);
+	}
+
 	////////////////////////////////////////////////////////////////
 	/// --- DEPOSITOR
 	///////////////////////////////////////////////////////////////
-
 	function testDepositor01LockToken() public {
 		testLocker01createLock();
 		uint256 waitBeforeLock = 60 * 60 * 24 * 10;
 		uint256 incentiveAmount = 2e16;
-		deal(token, address(depositor), INITIAL_AMOUNT_TO_LOCK);
+		dealFXS(address(depositor), INITIAL_AMOUNT_TO_LOCK);
 		bytes memory lockTokenCallData = abi.encodeWithSignature("lockToken()");
 		lockToken(
 			LOCAL_DEPLOYER,
@@ -278,7 +293,7 @@ contract ApwineTest is BaseTest {
 	function testDepositor01LockNoToken() public {
 		testLocker01createLock();
 		uint256 waitBeforeLock = 60 * 60 * 24 * 10;
-		deal(token, address(depositor), 0);
+		dealFXS(address(depositor), 0);
 		bytes memory lockTokenCallData = abi.encodeWithSignature("lockToken()");
 		lockToken(
 			LOCAL_DEPLOYER,
@@ -309,7 +324,8 @@ contract ApwineTest is BaseTest {
 			stake,
 			user
 		);
-		deal(token, user, amountToDeposit);
+		//deal(token, user, amountToDeposit);
+		dealFXS(user, amountToDeposit);
 		vm.prank(user);
 		IERC20(token).approve(address(depositor), amountToDeposit);
 		deposit(
@@ -342,7 +358,7 @@ contract ApwineTest is BaseTest {
 			stake,
 			user
 		);
-		deal(token, user, amountToDeposit);
+		dealFXS(user, amountToDeposit);
 		vm.prank(user);
 		IERC20(token).approve(address(depositor), amountToDeposit);
 		deposit(
@@ -375,7 +391,7 @@ contract ApwineTest is BaseTest {
 			stake,
 			user
 		);
-		deal(token, user, amountToDeposit);
+		dealFXS(user, amountToDeposit);
 		vm.prank(user);
 		IERC20(token).approve(address(depositor), amountToDeposit);
 		deposit(
@@ -408,7 +424,7 @@ contract ApwineTest is BaseTest {
 			stake,
 			user
 		);
-		deal(token, user, amountToDeposit);
+		dealFXS(user, amountToDeposit);
 		vm.prank(user);
 		IERC20(token).approve(address(depositor), amountToDeposit);
 		deposit(
@@ -435,7 +451,7 @@ contract ApwineTest is BaseTest {
 		bool stake = false;
 		address user = ALICE;
 		bytes memory depositCallData = abi.encodeWithSignature("depositAll(bool,bool,address)", lock, stake, user);
-		deal(token, user, amountToDeposit);
+		dealFXS(user, amountToDeposit);
 		vm.prank(user);
 		IERC20(token).approve(address(depositor), amountToDeposit);
 		deposit(
@@ -527,7 +543,8 @@ contract ApwineTest is BaseTest {
 			amountToNotify
 		);
 		timeJump(60 * 60 * 24 * 7);
-		deal(rewardsToken[0], address(accumulator), amountToNotify);
+		dealFXS(address(accumulator), amountToNotify);
+
 		notifyExtraReward(
 			LOCAL_DEPLOYER,
 			address(accumulator),
@@ -542,7 +559,7 @@ contract ApwineTest is BaseTest {
 		uint256 amountToNotify = 1e18;
 		bytes memory notityExtraRewardCallData = abi.encodeWithSignature("notifyAllExtraReward(address)", rewardsToken[0]);
 		timeJump(60 * 60 * 24 * 7);
-		deal(rewardsToken[0], address(accumulator), amountToNotify);
+		dealFXS(address(accumulator), amountToNotify);
 		notifyExtraReward(
 			LOCAL_DEPLOYER,
 			address(accumulator),
@@ -560,7 +577,7 @@ contract ApwineTest is BaseTest {
 			rewardsAmount
 		);
 		timeJump(60 * 60 * 24 * 7);
-		simulateRewards(rewardsToken, rewardsAmount, address(accumulator));
+		dealFXS(address(accumulator), rewardsAmount[0]);
 		notifyExtraReward(
 			LOCAL_DEPLOYER,
 			address(accumulator),
@@ -574,7 +591,7 @@ contract ApwineTest is BaseTest {
 	function testBaseAccumulator04NotifyExtraRewards() public {
 		bytes memory notityExtraRewardCallData = abi.encodeWithSignature("notifyAllExtraReward(address[])", rewardsToken);
 		timeJump(60 * 60 * 24 * 7);
-		simulateRewards(rewardsToken, rewardsAmount, address(accumulator));
+		dealFXS(address(accumulator), rewardsAmount[0]);
 		notifyExtraReward(
 			LOCAL_DEPLOYER,
 			address(accumulator),
@@ -588,7 +605,7 @@ contract ApwineTest is BaseTest {
 	function testBaseAccumulator05DepositToken() public {
 		uint256 amount = 1e18;
 		bytes memory depositTokenCallData = abi.encodeWithSignature("depositToken(address,uint256)", token, 1e18);
-		deal(token, LOCAL_DEPLOYER, amount);
+		dealFXS(LOCAL_DEPLOYER, amount);
 		depositToken(LOCAL_DEPLOYER, address(accumulator), token, amount, depositTokenCallData);
 	}
 
@@ -649,7 +666,7 @@ contract ApwineTest is BaseTest {
 		);
 	}
 
-	function testAccumulator12RescueToken() public {
+	function testBaseAccumulator12RescueToken() public {
 		uint256 amount = 1e18;
 		bytes memory rescueTokenCallData = abi.encodeWithSignature(
 			"rescueERC20(address,uint256,address)",
@@ -657,7 +674,7 @@ contract ApwineTest is BaseTest {
 			1e18,
 			address(0xA)
 		);
-		deal(token, address(accumulator), amount);
+		dealFXS(address(accumulator), amount);
 		rescueToken(LOCAL_DEPLOYER, address(accumulator), token, address(0xA), amount, rescueTokenCallData);
 	}
 
@@ -669,8 +686,8 @@ contract ApwineTest is BaseTest {
 		testLocker01createLock();
 		bytes[] memory listCallData = new bytes[](1);
 		address rewardsReceiver = address(liquidityGauge);
-		listCallData[0] = abi.encodeWithSignature("claimAndNotify(uint256)", rewardsAmount[0] / 1e6);
-		simulateRewards(rewardsToken, rewardsAmount, feeDistributor);
+		listCallData[0] = abi.encodeWithSignature("claimAndNotify(uint256)", rewardsAmount[0] / 1e14);
+		dealFXS(yieldDistributor, rewardsAmount[0]);
 		timeJump(2 * Constants.WEEK);
 		claimRewardAndNotify(
 			LOCAL_DEPLOYER,
@@ -687,7 +704,7 @@ contract ApwineTest is BaseTest {
 		bytes[] memory listCallData = new bytes[](1);
 		address rewardsReceiver = address(liquidityGauge);
 		listCallData[0] = abi.encodeWithSignature("claimAndNotifyAll()");
-		simulateRewards(rewardsToken, rewardsAmount, feeDistributor);
+		dealFXS(yieldDistributor, rewardsAmount[0]);
 		timeJump(2 * Constants.WEEK);
 		claimRewardAndNotify(
 			LOCAL_DEPLOYER,
@@ -697,25 +714,6 @@ contract ApwineTest is BaseTest {
 			address(liquidityGauge),
 			listCallData
 		);
-	}
-
-	function testAccumulator03SetFeeReceiver() public {
-		bytes memory setFeeReceiverCallData = abi.encodeWithSignature("setFeeReceiver(address)", address(0xA));
-		bytes memory feeReceiverCallData = abi.encodeWithSignature("feeReceiver()");
-		setter(
-			LOCAL_DEPLOYER,
-			address(accumulator),
-			address(accumulator),
-			address(0xA),
-			setFeeReceiverCallData,
-			feeReceiverCallData
-		);
-	}
-
-	function testAccumulator03SetLockerFee() public {
-		bytes memory setLockerFeeCallData = abi.encodeWithSignature("setLockerFee(uint256)", 10);
-		bytes memory lockerFeeCallData = abi.encodeWithSignature("lockerFee()");
-		setter(LOCAL_DEPLOYER, address(accumulator), address(accumulator), 10, setLockerFeeCallData, lockerFeeCallData);
 	}
 
 	////////////////////////////////////////////////////////////////
@@ -747,5 +745,14 @@ contract ApwineTest is BaseTest {
 			setOperatorCallData,
 			operatorCallData
 		);
+	}
+
+	////////////////////////////////////////////////////////////////
+	/// --- HELPERS
+	///////////////////////////////////////////////////////////////
+	/// @notice using deal for giving FXS token doesn't work
+	function dealFXS(address receiver, uint256 amount) public {
+		vm.prank(Constants.VE_FXS);
+		IERC20(Constants.FXS).transfer(receiver, amount);
 	}
 }

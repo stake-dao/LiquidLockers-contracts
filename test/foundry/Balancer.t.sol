@@ -41,8 +41,6 @@ contract BalancerTest is BaseTest {
 	uint256 internal constant LOCK_MULTIPLIER = 1;
 	uint256[] internal rewardsAmount;
 
-	bytes internal BASE = abi.encodeWithSignature("base()");
-
 	sdToken internal _sdToken;
 	ProxyAdmin internal proxyAdmin;
 	BalancerLocker internal locker;
@@ -771,26 +769,6 @@ contract BalancerTest is BaseTest {
 
 		assertEq(accumulator.tokenData(2), address(0xBAD), "failed to add tokenData");
 	}
-
-	/*
-	function testAccumulator03SetFeeReceiver() public {
-		bytes memory setFeeReceiverCallData = abi.encodeWithSignature("setFeeReceiver(address)", address(0xA));
-		bytes memory feeReceiverCallData = abi.encodeWithSignature("feeReceiver()");
-		setter(
-			LOCAL_DEPLOYER,
-			address(accumulator),
-			address(accumulator),
-			address(0xA),
-			setFeeReceiverCallData,
-			feeReceiverCallData
-		);
-	}
-
-	function testAccumulator03SetLockerFee() public {
-		bytes memory setLockerFeeCallData = abi.encodeWithSignature("setLockerFee(uint256)", 10);
-		bytes memory lockerFeeCallData = abi.encodeWithSignature("lockerFee()");
-		setter(LOCAL_DEPLOYER, address(accumulator), address(accumulator), 10, setLockerFeeCallData, lockerFeeCallData);
-	}*/
 
 	////////////////////////////////////////////////////////////////
 	/// --- SDTOKEN

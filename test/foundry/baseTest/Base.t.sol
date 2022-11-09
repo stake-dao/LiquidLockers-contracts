@@ -15,6 +15,20 @@ import "contracts/interfaces/IBaseAccumulator.sol";
 
 contract BaseTest is Test {
 	////////////////////////////////////////////////////////////////
+	/// --- MAIN CALL
+	///////////////////////////////////////////////////////////////
+	function mainCall(
+		address caller,
+		address toCall,
+		bytes memory callData
+	) internal returns (bool success) {
+		vm.startPrank(caller);
+		(success, ) = toCall.call(callData);
+		require(success, "low-level call failed");
+		vm.stopPrank();
+	}
+
+	////////////////////////////////////////////////////////////////
 	/// --- LOCKER
 	///////////////////////////////////////////////////////////////
 	function createLock(
@@ -29,10 +43,7 @@ contract BaseTest is Test {
 		IVeToken.LockedBalance memory lockedBalanceBefore = IVeToken(veToken).locked(locker);
 		uint256 veBalanceBefore = IVeToken(veToken).balanceOf(locker);
 
-		vm.startPrank(caller);
-		(bool success, ) = locker.call(callData);
-		require(success, "low-level call failed");
-		vm.stopPrank();
+		mainCall(caller, locker, callData);
 
 		IVeToken.LockedBalance memory lockedBalance = IVeToken(veToken).locked(locker);
 
@@ -58,10 +69,7 @@ contract BaseTest is Test {
 		bytes memory callData
 	) internal {
 		IVeToken.LockedBalance memory lockedBalanceBefore = IVeToken(veToken).locked(locker);
-		vm.startPrank(caller);
-		(bool success, ) = locker.call(callData);
-		require(success, "low-level call failed");
-		vm.stopPrank();
+		mainCall(caller, locker, callData);
 
 		IVeToken.LockedBalance memory lockedBalance = IVeToken(veToken).locked(locker);
 
@@ -76,10 +84,7 @@ contract BaseTest is Test {
 		bytes memory callData
 	) internal {
 		IVeToken.LockedBalance memory lockedBalanceBefore = IVeToken(veToken).locked(address(locker));
-		vm.startPrank(caller);
-		(bool success, ) = locker.call(callData);
-		require(success, "low-level call failed");
-		vm.stopPrank();
+		mainCall(caller, locker, callData);
 
 		IVeToken.LockedBalance memory lockedBalance = IVeToken(veToken).locked(address(locker));
 		assertApproxEqAbs(
@@ -99,10 +104,7 @@ contract BaseTest is Test {
 		bytes memory callData
 	) internal {
 		uint256 balanceBefore = IERC20(token).balanceOf(receiver);
-		vm.startPrank(caller);
-		(bool success, ) = locker.call(callData);
-		require(success, "low-level call failed");
-		vm.stopPrank();
+		mainCall(caller, locker, callData);
 
 		assertEq(IERC20(token).balanceOf(receiver), balanceBefore + initialAmountToWithdraw, "amount");
 	}
@@ -150,10 +152,7 @@ contract BaseTest is Test {
 		bytes memory callData
 	) internal {
 		uint256 voteBefore = IGaugeController(gaugeController).last_user_vote(address(locker), gauge);
-		vm.startPrank(caller);
-		(bool success, ) = locker.call(callData);
-		require(success, "low-level call failed");
-		vm.stopPrank();
+		mainCall(caller, locker, callData);
 		uint256 voteAfter = IGaugeController(gaugeController).last_user_vote(address(locker), gauge);
 
 		assertEq(voteBefore, 0, "vote before != 0");
@@ -165,10 +164,7 @@ contract BaseTest is Test {
 		address locker,
 		bytes memory callData
 	) internal {
-		vm.startPrank(caller);
-		(bool success, ) = locker.call(callData);
-		require(success, "low-level call failed");
-		vm.stopPrank();
+		bool success = mainCall(caller, locker, callData);
 
 		assertEq(success, true, "call fail");
 	}
@@ -193,14 +189,10 @@ contract BaseTest is Test {
 		timeJump(waitBeforeLock);
 
 		// Force incentive token amount
-		// number 3 for FRAX!
 		vm.store(depositor, bytes32(uint256(4)), bytes32(incentiveAmount));
 		require(IBaseDepositor(depositor).incentiveToken() == incentiveAmount, "Force to incentive failed");
 
-		vm.startPrank(caller);
-		(bool success, ) = depositor.call(callData);
-		require(success, "low-level call failed");
-		vm.stopPrank();
+		mainCall(caller, depositor, callData);
 
 		assertEq(IERC20(token).balanceOf(locker), 0, "locker balance != 0");
 		assertEq(IERC20(token).balanceOf(depositor), 0, "depositor balance != 0");
@@ -231,28 +223,33 @@ contract BaseTest is Test {
 	) internal {
 		timeJump(waitBeforeLock);
 
+		uint256 incentiveTokenBefore;
 		// Force incentive token amount
 		vm.store(depositor, bytes32(uint256(4)), bytes32(incentiveAmount));
 		require(IBaseDepositor(depositor).incentiveToken() == incentiveAmount, "Force to incentive failed");
+		incentiveTokenBefore = IBaseDepositor(depositor).incentiveToken();
 
 		uint256 balanceDepositorBefore = IERC20(token).balanceOf(depositor);
-		uint256 incentiveTokenBefore = IBaseDepositor(depositor).incentiveToken();
 
-		vm.startPrank(caller);
-		(bool success, ) = depositor.call(callData);
-		require(success, "low-level call failed");
-		vm.stopPrank();
+		mainCall(caller, depositor, callData);
+
+		uint256 incentiveTokenAfter = IBaseDepositor(depositor).incentiveToken();
 
 		if (lock) {
 			amountToDeposit += incentiveAmount;
-			assertEq(IBaseDepositor(depositor).incentiveToken(), 0, "incentive amount");
+			//if (token == Constants.FXS) {
+			//	incentiveTokenAfter = IBaseDepositor(depositor).incentiveFxs();
+			//} else {
+			//incentiveTokenAfter = IBaseDepositor(depositor).incentiveToken();
+			//}
+			assertEq(incentiveTokenAfter, 0, "incentive amount");
 		} else {
 			//uint256 callIncentive = (amountToDeposit * IBaseDepositor(depositor).lockIncentive()) /
 			//	IBaseDepositor(depositor).FEE_DENOMINATOR(); //not use because stack too deep.
 
 			assertEq(IERC20(token).balanceOf(depositor), balanceDepositorBefore + amountToDeposit, "amount depositor");
 			assertEq(
-				IBaseDepositor(depositor).incentiveToken(),
+				incentiveTokenAfter,
 				incentiveTokenBefore +
 					(amountToDeposit * IBaseDepositor(depositor).lockIncentive()) /
 					IBaseDepositor(depositor).FEE_DENOMINATOR(),
@@ -280,10 +277,7 @@ contract BaseTest is Test {
 		uint256 rewardAmount,
 		bytes memory callData
 	) internal {
-		vm.startPrank(caller);
-		(bool success, ) = accumulator.call(callData);
-		require(success, "low-level call failed");
-		vm.stopPrank();
+		mainCall(caller, accumulator, callData);
 
 		if (rewardAmount > 0) {
 			// Only work for Blackpool!
@@ -306,10 +300,7 @@ contract BaseTest is Test {
 		uint256[] memory rewardAmount,
 		bytes memory callData
 	) internal {
-		vm.startPrank(caller);
-		(bool success, ) = accumulator.call(callData);
-		require(success, "low-level call failed");
-		vm.stopPrank();
+		mainCall(caller, accumulator, callData);
 
 		uint256 fees = IBaseAccumulator(accumulator).claimerFee();
 		for (uint8 i; i < rewardToken.length; ++i) {
@@ -351,10 +342,7 @@ contract BaseTest is Test {
 		uint256 amount,
 		bytes memory callData
 	) internal {
-		vm.startPrank(caller);
-		(bool success, ) = accumulator.call(callData);
-		require(success, "low-level call failed");
-		vm.stopPrank();
+		mainCall(caller, accumulator, callData);
 
 		assertEq(IERC20(token).balanceOf(receipient), amount, "token balance of receipient");
 	}
@@ -388,10 +376,7 @@ contract BaseTest is Test {
 		uint256 balanceBefore = IERC20(sdToken).balanceOf(to);
 		uint256 supplyBefore = IERC20(sdToken).totalSupply();
 
-		vm.startPrank(caller);
-		(bool success, ) = sdToken.call(callData);
-		require(success, "low-level call failed");
-		vm.stopPrank();
+		mainCall(caller, sdToken, callData);
 
 		assertEq(IERC20(sdToken).balanceOf(to), balanceBefore + mintAmount, "sdToken balance");
 		assertEq(IERC20(sdToken).totalSupply(), supplyBefore + mintAmount, "sdToken supply");
@@ -406,10 +391,8 @@ contract BaseTest is Test {
 	) internal {
 		uint256 balanceBefore = IERC20(sdToken).balanceOf(from);
 		uint256 supplyBefore = IERC20(sdToken).totalSupply();
-		vm.startPrank(caller);
-		(bool success, ) = sdToken.call(callData);
-		require(success, "low-level call failed");
-		vm.stopPrank();
+
+		mainCall(caller, sdToken, callData);
 
 		assertEq(IERC20(sdToken).balanceOf(from), balanceBefore - burnAmount, "sdToken balance");
 		assertEq(IERC20(sdToken).totalSupply(), supplyBefore - burnAmount, "sdToken supply");
