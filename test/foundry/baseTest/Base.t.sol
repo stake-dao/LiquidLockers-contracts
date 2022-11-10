@@ -105,7 +105,7 @@ contract BaseTest is Test {
 	) internal {
 		uint256 balanceBefore = IERC20(token).balanceOf(receiver);
 		mainCall(caller, locker, callData);
-
+		assertEq(IERC20(token).balanceOf(address(locker)), 0, "locker balance !=0");
 		assertEq(IERC20(token).balanceOf(receiver), balanceBefore + initialAmountToWithdraw, "amount");
 	}
 
@@ -223,33 +223,27 @@ contract BaseTest is Test {
 	) internal {
 		timeJump(waitBeforeLock);
 
-		uint256 incentiveTokenBefore;
 		// Force incentive token amount
 		vm.store(depositor, bytes32(uint256(4)), bytes32(incentiveAmount));
 		require(IBaseDepositor(depositor).incentiveToken() == incentiveAmount, "Force to incentive failed");
-		incentiveTokenBefore = IBaseDepositor(depositor).incentiveToken();
 
+		uint256 incentiveTokenBefore = IBaseDepositor(depositor).incentiveToken();
 		uint256 balanceDepositorBefore = IERC20(token).balanceOf(depositor);
+		uint256 balanceTokenUserBefore = IERC20(token).balanceOf(user);
 
 		mainCall(caller, depositor, callData);
 
-		uint256 incentiveTokenAfter = IBaseDepositor(depositor).incentiveToken();
-
+		assertEq(IERC20(token).balanceOf(user), balanceTokenUserBefore - amountToDeposit, "wrong user balance");
 		if (lock) {
 			amountToDeposit += incentiveAmount;
-			//if (token == Constants.FXS) {
-			//	incentiveTokenAfter = IBaseDepositor(depositor).incentiveFxs();
-			//} else {
-			//incentiveTokenAfter = IBaseDepositor(depositor).incentiveToken();
-			//}
-			assertEq(incentiveTokenAfter, 0, "incentive amount");
+			assertEq(IBaseDepositor(depositor).incentiveToken(), 0, "incentive amount");
 		} else {
 			//uint256 callIncentive = (amountToDeposit * IBaseDepositor(depositor).lockIncentive()) /
 			//	IBaseDepositor(depositor).FEE_DENOMINATOR(); //not use because stack too deep.
 
 			assertEq(IERC20(token).balanceOf(depositor), balanceDepositorBefore + amountToDeposit, "amount depositor");
 			assertEq(
-				incentiveTokenAfter,
+				IBaseDepositor(depositor).incentiveToken(),
 				incentiveTokenBefore +
 					(amountToDeposit * IBaseDepositor(depositor).lockIncentive()) /
 					IBaseDepositor(depositor).FEE_DENOMINATOR(),
@@ -454,6 +448,18 @@ contract BaseTest is Test {
 		require(success, "low-level call failed");
 
 		assertEq(keccak256(data), keccak256(newValue), "value");
+	}
+
+	function reverter(
+		address[] memory caller,
+		address toCall,
+		bytes[] memory listCallData,
+		bytes[] memory listRevertReason
+	) internal {
+		for (uint8 i = 0; i < listCallData.length; ++i) {
+			vm.expectRevert(listRevertReason[i]);
+			mainCall(caller[i], toCall, listCallData[i]);
+		}
 	}
 
 	////////////////////////////////////////////////////////////////

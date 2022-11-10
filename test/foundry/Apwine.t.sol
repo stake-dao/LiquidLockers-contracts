@@ -17,7 +17,6 @@ import "contracts/sdtDistributor/MasterchefMasterToken.sol";
 
 // Interface
 import "contracts/interfaces/IVeApw.sol";
-//import "contracts/interfaces/IAngleGaugeController.sol";
 
 import "contracts/interfaces/ISmartWalletChecker.sol";
 import "contracts/interfaces/ILiquidityGauge.sol";
@@ -73,7 +72,7 @@ contract ApwineTest is BaseTest {
 		locker = new ApwineLocker(address(this));
 
 		// Deploy sdToken
-		_sdToken = new sdToken("Stake DAO BPT", "_sdToken");
+		_sdToken = new sdToken("Stake DAO APW", "_sdToken");
 
 		// Deploy ApwineDepositor
 		depositor = new ApwineDepositor(address(token), address(locker), address(_sdToken), veToken);
@@ -163,8 +162,8 @@ contract ApwineTest is BaseTest {
 	///////////////////////////////////////////////////////////////
 
 	function testLocker01createLock() public {
-		bytes memory createLockCallData = abi.encodePacked(
-			ApwineLocker.createLock.selector,
+		bytes memory createLockCallData = abi.encodeWithSignature(
+			"createLock(uint256,uint256)",
 			INITIAL_AMOUNT_TO_LOCK,
 			block.timestamp + INITIAL_PERIOD_TO_LOCK
 		);
@@ -182,7 +181,7 @@ contract ApwineTest is BaseTest {
 
 	function testLocker02IncreaseLockAmount() public {
 		testLocker01createLock();
-		bytes memory increaseAmountCallData = abi.encodePacked(ApwineLocker.increaseAmount.selector, EXTRA_AMOUNT_TO_LOCK);
+		bytes memory increaseAmountCallData = abi.encodeWithSignature("increaseAmount(uint256)", EXTRA_AMOUNT_TO_LOCK);
 		deal(token, address(locker), EXTRA_AMOUNT_TO_LOCK);
 		increaseAmount(LOCAL_DEPLOYER, address(locker), veToken, EXTRA_AMOUNT_TO_LOCK, increaseAmountCallData);
 	}
@@ -190,8 +189,8 @@ contract ApwineTest is BaseTest {
 	function testLocker03IncreaseLockDuration() public {
 		testLocker01createLock();
 		timeJump(EXTRA_PERIOD_TO_LOCK);
-		bytes memory increaseLockCallData = abi.encodePacked(
-			ApwineLocker.increaseUnlockTime.selector,
+		bytes memory increaseLockCallData = abi.encodeWithSignature(
+			"increaseUnlockTime(uint256)",
 			block.timestamp + INITIAL_PERIOD_TO_LOCK
 		);
 		increaseLock(LOCAL_DEPLOYER, address(locker), veToken, EXTRA_PERIOD_TO_LOCK, increaseLockCallData);
@@ -249,6 +248,33 @@ contract ApwineTest is BaseTest {
 			setFeeDistributorCallData,
 			feeDistributorCallData
 		);
+	}
+
+	function testLocker11Revert() public {
+		uint8 i = 3;
+		// callData
+		bytes[] memory listCallData = new bytes[](i);
+		listCallData[0] = abi.encodeWithSignature(
+			"createLock(uint256,uint256)",
+			INITIAL_AMOUNT_TO_LOCK,
+			block.timestamp + INITIAL_PERIOD_TO_LOCK
+		);
+		listCallData[1] = abi.encodeWithSignature("increaseAmount(uint256)", EXTRA_AMOUNT_TO_LOCK);
+		listCallData[2] = abi.encodeWithSignature("claimRewards(address,address)", rewardsToken[0], address(0x1));
+
+		// Revert reasons
+		bytes[] memory listRevertReason = new bytes[](i);
+		listRevertReason[0] = bytes("!gov");
+		listRevertReason[1] = bytes("!(gov||ApwineDepositor)");
+		listRevertReason[2] = bytes("!(gov||acc)");
+
+		// Caller
+		address[] memory listCaller = new address[](i);
+		listCaller[0] = address(0xB0B);
+		listCaller[1] = address(0xB0B);
+		listCaller[2] = address(0xB0B);
+
+		reverter(listCaller, address(locker), listCallData, listRevertReason);
 	}
 
 	////////////////////////////////////////////////////////////////
@@ -497,6 +523,29 @@ contract ApwineTest is BaseTest {
 		setter(LOCAL_DEPLOYER, address(depositor), address(depositor), 10, setFeesCallData, feesCallData);
 	}
 
+	function testDepositor08Revert() public {
+		uint8 i = 3;
+		// callData
+		bytes[] memory listCallData = new bytes[](i);
+		listCallData[0] = abi.encodeWithSignature("setGovernance(address)", address(0x1));
+		listCallData[1] = abi.encodeWithSignature("deposit(uint256,bool,bool,address)", 0, true, true, address(0x1));
+		listCallData[2] = abi.encodeWithSignature("deposit(uint256,bool,bool,address)", 10, true, true, address(0));
+
+		// Revert reasons
+		bytes[] memory listRevertReason = new bytes[](i);
+		listRevertReason[0] = bytes("!auth");
+		listRevertReason[1] = bytes("!>0");
+		listRevertReason[2] = bytes("!user");
+
+		// Caller
+		address[] memory listCaller = new address[](i);
+		listCaller[0] = address(0xB0B);
+		listCaller[1] = LOCAL_DEPLOYER;
+		listCaller[2] = LOCAL_DEPLOYER;
+
+		reverter(listCaller, address(depositor), listCallData, listRevertReason);
+	}
+
 	////////////////////////////////////////////////////////////////
 	/// --- BASE ACCUMULATOR
 	///////////////////////////////////////////////////////////////
@@ -649,7 +698,7 @@ contract ApwineTest is BaseTest {
 		);
 	}
 
-	function testAccumulator12RescueToken() public {
+	function testBaseAccumulator12RescueToken() public {
 		uint256 amount = 1e18;
 		bytes memory rescueTokenCallData = abi.encodeWithSignature(
 			"rescueERC20(address,uint256,address)",
@@ -659,6 +708,35 @@ contract ApwineTest is BaseTest {
 		);
 		deal(token, address(accumulator), amount);
 		rescueToken(LOCAL_DEPLOYER, address(accumulator), token, address(0xA), amount, rescueTokenCallData);
+	}
+
+	function testBaseAccumulator13Revert() public {
+		uint8 i = 5;
+		// callData
+		bytes[] memory listCallData = new bytes[](i);
+		listCallData[0] = abi.encodeWithSignature("notifyExtraReward(address,uint256)", token, 10);
+		listCallData[1] = abi.encodeWithSignature("notifyExtraReward(address,uint256)", token, 10);
+		listCallData[2] = abi.encodeWithSignature("depositToken(address,uint256)", token, 0);
+		listCallData[3] = abi.encodeWithSignature("setGauge(address)", address(0));
+		listCallData[4] = abi.encodeWithSignature("rescueERC20(address,uint256,address)", token, 10, address(0));
+
+		// Revert reasons
+		bytes[] memory listRevertReason = new bytes[](i);
+		listRevertReason[0] = bytes("!gov");
+		listRevertReason[1] = bytes("amount not enough");
+		listRevertReason[2] = bytes("set an amount > 0");
+		listRevertReason[3] = bytes("can't be zero address");
+		listRevertReason[4] = bytes("can't be zero address");
+
+		// Caller
+		address[] memory listCaller = new address[](i);
+		listCaller[0] = address(0xB0B);
+		listCaller[1] = LOCAL_DEPLOYER;
+		listCaller[2] = LOCAL_DEPLOYER;
+		listCaller[3] = LOCAL_DEPLOYER;
+		listCaller[4] = LOCAL_DEPLOYER;
+
+		reverter(listCaller, address(accumulator), listCallData, listRevertReason);
 	}
 
 	////////////////////////////////////////////////////////////////
@@ -747,5 +825,22 @@ contract ApwineTest is BaseTest {
 			setOperatorCallData,
 			operatorCallData
 		);
+	}
+
+	function testSdToken04Revert() public {
+		uint8 i = 5;
+		// callData
+		bytes[] memory listCallData = new bytes[](i);
+		listCallData[0] = abi.encodeWithSignature("setOperator(address)", address(0x1));
+
+		// Revert reasons
+		bytes[] memory listRevertReason = new bytes[](i);
+		listRevertReason[0] = bytes("!authorized");
+
+		// Caller
+		address[] memory listCaller = new address[](i);
+		listCaller[0] = address(0xB0B);
+
+		reverter(listCaller, address(_sdToken), listCallData, listRevertReason);
 	}
 }

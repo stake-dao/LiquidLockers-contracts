@@ -162,8 +162,8 @@ contract BlackpoolTest is BaseTest {
 	///////////////////////////////////////////////////////////////
 
 	function testLocker01createLock() public {
-		bytes memory createLockCallData = abi.encodePacked(
-			BlackpoolLocker.createLock.selector,
+		bytes memory createLockCallData = abi.encodeWithSignature(
+			"createLock(uint256,uint256)",
 			INITIAL_AMOUNT_TO_LOCK,
 			block.timestamp + INITIAL_PERIOD_TO_LOCK
 		);
@@ -181,10 +181,7 @@ contract BlackpoolTest is BaseTest {
 
 	function testLocker02IncreaseLockAmount() public {
 		testLocker01createLock();
-		bytes memory increaseAmountCallData = abi.encodePacked(
-			BlackpoolLocker.increaseAmount.selector,
-			EXTRA_AMOUNT_TO_LOCK
-		);
+		bytes memory increaseAmountCallData = abi.encodeWithSignature("increaseAmount(uint256)", EXTRA_AMOUNT_TO_LOCK);
 		deal(token, address(locker), EXTRA_AMOUNT_TO_LOCK);
 		increaseAmount(LOCAL_DEPLOYER, address(locker), veToken, EXTRA_AMOUNT_TO_LOCK, increaseAmountCallData);
 	}
@@ -192,8 +189,8 @@ contract BlackpoolTest is BaseTest {
 	function testLocker03IncreaseLockDuration() public {
 		testLocker01createLock();
 		timeJump(EXTRA_PERIOD_TO_LOCK);
-		bytes memory increaseLockCallData = abi.encodePacked(
-			BlackpoolLocker.increaseUnlockTime.selector,
+		bytes memory increaseLockCallData = abi.encodeWithSignature(
+			"increaseUnlockTime(uint256)",
 			block.timestamp + INITIAL_PERIOD_TO_LOCK
 		);
 		increaseLock(LOCAL_DEPLOYER, address(locker), veToken, EXTRA_PERIOD_TO_LOCK, increaseLockCallData);
@@ -202,7 +199,6 @@ contract BlackpoolTest is BaseTest {
 	function testLocker04Release() public {
 		testLocker01createLock();
 		timeJump(INITIAL_PERIOD_TO_LOCK);
-		//bytes memory releaseCallData = abi.encodePacked(BlackpoolLocker.release.selector, address(this));
 		bytes memory releaseCallData = abi.encodeWithSignature("release(address)", address(this));
 		release(LOCAL_DEPLOYER, address(locker), token, address(this), INITIAL_AMOUNT_TO_LOCK, releaseCallData);
 	}
@@ -254,10 +250,37 @@ contract BlackpoolTest is BaseTest {
 		);
 	}
 
+	function testLocker14Revert() public {
+		uint8 i = 3;
+		// callData
+		bytes[] memory listCallData = new bytes[](i);
+		listCallData[0] = abi.encodeWithSignature(
+			"createLock(uint256,uint256)",
+			INITIAL_AMOUNT_TO_LOCK,
+			block.timestamp + INITIAL_PERIOD_TO_LOCK
+		);
+		listCallData[1] = abi.encodeWithSignature("increaseAmount(uint256)", EXTRA_AMOUNT_TO_LOCK);
+		listCallData[2] = abi.encodeWithSignature("claimRewards(address,address)", rewardsToken[0], address(0x1));
+
+		// Revert reasons
+		bytes[] memory listRevertReason = new bytes[](i);
+		listRevertReason[0] = bytes("!gov");
+		listRevertReason[1] = bytes("!(gov||BlackpoolDepositor)");
+		listRevertReason[2] = bytes("!(gov||acc)");
+
+		// Caller
+		address[] memory listCaller = new address[](i);
+		listCaller[0] = address(0xB0B);
+		listCaller[1] = address(0xB0B);
+		listCaller[2] = address(0xB0B);
+
+		reverter(listCaller, address(locker), listCallData, listRevertReason);
+	}
+
 	////////////////////////////////////////////////////////////////
 	/// --- DEPOSITOR
 	///////////////////////////////////////////////////////////////
-	
+
 	function testDepositor01LockToken() public {
 		testLocker01createLock();
 		uint256 waitBeforeLock = 60 * 60 * 24 * 8;
@@ -500,11 +523,34 @@ contract BlackpoolTest is BaseTest {
 		setter(LOCAL_DEPLOYER, address(depositor), address(depositor), 10, setFeesCallData, feesCallData);
 	}
 
+	function testDepositor08Revert() public {
+		uint8 i = 3;
+		// callData
+		bytes[] memory listCallData = new bytes[](i);
+		listCallData[0] = abi.encodeWithSignature("setGovernance(address)", address(0x1));
+		listCallData[1] = abi.encodeWithSignature("deposit(uint256,bool,bool,address)", 0, true, true, address(0x1));
+		listCallData[2] = abi.encodeWithSignature("deposit(uint256,bool,bool,address)", 10, true, true, address(0));
+
+		// Revert reasons
+		bytes[] memory listRevertReason = new bytes[](i);
+		listRevertReason[0] = bytes("!auth");
+		listRevertReason[1] = bytes("!>0");
+		listRevertReason[2] = bytes("!user");
+
+		// Caller
+		address[] memory listCaller = new address[](i);
+		listCaller[0] = address(0xB0B);
+		listCaller[1] = LOCAL_DEPLOYER;
+		listCaller[2] = LOCAL_DEPLOYER;
+
+		reverter(listCaller, address(depositor), listCallData, listRevertReason);
+	}
+
 	////////////////////////////////////////////////////////////////
 	/// --- BASE ACCUMULATOR
 	///////////////////////////////////////////////////////////////
 	// Needed for 100% coverage
-	function testAccumulator00NotifyExtraReward0() public {
+	function testBaseAccumulator00NotifyExtraReward0() public {
 		uint256 amountToNotify = 0;
 		bytes memory notityExtraRewardCallData = abi.encodeWithSignature(
 			"notifyExtraReward(address,uint256)",
@@ -522,7 +568,7 @@ contract BlackpoolTest is BaseTest {
 		);
 	}
 
-	function testAccumulator01NotifyExtraReward() public {
+	function testBaseAccumulator01NotifyExtraReward() public {
 		uint256 amountToNotify = 1e18;
 		bytes memory notityExtraRewardCallData = abi.encodeWithSignature(
 			"notifyExtraReward(address,uint256)",
@@ -541,7 +587,7 @@ contract BlackpoolTest is BaseTest {
 		);
 	}
 
-	function testAccumulator02NotifyAllExtraReward() public {
+	function testBaseAccumulator02NotifyAllExtraReward() public {
 		uint256 amountToNotify = 1e18;
 		bytes memory notityExtraRewardCallData = abi.encodeWithSignature("notifyAllExtraReward(address)", rewardsToken[0]);
 		timeJump(60 * 60 * 24 * 7);
@@ -556,7 +602,7 @@ contract BlackpoolTest is BaseTest {
 		);
 	}
 
-	function testAccumulator03NotifyExtraRewards() public {
+	function testBaseAccumulator03NotifyExtraRewards() public {
 		bytes memory notityExtraRewardCallData = abi.encodeWithSignature(
 			"notifyExtraReward(address[],uint256[])",
 			rewardsToken,
@@ -574,7 +620,7 @@ contract BlackpoolTest is BaseTest {
 		);
 	}
 
-	function testAccumulator04NotifyExtraRewards() public {
+	function testBaseAccumulator04NotifyExtraRewards() public {
 		bytes memory notityExtraRewardCallData = abi.encodeWithSignature("notifyAllExtraReward(address[])", rewardsToken);
 		timeJump(60 * 60 * 24 * 7);
 		simulateRewards(rewardsToken, rewardsAmount, address(accumulator));
@@ -588,20 +634,20 @@ contract BlackpoolTest is BaseTest {
 		);
 	}
 
-	function testAccumulator05DepositToken() public {
+	function testBaseAccumulator05DepositToken() public {
 		uint256 amount = 1e18;
 		bytes memory depositTokenCallData = abi.encodeWithSignature("depositToken(address,uint256)", token, 1e18);
 		deal(token, LOCAL_DEPLOYER, amount);
 		depositToken(LOCAL_DEPLOYER, address(accumulator), token, amount, depositTokenCallData);
 	}
 
-	function testAccumulator06SetGauge() public {
+	function testBaseAccumulator06SetGauge() public {
 		bytes memory setGaugeCallData = abi.encodeWithSignature("setGauge(address)", address(0xA));
 		bytes memory gaugeCallData = abi.encodeWithSignature("gauge()");
 		setter(LOCAL_DEPLOYER, address(accumulator), address(accumulator), address(0xA), setGaugeCallData, gaugeCallData);
 	}
 
-	function testAccumulator07SetSdtDistributor() public {
+	function testBaseAccumulator07SetSdtDistributor() public {
 		bytes memory setSDTDistributorCallData = abi.encodeWithSignature("setSdtDistributor(address)", address(0xA));
 		bytes memory sdtDistributorCallData = abi.encodeWithSignature("sdtDistributor()");
 		setter(
@@ -614,13 +660,13 @@ contract BlackpoolTest is BaseTest {
 		);
 	}
 
-	function testAccumulator08SetLocker() public {
+	function testBaseAccumulator08SetLocker() public {
 		bytes memory setLockerCallData = abi.encodeWithSignature("setLocker(address)", address(0xA));
 		bytes memory lockerCallData = abi.encodeWithSignature("locker()");
 		setter(LOCAL_DEPLOYER, address(accumulator), address(accumulator), address(0xA), setLockerCallData, lockerCallData);
 	}
 
-	function testAccumulator09SetTokenReward() public {
+	function testBaseAccumulator09SetTokenReward() public {
 		bytes memory setTokenRewardCallData = abi.encodeWithSignature("setTokenReward(address)", address(0xA));
 		bytes memory tokenRewardCallData = abi.encodeWithSignature("tokenReward()");
 		setter(
@@ -633,13 +679,13 @@ contract BlackpoolTest is BaseTest {
 		);
 	}
 
-	function testAccumulator10SetClaimerFee() public {
+	function testBaseAccumulator10SetClaimerFee() public {
 		bytes memory setClaimerFeeCallData = abi.encodeWithSignature("setClaimerFee(uint256)", 10);
 		bytes memory claimerFeeCallData = abi.encodeWithSignature("claimerFee()");
 		setter(LOCAL_DEPLOYER, address(accumulator), address(accumulator), 10, setClaimerFeeCallData, claimerFeeCallData);
 	}
 
-	function testAccumulator09SetGovernance() public {
+	function testBaseAccumulator09SetGovernance() public {
 		bytes memory setGovernanceCallData = abi.encodeWithSignature("setGovernance(address)", address(0xA));
 		bytes memory governanceCallData = abi.encodeWithSignature("governance()");
 		setter(
@@ -652,7 +698,7 @@ contract BlackpoolTest is BaseTest {
 		);
 	}
 
-	function testAccumulator12RescueToken() public {
+	function testBaseAccumulator12RescueToken() public {
 		uint256 amount = 1e18;
 		bytes memory rescueTokenCallData = abi.encodeWithSignature(
 			"rescueERC20(address,uint256,address)",
@@ -664,10 +710,39 @@ contract BlackpoolTest is BaseTest {
 		rescueToken(LOCAL_DEPLOYER, address(accumulator), token, address(0xA), amount, rescueTokenCallData);
 	}
 
+	function testBaseAccumulator13Revert() public {
+		uint8 i = 5;
+		// callData
+		bytes[] memory listCallData = new bytes[](i);
+		listCallData[0] = abi.encodeWithSignature("notifyExtraReward(address,uint256)", token, 10);
+		listCallData[1] = abi.encodeWithSignature("notifyExtraReward(address,uint256)", token, 10);
+		listCallData[2] = abi.encodeWithSignature("depositToken(address,uint256)", token, 0);
+		listCallData[3] = abi.encodeWithSignature("setGauge(address)", address(0));
+		listCallData[4] = abi.encodeWithSignature("rescueERC20(address,uint256,address)", token, 10, address(0));
+
+		// Revert reasons
+		bytes[] memory listRevertReason = new bytes[](i);
+		listRevertReason[0] = bytes("!gov");
+		listRevertReason[1] = bytes("amount not enough");
+		listRevertReason[2] = bytes("set an amount > 0");
+		listRevertReason[3] = bytes("can't be zero address");
+		listRevertReason[4] = bytes("can't be zero address");
+
+		// Caller
+		address[] memory listCaller = new address[](i);
+		listCaller[0] = address(0xB0B);
+		listCaller[1] = LOCAL_DEPLOYER;
+		listCaller[2] = LOCAL_DEPLOYER;
+		listCaller[3] = LOCAL_DEPLOYER;
+		listCaller[4] = LOCAL_DEPLOYER;
+
+		reverter(listCaller, address(accumulator), listCallData, listRevertReason);
+	}
+
 	////////////////////////////////////////////////////////////////
 	/// --- ACCUMULATOR
 	///////////////////////////////////////////////////////////////
-	
+
 	function testAccumulator01ClaimAndNotify() public {
 		testLocker01createLock();
 		bytes[] memory listCallData = new bytes[](1);
@@ -742,6 +817,30 @@ contract BlackpoolTest is BaseTest {
 	function testSdToken03SetOperator() public {
 		bytes memory setOperatorCallData = abi.encodeWithSignature("setOperator(address)", address(0xA));
 		bytes memory operatorCallData = abi.encodeWithSignature("operator()");
-		setter(address(depositor), address(_sdToken), address(_sdToken), address(0xA), setOperatorCallData, operatorCallData);
+		setter(
+			address(depositor),
+			address(_sdToken),
+			address(_sdToken),
+			address(0xA),
+			setOperatorCallData,
+			operatorCallData
+		);
+	}
+
+	function testSdToken04Revert() public {
+		uint8 i = 5;
+		// callData
+		bytes[] memory listCallData = new bytes[](i);
+		listCallData[0] = abi.encodeWithSignature("setOperator(address)", address(0x1));
+
+		// Revert reasons
+		bytes[] memory listRevertReason = new bytes[](i);
+		listRevertReason[0] = bytes("!authorized");
+
+		// Caller
+		address[] memory listCaller = new address[](i);
+		listCaller[0] = address(0xB0B);
+
+		reverter(listCaller, address(_sdToken), listCallData, listRevertReason);
 	}
 }
