@@ -91,4 +91,11 @@ library Constants {
 	address public constant FRAX_YIELD_DISTRIBUTOR = 0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872;
 	address public constant FRAX_GAUGE_CONTROLLER = 0x44ade9AA409B0C29463fF7fcf07c9d3c939166ce;
 	address public constant FXS_WHALE = 0x322a3fB2f628085749e5F1151AA9A32Eb50D3519;
+
+    ////////////////////////////////////////////////////////////////
+    /// --- ANGLE LL
+    ///////////////////////////////////////////////////////////////
+
+    address public constant ANGLE_STRATEGY = 0x22635427C72e8b0028FeAE1B5e1957508d9D7CAF;
+    address public constant ANGLE_VOTER_V2 = 0xBabe5d223fB31A37ce184481678A6667AC8CD98B;
 }

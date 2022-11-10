@@ -18,3 +18,6 @@ test-apwine:; @forge test --match-contract ApwineTest
 test-balancer:; @forge test --match-contract BalancerTest
 test-blackpool:; @forge test --match-contract BlackpoolTest
 test-frax:; @forge test --match-contract FraxTest
+veSdtFeeAngleProxyV2Test:; forge test -vvvv --match-contract "VeSDTFeeAngleProxyV2"
+
+deploy-veSDTFeeAngleProxyV2:; forge script scripts/DeployVeSDTFeeAngleProxyV2.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast  --verify --etherscan-api-key ${ETHERSCAN_KEY}
