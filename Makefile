@@ -21,3 +21,5 @@ test-apwine:; @forge test --match-contract ApwineTest
 test-balancer:; @forge test --match-contract BalancerTest
 test-blackpool:; @forge test --match-contract BlackpoolTest
 test-frax:; @forge test --match-contract FraxTest
+
+test-feeDistributor:; @forge test --match-contract FeeDistributorTest

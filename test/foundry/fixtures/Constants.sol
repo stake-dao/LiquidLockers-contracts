@@ -5,7 +5,6 @@ library Constants {
 	////////////////////////////////////////////////////////////////
 	/// --- COMMONS
 	///////////////////////////////////////////////////////////////
-
 	uint256 public constant DAY = 1 days;
 	uint256 public constant WEEK = 7 days;
 	uint256 public constant YEAR = 365 days;
@@ -19,13 +18,11 @@ library Constants {
 	////////////////////////////////////////////////////////////////
 	/// --- YEARN FINANCE
 	///////////////////////////////////////////////////////////////
-
 	address public constant YFI = 0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e;
 
 	////////////////////////////////////////////////////////////////
 	/// --- STAKE DAO ADDRESSES
 	///////////////////////////////////////////////////////////////
-
 	address public constant STAKE_DAO_MULTISIG = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
 
 	address public constant SDT = 0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F;
@@ -40,6 +37,11 @@ library Constants {
 	address public constant MASTERCHEF = 0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c;
 	address public constant FEE_D_SD = 0x29f3dd38dB24d3935CF1bf841e6b2B461A3E5D92;
 	address public constant PROXY_ADMIN = 0xfE612c237A81527a86f2Cac1FD19939CF4F91B9B;
+
+	////////////////////////////////////////////////////////////////
+	/// --- STAKE DAO TOKENS
+	///////////////////////////////////////////////////////////////
+	address public constant SD3CRV = 0xB17640796e4c27a39AF51887aff3F8DC0daF9567;
 
 	////////////////////////////////////////////////////////////////
 	/// --- ANGLE PROTOCOL
@@ -92,10 +94,9 @@ library Constants {
 	address public constant FRAX_GAUGE_CONTROLLER = 0x44ade9AA409B0C29463fF7fcf07c9d3c939166ce;
 	address public constant FXS_WHALE = 0x322a3fB2f628085749e5F1151AA9A32Eb50D3519;
 
-    ////////////////////////////////////////////////////////////////
-    /// --- ANGLE LL
-    ///////////////////////////////////////////////////////////////
-
-    address public constant ANGLE_STRATEGY = 0x22635427C72e8b0028FeAE1B5e1957508d9D7CAF;
-    address public constant ANGLE_VOTER_V2 = 0xBabe5d223fB31A37ce184481678A6667AC8CD98B;
+	////////////////////////////////////////////////////////////////
+	/// --- ANGLE LL
+	///////////////////////////////////////////////////////////////
+	address public constant ANGLE_STRATEGY = 0x22635427C72e8b0028FeAE1B5e1957508d9D7CAF;
+	address public constant ANGLE_VOTER_V2 = 0xBabe5d223fB31A37ce184481678A6667AC8CD98B;
 }
