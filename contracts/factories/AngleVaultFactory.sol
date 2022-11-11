@@ -3,7 +3,7 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "../strategy/AngleVault.sol";
+import "../strategies/angle/AngleVault.sol";
 import "../interfaces/IGaugeController.sol";
 import "../interfaces/ILiquidityGaugeStrat.sol";
 

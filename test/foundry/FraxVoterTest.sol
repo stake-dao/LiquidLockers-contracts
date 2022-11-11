@@ -2,7 +2,7 @@
 pragma solidity 0.8.7;
 
 import "forge-std/Test.sol";
-import "contracts/dao/FraxVoter.sol";
+import "contracts/dao/voters/FraxVoter.sol";
 import "contracts/interfaces/IGaugeController.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 

@@ -8,6 +8,10 @@ interface IGaugeController {
 		uint256 end;
 	}
 
+	function admin() external view returns (address);
+
+	function gauges(uint256) external view returns (address);
+
 	//solhint-disable-next-line
 	function gauge_types(address addr) external view returns (int128);
 
@@ -29,4 +33,16 @@ interface IGaugeController {
 	function vote_for_gauge_weights(address, uint256) external;
 
 	function vote_user_slopes(address, address) external returns (VotedSlope memory);
+
+	function last_user_vote(address _user, address _gauge) external view returns (uint256);
+
+	function checkpoint_gauge(address _gauge) external;
+
+	function add_gauge(
+		address,
+		int128,
+		uint256
+	) external;
+
+	function add_type(string memory, uint256) external;
 }
