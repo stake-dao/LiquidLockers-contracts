@@ -9,7 +9,6 @@ import "../../contracts/external/ProxyAdmin.sol";
 import "../../contracts/external/TransparentUpgradeableProxy.sol";
 
 // Interface
-import "../../contracts/interfaces/IFeeDistributor.sol";
 import "../../contracts/interfaces/IVeSDT.sol";
 
 contract VeSDTTest is BaseTest {
@@ -26,7 +25,6 @@ contract VeSDTTest is BaseTest {
 	SmartWalletWhitelist internal smartWalletWhitelist;
 	TransparentUpgradeableProxy internal proxy;
 
-	IFeeDistributor internal feeDistributor;
 	IVeSDT internal veSDT;
 	IVeSDT internal veSDTImpl;
 

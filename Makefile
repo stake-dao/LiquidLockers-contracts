@@ -24,3 +24,4 @@ test-frax:; @forge test --match-contract FraxTest
 
 test-feeDistributor:; @forge test --match-contract FeeDistributorTest
 test-veSDT:; @forge test --match-contract VeSDTTest 
+test-veSDTProxy:; @forge test --match-contract VeSDTProxyTest
