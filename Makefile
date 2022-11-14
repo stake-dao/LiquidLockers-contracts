@@ -23,3 +23,4 @@ test-blackpool:; @forge test --match-contract BlackpoolTest
 test-frax:; @forge test --match-contract FraxTest
 
 test-feeDistributor:; @forge test --match-contract FeeDistributorTest
+test-veSDT:; @forge test --match-contract VeSDTTest 
