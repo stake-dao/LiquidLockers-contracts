@@ -487,6 +487,24 @@ contract BaseTest is Test {
 		assertApproxEqRel(IERC20(Constants.VE_SDT).balanceOf(caller), 1_000_000e18, 1e16);
 	}
 
+	function lockSDTCustom(
+		address caller,
+		address sdt,
+		address vesdt,
+		uint256 amount,
+		uint256 unlockTime
+	) public {
+		vm.startPrank(caller);
+		deal(sdt, caller, amount);
+		IERC20(sdt).approve(vesdt, amount);
+		bytes memory createLockCallData = abi.encodeWithSignature("create_lock(uint256,uint256)", amount, unlockTime);
+		(bool success, ) = vesdt.call(createLockCallData);
+		require(success, "lock SDT failed");
+		vm.stopPrank();
+
+		assertApproxEqRel(IERC20(vesdt).balanceOf(caller), amount, 1e16);
+	}
+
 	function simulateRewards(
 		address[] memory rewardsToken,
 		uint256[] memory rewardsAmount,

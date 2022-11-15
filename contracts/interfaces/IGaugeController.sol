@@ -30,6 +30,8 @@ interface IGaugeController {
 	//solhint-disable-next-line
 	function get_gauge_weight(address addr) external view returns (uint256);
 
+	function get_type_weight(int128) external view returns (uint256);
+
 	function vote_for_gauge_weights(address, uint256) external;
 
 	function vote_user_slopes(address, address) external returns (VotedSlope memory);
