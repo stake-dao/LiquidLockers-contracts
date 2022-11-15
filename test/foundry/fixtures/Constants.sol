@@ -44,6 +44,12 @@ library Constants {
 	address public constant SD3CRV = 0xB17640796e4c27a39AF51887aff3F8DC0daF9567;
 
 	////////////////////////////////////////////////////////////////
+	/// --- VESDCRV
+	///////////////////////////////////////////////////////////////
+	address public constant VESDCRV = 0x478bBC744811eE8310B461514BDc29D03739084D;
+	address public constant OLD_CRV_LOCKER = 0x52f541764E6e90eeBc5c21Ff570De0e2D63766B6;
+
+	////////////////////////////////////////////////////////////////
 	/// --- ANGLE PROTOCOL
 	///////////////////////////////////////////////////////////////
 	address public constant ANGLE = 0x31429d1856aD1377A8A0079410B297e1a9e214c2;
@@ -83,6 +89,13 @@ library Constants {
 	address public constant BPT_SMART_WALLET_CHECKER = 0xadd223B33EF85F79CB2fd0263881FfAb2C93918A;
 	address public constant BPT_FEE_DISTRIBUTOR = 0xFf23e40ac05D30Df46c250Dd4d784f6496A79CE9;
 
+	////////////////////////////////////////////////////////////////
+	/// --- CURVE PROTOCOL
+	///////////////////////////////////////////////////////////////
+	address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
+	address public constant CRV3 = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
+
+	address public constant CURVE_FEE_DISTRIBUTOR = 0xA464e6DCda8AC41e03616F95f4BC98a13b8922Dc;
 	////////////////////////////////////////////////////////////////
 	/// --- FRAX PROTOCOL
 	///////////////////////////////////////////////////////////////
