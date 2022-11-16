@@ -27,3 +27,4 @@ test-veSDT:; @forge test --match-contract VeSDTTest
 test-veSDTProxy:; @forge test --match-contract VeSDTProxyTest
 test-crvMigration:; @forge test --match-contract CRVMigrationTest
 test-gaugeController:; @forge test --match-contract GaugeControllerTest
+test-sdtDistributor:; @forge test --match-contract SdtDistributorTest 
