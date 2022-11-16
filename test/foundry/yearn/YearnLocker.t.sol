@@ -5,7 +5,7 @@ import "forge-std/Vm.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import { YearnLocker } from "contracts/YearnLocker.sol";
+import { YearnLocker } from "contracts/lockers/YearnLocker.sol";
 import { IVeYFI } from "contracts/interfaces/IVeYFI.sol";
 import { Constants } from "test/foundry/fixtures/Constants.sol";
 import { IRewardPool } from "contracts/interfaces/IRewardPool.sol";

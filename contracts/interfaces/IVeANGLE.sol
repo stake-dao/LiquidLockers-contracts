@@ -14,4 +14,8 @@ interface IVeANGLE {
 	function increase_unlock_time(uint256 _unlock_time) external;
 
 	function withdraw() external;
+
+	function locked(address) external returns (LockedBalance memory);
+
+	function balanceOf(address) external returns (uint256);
 }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 interface IMasterchef {
 	function deposit(uint256, uint256) external;
 
@@ -22,4 +24,14 @@ interface IMasterchef {
 	function sdtPerBlock() external view returns (uint256);
 
 	function pendingSdt(uint256, address) external view returns (uint256);
+
+	function owner() external view returns (address);
+
+	function add(
+		uint256 _allocPoint,
+		IERC20 _lpToken,
+		bool _withUpdate
+	) external;
+
+	function poolLength() external view returns (uint256);
 }

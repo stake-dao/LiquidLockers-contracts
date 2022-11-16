@@ -1,10 +1,10 @@
 pragma solidity ^0.8.7;
 
-import { Depositor } from "../locking/Depositor.sol";
+import { Depositor } from "../depositors/Depositor.sol";
 import { ICurvePool } from "../interfaces/ICurvePool.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { CurveVault } from "../strategy/CurveVault.sol";
-import { BalancerVault } from "../strategy/BalancerVault.sol";
+import { CurveVault } from "../strategies/curve/CurveVault.sol";
+import { BalancerVault } from "../strategies/balancer/BalancerVault.sol";
 import { IBalancerVault } from "./BalancerZapper.sol";
 
 contract SdLiquidityZapper {

@@ -5,14 +5,13 @@ import "forge-std/Test.sol";
 import "forge-std/Script.sol";
 
 import { TransparentUpgradeableProxy } from "contracts/external/TransparentUpgradeableProxy.sol";
-import { BlackpoolDepositor } from "contracts/locking/BlackpoolDepositor.sol";
-import { BlackpoolAccumulator } from "contracts/accumulator/BlackPoolAccumulator.sol";
+import { BlackpoolDepositor } from "contracts/depositors/BlackpoolDepositor.sol";
+import { BlackpoolAccumulator } from "contracts/accumulators/BlackPoolAccumulator.sol";
 import { ILiquidityGauge } from "contracts/interfaces/ILiquidityGauge.sol";
-import { BlackpoolLocker } from "contracts/BlackpoolLocker.sol";
-import { sdToken } from "contracts/locking/sdToken.sol";
+import { BlackpoolLocker } from "contracts/lockers/BlackpoolLocker.sol";
+import { sdToken } from "contracts/tokens/sdToken.sol";
 
 contract DeployBlackpoolStack is Script, Test {
-
 	sdToken sdBPT;
 	BlackpoolAccumulator blackpoolAccumulator;
 	TransparentUpgradeableProxy transparentUpgradeableProxy;
