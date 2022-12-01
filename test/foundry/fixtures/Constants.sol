@@ -42,6 +42,7 @@ library Constants {
 	/// --- STAKE DAO TOKENS
 	///////////////////////////////////////////////////////////////
 	address public constant SD3CRV = 0xB17640796e4c27a39AF51887aff3F8DC0daF9567;
+	address public constant SDFRAX3CRV = 0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7;
 
 	////////////////////////////////////////////////////////////////
 	/// --- VESDCRV
