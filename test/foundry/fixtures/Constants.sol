@@ -15,6 +15,8 @@ library Constants {
 	address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 	address public constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
 	address public constant LDO = 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32;
+	address public constant WSTETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
+	address public constant OHM = 0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5;
 
 	////////////////////////////////////////////////////////////////
 	/// --- YEARN FINANCE
