@@ -32,3 +32,4 @@ test-sdtDistributor:; @forge test --match-contract SdtDistributorTest
 test-balancer-fee:; @forge test --match-contract BalancerFeeProxyTest
 test-balancer-strat:; @forge test --match-contract BalancerStrategyTest
 test-balancer-vault:; @forge test --match-contract BalancerVaultTest
+test-balancer-zapper:; @forge test --match-contract BalancerZapperTest
