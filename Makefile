@@ -5,7 +5,7 @@ default:; forge fmt && forge build
 
 .EXPORT_ALL_VARIABLES:
 FOUNDRY_ETH_RPC_URL=${MAINNET}
-FOUNDRY_FORK_BLOCK_NUMBER=15924200
+FOUNDRY_FORK_BLOCK_NUMBER=16096521
 ETHERSCAN_API_KEY==${ETHERSCAN_KEY}
 
 coverage:; @forge coverage --match-contract FraxTest
@@ -30,3 +30,4 @@ test-gaugeController:; @forge test --match-contract GaugeControllerTest
 test-sdtDistributor:; @forge test --match-contract SdtDistributorTest 
 
 test-balancer-fee:; @forge test --match-contract BalancerFeeProxyTest
+test-balancer-strat:; @forge test --match-contract BalancerStrategyTest

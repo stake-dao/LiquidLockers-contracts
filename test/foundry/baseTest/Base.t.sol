@@ -517,4 +517,10 @@ contract BaseTest is Test {
 			require((balanceBefore - IERC20(rewardsToken[i]).balanceOf(address(this))) == 0, "!not empty");
 		}
 	}
+
+	function bytesToAddressCustom(bytes memory payload, uint256 start) public pure returns (address addr) {
+		assembly {
+			addr := mload(add(payload, start))
+		}
+	}
 }

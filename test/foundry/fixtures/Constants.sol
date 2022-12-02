@@ -14,6 +14,7 @@ library Constants {
 	address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 	address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 	address public constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
+	address public constant LDO = 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32;
 
 	////////////////////////////////////////////////////////////////
 	/// --- YEARN FINANCE
@@ -80,6 +81,9 @@ library Constants {
 	address public constant BALANCER_GAUGE_CONTROLLER = 0xC128468b7Ce63eA702C1f104D55A2566b13D3ABD;
 	address public constant BALANCER_SMART_WALLET_CHECKER = 0x7869296Efd0a76872fEE62A058C8fBca5c1c826C;
 	address public constant BALANCER_MULTI_SIG = 0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f;
+	address public constant BALANCER_HELPER = 0x5aDDCCa35b7A0D07C74063c48700C8590E87864E;
+	address public constant BALANCER_LOCKER = 0xea79d1A83Da6DB43a85942767C389fE0ACf336A5;
+	address public constant BALANCER_ACCUMULATOR = 0x9A211c972AebF2aE70F1ec14845848baAB79d6Af;
 
 	////////////////////////////////////////////////////////////////
 	/// --- BLACKPOOL PROTOCOL
