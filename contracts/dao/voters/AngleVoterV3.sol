@@ -26,11 +26,7 @@ contract AngleVoterV3 {
 		address[] feeRecipients;
 	}
 
-	address public governance;
-
-	constructor() {
-		governance = msg.sender;
-	}
+	address public governance = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063; // ms
 
 	/// @notice claim ANGLE rewards for guni gauges
 	/// @param _totalAmount total amount to claim

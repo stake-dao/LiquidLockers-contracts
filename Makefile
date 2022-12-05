@@ -15,6 +15,7 @@ boostDelegationTest:; forge test -vvvv --fork-url $(MAINNET) --match-contract "V
 
 veSdtFeeAngleProxyV2Test:; forge test -vvvv --match-contract "VeSDTFeeAngleProxyV2"
 deploy-veSDTFeeAngleProxyV2:; forge script scripts/DeployVeSDTFeeAngleProxyV2.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast  --verify --etherscan-api-key ${ETHERSCAN_KEY}
+deploy-angleVoterV3:; forge script scripts/DeployAngleVoterV3.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast  --verify --etherscan-api-key ${ETHERSCAN_KEY}
 
 test-angle:; @forge test --match-contract AngleTest
 test-apwine:; @forge test --match-contract ApwineTest 
