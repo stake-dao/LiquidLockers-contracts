@@ -17,6 +17,7 @@ library Constants {
 	address public constant LDO = 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32;
 	address public constant WSTETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
 	address public constant OHM = 0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5;
+	address public constant SUSHI = 0x6B3595068778DD592e39A122f4f5a5cF09C90fE2;
 
 	////////////////////////////////////////////////////////////////
 	/// --- YEARN FINANCE
@@ -101,6 +102,12 @@ library Constants {
 	///////////////////////////////////////////////////////////////
 	address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
 	address public constant CRV3 = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
+	address public constant EUR3 = 0xb9446c4Ef5EBE66268dA6700D26f96273DE3d571;
+	address public constant CRV_POOL_SDT_ETH = 0x6359B6d3e327c497453d4376561eE276c6933323;
+	address public constant CRV_GAUGE_3CRV = 0xbFcF63294aD7105dEa65aA58F8AE5BE2D9d0952A;
+	address public constant CRV_GAUGE_SDT_ETH = 0x60355587a8D4aa67c2E64060Ab36e566B9bCC000;
+	address public constant CRV_GAUGE_EUR3 = 0x1E212e054d74ed136256fc5a5DDdB4867c6E003F;
+	address public constant STECRV = 0x06325440D014e39736583c165C2963BA99fAf14E;
 
 	address public constant CURVE_FEE_DISTRIBUTOR = 0xA464e6DCda8AC41e03616F95f4BC98a13b8922Dc;
 	////////////////////////////////////////////////////////////////

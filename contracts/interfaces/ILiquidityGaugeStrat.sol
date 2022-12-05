@@ -17,6 +17,8 @@ interface ILiquidityGaugeStrat {
 	// solhint-disable-next-line
 	function claim_rewards_for(address _user, address _recipient) external;
 
+	function claim_rewards(address _user) external;
+
 	// // solhint-disable-next-line
 	// function claim_rewards_for(address _user) external;
 
@@ -57,4 +59,8 @@ interface ILiquidityGaugeStrat {
 	function add_reward(address, address) external;
 
 	function set_claimer(address) external;
+
+	function name() external view returns (string memory);
+
+	function symbol() external view returns (string memory);
 }

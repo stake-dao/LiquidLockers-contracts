@@ -36,4 +36,6 @@ interface ILocker {
 
 	function setAccumulator(address _accumulator) external;
 
+	function governance() external view returns(address);
+
 }

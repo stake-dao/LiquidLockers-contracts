@@ -501,8 +501,9 @@ contract BaseTest is Test {
 		(bool success, ) = vesdt.call(createLockCallData);
 		require(success, "lock SDT failed");
 		vm.stopPrank();
+		uint256 max = 4 * Constants.YEAR;
 
-		assertApproxEqRel(IERC20(vesdt).balanceOf(caller), amount, 1e16);
+		assertApproxEqRel(IERC20(vesdt).balanceOf(caller), (amount * (unlockTime - block.timestamp)) / max, 2e16);
 	}
 
 	function simulateRewards(
