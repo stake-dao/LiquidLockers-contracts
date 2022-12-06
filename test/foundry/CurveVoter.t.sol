@@ -3,7 +3,6 @@ pragma solidity ^0.8.7;
 
 // Base Tests
 import "./baseTest/Base.t.sol";
-import "./baseTest/MockLocker.sol";
 import "./fixtures/LibString.sol";
 
 import "../../contracts/dao/voters/CurveVoterV2.sol";
@@ -53,7 +52,6 @@ contract CurveVoterTest is BaseTest {
 
 	CurveVoterV2 public voter;
 	CurveStrategy public strategy;
-	MockLocker public locker;
 
 	ICurveProtocolVoter public protocol = ICurveProtocolVoter(Constants.CURVE_PROTOCOL_VOTER);
 	IGaugeController public gc = IGaugeController(Constants.CURVE_PROTOCOL_GC);

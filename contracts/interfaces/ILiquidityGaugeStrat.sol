@@ -34,6 +34,8 @@ interface ILiquidityGaugeStrat {
 		bool _claim_rewards
 	) external;
 
+	function withdraw(uint256 _value, address _addr) external;
+
 	// solhint-disable-next-line
 	function reward_data(address _tokenReward) external view returns (Reward memory);
 
@@ -63,4 +65,10 @@ interface ILiquidityGaugeStrat {
 	function name() external view returns (string memory);
 
 	function symbol() external view returns (string memory);
+
+	function transfer(address _to, uint256 _value) external returns (bool);
+
+	function working_balances(address _address) external returns (uint256);
+
+	function set_reward_distributor(address _rewardToken, address _newDistrib) external;
 }

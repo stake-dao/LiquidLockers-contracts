@@ -532,4 +532,13 @@ contract BaseTest is Test {
 		}
 		require(deployed != address(0), "DEPLOYMENT_FAILED");
 	}
+
+	function sliceUint(bytes memory bs, uint256 start) internal pure returns (uint256) {
+		require(bs.length >= start + 32, "slicing out of range");
+		uint256 x;
+		assembly {
+			x := mload(add(bs, add(0x20, start)))
+		}
+		return x;
+	}
 }

@@ -35,3 +35,4 @@ test-balancer-vault:; @forge test --match-contract BalancerVaultTest
 test-balancer-zapper:; @forge test --match-contract BalancerZapperTest
 test-curve-vault:; @forge test --match-contract CurveVaultTest
 test-curve-voter:; @forge test --match-contract CurveVoterTest
+test-angle-vault:; @forge test --match-contract AngleVaultTest #--match-test 19 -vvvv --etherscan-api-key $(ETHERSCAN_KEY) 

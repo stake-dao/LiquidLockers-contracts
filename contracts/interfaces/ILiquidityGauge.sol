@@ -47,7 +47,9 @@ interface ILiquidityGauge {
 
 	function set_claimer(address) external;
 
-	function admin() external view returns(address);
+	function admin() external view returns (address);
+
+	function set_reward_distributor(address _rewardToken, address _newDistrib) external;
 
 	function initialize(
 		address staking_token,
