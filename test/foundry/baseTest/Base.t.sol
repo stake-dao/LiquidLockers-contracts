@@ -524,4 +524,12 @@ contract BaseTest is Test {
 			addr := mload(add(payload, start))
 		}
 	}
+
+	function deployBytecode(bytes memory bytecode, bytes memory args) internal returns (address deployed) {
+		bytecode = abi.encodePacked(bytecode, args);
+		assembly {
+			deployed := create(0, add(bytecode, 0x20), mload(bytecode))
+		}
+		require(deployed != address(0), "DEPLOYMENT_FAILED");
+	}
 }

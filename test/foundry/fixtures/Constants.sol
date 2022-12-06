@@ -102,12 +102,16 @@ library Constants {
 	///////////////////////////////////////////////////////////////
 	address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
 	address public constant CRV3 = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
+	address public constant VE_CRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
+	address public constant CRV_SMART_WALLET_CHECKER = 0xca719728Ef172d0961768581fdF35CB116e0B7a4;
 	address public constant EUR3 = 0xb9446c4Ef5EBE66268dA6700D26f96273DE3d571;
 	address public constant CRV_POOL_SDT_ETH = 0x6359B6d3e327c497453d4376561eE276c6933323;
 	address public constant CRV_GAUGE_3CRV = 0xbFcF63294aD7105dEa65aA58F8AE5BE2D9d0952A;
 	address public constant CRV_GAUGE_SDT_ETH = 0x60355587a8D4aa67c2E64060Ab36e566B9bCC000;
 	address public constant CRV_GAUGE_EUR3 = 0x1E212e054d74ed136256fc5a5DDdB4867c6E003F;
 	address public constant STECRV = 0x06325440D014e39736583c165C2963BA99fAf14E;
+	address public constant CURVE_PROTOCOL_VOTER = 0xE478de485ad2fe566d49342Cbd03E49ed7DB3356;
+	address public constant CURVE_PROTOCOL_GC = 0x2F50D538606Fa9EDD2B11E2446BEb18C9D5846bB;
 
 	address public constant CURVE_FEE_DISTRIBUTOR = 0xA464e6DCda8AC41e03616F95f4BC98a13b8922Dc;
 	////////////////////////////////////////////////////////////////
