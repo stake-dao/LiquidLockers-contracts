@@ -1,8 +1,5 @@
 # Liquid Lockers
 
-_Contracts marked **[Risky]** are either freshly developed contracts from scratch or have been made a lot of changes to, from their originally sourced contracts, and hence need to be paid special attention to while auditing and  need to be tested thoroughly_
-
-
 ## Installation
 
 Install Foundry:
@@ -24,169 +21,84 @@ Build:
    yarn build
 ```
 
+Test:
+```bash
+   yarn test (hh test files)
+   yarn test:foundry (foundry test files)
+```
+
 See package.json for more commands.
 
-## State of Continuous Auditing
+## Architecture Overview (3 core components)</br>
 
-Since the first version of audit on commit hash [`7e702aba329d5780ef5841f44ad699385b8b428f`](https://github.com/StakeDAO/sd-frax-veSDT/tree/7e702aba329d5780ef5841f44ad699385b8b428f), AngleLocker.sol (in Step1), Step 2, Step 3 and Step 3.5 as described in detail below, have been developed which need to be audited. 
+### 1 - Liquid Lockers</br>
+![Screenshot 2022-03-22 at 2 05 15 PM](image/liquid-locker-diagram.png)
 
-## Architecture Overview
+#### General Understanding
 
-Lockers</br>
-![Screenshot 2022-02-01 at 7 29 10 PM](https://user-images.githubusercontent.com/22425782/151983477-3154c588-a7a1-4e22-af55-a1e157d0bff8.png) </br>
+It is one of the core features of the new architecture released by Stake DAO, it enables the way to lock (irreversible action) tokens that supports a ve tokenomics (CRV, FXS, ecc) via Stake DAO, getting sdToken tokens in return. For every token locked, it will mint a new sdToken, with rate 1:1. For example, an user can lock 1 FXS to obtain 1 sdFXS. It would allow sdToken holders to claim rewards and to vote, offchain via snapshot, for the gauges allocation on the related platform, once per week.
 
-veSDT</br>
-![Screenshot 2021-12-08 at 9 17 11 PM](https://user-images.githubusercontent.com/22425782/145238612-22e9374d-baf0-4c07-8543-b1aab536ffb8.png) </br>
+1. Locker - Token holders can now lock their tokens via he depositor (`Depositor.sol`). Contract will create/increase a x years lock depending of the max year lock allowed in the targeted platform, for obtaining the max veToken amount, and the unlock time will be increased during the weeks:
 
-### Legend (for the table below)
-
-Risk-level <br />
-1: low <br />
-2: low-medium <br />
-3: medium <br />
-4: medium-high <br />
-5: high <br />
-
-For contracts with `Risk-level >= 3` and `To Audit?` as ✅, 
-1. line by line audit
-2. inter-contract interaction tests <br />
-are required
-
-For contracts with `Risk-level < 3` and `To Audit?` as ✅, 
-1. only inter-contract interaction tests <br />
-are required, because these contracts are forks with very minimal changes, of already audited contracts.
-
-Sr. No. | Contract | Step | Risk-level | WIP | Audited? | To Audit?
---- | --- | --- | --- | --- | --- | --- |
-1 | Depositor.sol | 1 | 5 | :x: | ✅ | :x:
-2 | sdToken.sol | 1 | 1 | :x: | ✅ | :x:
-3 | FxsLocker.sol | 1 | 5 | :x: | ✅ | :x:
-4 | AngleLocker.sol | 1 | 3 | :x: | ✅ | :x:
-5 | veSDT.vy | 2 | 3 | :x: | ✅ | :x:
-6 | SmartWalletWhitelist.sol | 2 | 1 | :x: | ✅ | :x:
-7 | FeeDistributor.vy | 2 | 1 | :x: | ✅ | :x:
-8 | TransparentUpgradeableProxy.sol | 2, 3 | 1 | :x: | :x: | ✅
-9 | ProxyAdmin.sol | 2, 3 | 1 | :x: | :x: | ✅
-10 | AccessControlUpgradeable.sol | 2, 3 | 1 | :x: | :x: | ✅
-11 | SdtDistributor.sol | 3 | 5 | :x: | ✅ | :x:
-12 | GaugeController.vy | 3 | 1 | :x: | ✅ | :x:
-13 | LiquidityGaugeV4.vy | 3 | 5 | :x: | ✅ | :x:
-14 | FxsAccumulator.sol | 3 | 5 | :x: | ✅ | :x:
-15 | AngleAccumulator.sol | 3 | 5 | :x: | :x: | ✅
-16 | ClaimRewards.sol | 3 | 5 | :x: | ✅ | :x:
-17 | veBoostProxy.vy | 3 | 1 | :x: | ✅ | :x:
-19 | CrvAccumulator.sol | 3.5 | 5 | :x: | :x: | ✅
-20 | CrvDepositor.sol | 3.5 | 1 | :x: | :x: | ✅
-21 | sdCrv.sol | 3.5 | 1 | :x: | :x: | ✅
-
-## Step 1
-
-### General Understanding
-
-Users can start to lock their FXS in Frax finance via Stake DAO, getting sdFXS tokens in return. For every FXS locked, it will mint a new sdFXS, rate 1:1. This release also will allow sdFXS holders to vote, offchain via snapshot, for the FXS gauges allocation on Frax, once per week.
-
-### 2 Core Components:
-
-![Step1](https://user-images.githubusercontent.com/2848253/149667286-cf0e2e7f-c325-4919-95b5-45b8880eee37.png)
-
-1. FXS Locker - FXS holders can now lock their FXS via StakedDAO, via the depositor (`FxsDepositor.sol`). The DAO will create a 4 years lock, for obtaining the max veFXS amount, and the unlock time will be increased during the weeks:
-
-   1. Users can lock FXS via the depositor, choosing if locking or not directly them through the locker (`FxsLocker.sol`).
+   1. Users can lock Token via the depositor, choosing if locking or not directly them through the lockers.
    2. The locker can increse its unclock time.
-   3. sdFXS holders can vote
+   3. sdToken holders can vote.
 
-2. sdFXS - FXS lockers will obtain sdFXS with 1:1 rate, they can be used to vote, once per week, about the FXS rewards allocation on frax gauges.
+2. sdToken - Token lockers will obtain sdToken with 1:1 rate, they can be used to vote, once per week, about the Token rewards allocation on targeted platform gauges or any governance proposals.
+3. Token Accumulator - At every claim, it will manage the way to obtain the tokens and notify them as new 7 days reward period.
 
-### Smart Contracts (general intended behaviour)
+#### Locker Released
+   1. Frax (Audited)
+   2. Angle (Audited)
+   3. Curve(Audited)
+   4. Balancer
+   5. Ap Wine
+   6. BlackPool
+   7. Yearn (Coming Soon)
 
-1. [Risky] **Depositor.sol**: contract responsible for collecting FXS from users and locking them in frax. [Diffchecker](https://www.diffnow.com/report/5apbh) with Convex's FxsDepositor.
-2. **sdToken.sol**: resultant token received by users, on locking FXS via FxsDepositor. [Diffchecker](https://www.diffchecker.com/QFoCaRAo) with Convex's cvxFXSToken.
-3. [Risky] **FxsLocker.sol**: contract that directly interacts with frax's protocol contracts to lock FXS and also claim FXS rewards for FXS lockers. Basically manages Stake DAO's FXS lock in frax (increasing lock amount, time, etc). FxsDepositor locks FXS from users using this contract. This contract will own all the veFXS, which will then be used to vote on and boost the upcoming frax gauges, using the `execute()` function. [Diffchecker](https://www.diffnow.com/report/hp2ug) with Stake DAO's CRV locker [here](https://etherscan.io/address/0x52f541764E6e90eeBc5c21Ff570De0e2D63766B6#code).
-4. [Risky] **AngleLocker.sol**: contract that directly interacts with angle's protocol contracts to lock ANGLE and also claim sanUSDC_EUR rewards for ANGLE lockers. Basically manages Stake DAO's ANGLE lock in angle (increasing lock amount, time, etc). Depositor locks ANGLE from users using this contract. This contract will own all the veANGLE, which will then be used to vote on and boost the upcoming angle gauges, using the `execute()` function. [Diffchecker](https://www.diffnow.com/report/f7hdv) with Stake DAO's FXS locker.
+#### Smart Contracts (general intended behaviour)
 
-## Step 2
+1. **Depositors**: contracts responsible for collecting tokens from users and locking them via the related locker.
+2. **sdToken.sol**: resultant token received by users, with a 1:1 rate.
+3. **Lockers**: contracts that directly interacts with the related protocol contracts to lock the token and also claim the rewards for the lockers. Basically manages Stake DAO's lock position in the platform, like curve or frax, increasing the lock amount, unlock time, etc. The depositor locks the token from users using this contract. This contract will own all the related veToken, which will then be used to vote on and boost the gauges, using the `execute()` function.
+4. **Accumulators**: it's a helper contract to LiquidityGaugeV4, which receives token rewards from locker and other rewards from strategies, and notifies them to LiquidityGaugeV4.
+5. **LiquidityGaugeV4.vy** [upgradable] (not covered by coverage plugin): It is a gauge multi rewards contract, so stakers of sdFXS, sdANGLE, sdCRV(later step) will be able to receive rewards in more than one token. In our scenario they will receive rewards in the token collected by lockers (FXS for the FxsLocker and sanUSDC_EUR for the AngleLocker) and also SDT from the SdtDistributor. This kind of gauge supports veSDT boost (i.e. users receiving more SDT as rewards when they have locked more SDT in veSDT contract) and delegation as well.
+[Diffchecker](https://www.diffnow.com/report/rif07) with Angle's LiquidityGaugeV4.
 
-### 1 Core Component:
+### 2 - Governance</br>
 ![Screenshot 2021-12-08 at 9 17 11 PM](https://user-images.githubusercontent.com/22425782/145238612-22e9374d-baf0-4c07-8543-b1aab536ffb8.png) </br>
+
+At this step, users will be able to vote, using veSDT, via the GaugeController, for deciding the SDT rewards allocation to different locker gauges. Also, via the LiquidityGaugeV4, users who have locked any token, will receive SDT, along with other extra tokens like FXS, agEUR, CRV rewards, and they can also boost their SDT rewards by locking more SDT (i.e. holding more veSDT). </br>
 
 **veSDT** (similar to Curve’s veCRV model, forked from [Angle's contracts](https://github.com/AngleProtocol/angle-core/tree/main/contracts/dao)) - SDT holders can now lock their SDT for maximum 4 years and get voting power proportional to their lock time (which will decrease linearly with time). 3 reasons to vote-lock SDT:
 
    1. use this voting power to on-chain-vote and direct SDT inflation to all strategies and lockers which they want to increase the total APY of
    2. get individually boosted SDT from all strategies and lockers, if they have more veSDT locked
    3. get +10% APY in sdFRAX3CRV tokens (coming from all strategies on top of all lockers), as direct incentives for vote-locking SDT
-   
-      
-### Smart Contracts (general intended behaviour)
-1. **veSDT.vy** [upgradable] (not covered by coverage plugin): allows users to lock their SDT for a specified amount of time (max 4 years). Also allows them to increase their locked SDT amount and lock time. Additional function on top of Angle's contract is the `deposit_for_from()` method, which allows any address (contract or EOA) to lock more SDT for an existing address with a lock, by itself supplying those SDT. [Diffchecker](https://www.diffnow.com/report/zhef8) with veANGLE
-2. **FeeDistributor.vy** (not covered by coverage plugin): contract that distributes sd3CRV (Stake DAO stablecoin LP token) to all SDT lockers in veSDT. These sdFRAX3CRV are supposed to be automatically received on harvests from all strategies built on top of all lockers, but they can also be manually ERC20 transferred, until the strategies are live. [Diffchecker](https://www.diffnow.com/report/jbkz4) with Angle's FeeDistributor.
-3. **SmartWalletWhitelist.sol**: contract to whitelist smart contracts to allow them to lock SDT in the veSDT contract. It can also revoke existing SDT-locking rights of contracts. [Diffchecker](https://www.diffnow.com/report/0k8fm) with Angle's SmartWalletWhitelist.
-4. [**Contracts for Upgradability**](https://github.com/StakeDAO/sd-frax-veSDT/tree/feature/step3#contracts-for-upgradability)
-
-## Step 3
-
-### General Understanding
-
-At this step, users will be able to vote, using veSDT, via the GaugeController, for deciding the SDT rewards allocation to different locker gauges. Also, via the LiquidityGaugeV4, users who have locked FXS, ANGLE will receive SDT, along with FXS, sanUSDC_EUR rewards respectively, and they can also boost their SDT rewards by locking more SDT (i.e. holding more veSDT). </br>
-
-### 2 Core Components:
-
-![Screenshot 2022-02-01 at 7 29 10 PM](https://user-images.githubusercontent.com/22425782/151983477-3154c588-a7a1-4e22-af55-a1e157d0bff8.png) </br>
 
 1. **Gauge Voting**: users who hold veSDT, can now vote for locker gauges of frax, angle (this release) and curve (next release), to allocate proportion of SDT to each of these gauges. They'll be allowed to vote once in 10 days, which will decide the proportion of SDT going to each gauge but do note that the amount of SDT that goes to each gauge w.r.t. this proportion, can be altered daily (to start with, but this interval can also be changed).
 
-2. **Locker Rewards**: users who have locked their FXS in frax locker and ANGLE in angle locker, receive sdX token (sdFXS, sdANGLE, sdCRV) as receipts, which they can now stake in LiquidityGaugeV4 contract, to start earning FXS, agEUR rewards respectively, along with SDT (coming from Masterchef). NOTE: users can boost their SDT rewards by locking more SDT in the veSDT contract.
-      
-### Smart Contracts (general intended behaviour)
-
-1. [Risky] **SdtDistributor.sol** [upgradable]: This contract will receive SDT from masterchef to distribute them to all locker gauges. The amount of SDT that every gauge will receive, will be based on the veSDT voting done every 10 days on GaugeContrller contract, from where SdtDistributor will read the voting data. There will be 1 SdtDistributor for all lockers of frax + angle + curve etc. And 1 SdtDistributor for all strategies on frax + angle + curve etc (in step 4). [Diffchecker](https://www.diffnow.com/report/ev2sp) with AngleDistributor.
-2. **GaugeController.vy** (not covered by coverage plugin): this contract will allow veSDT holders to vote on all locker gauges, to allocate proportion of SDT to each of these gauges (i.e. frax, angle, curve). They can obtain veSDT by locking a certain amount of SDT for a fixed period of time (1 SDT: 1 veSDT at max locking time of 4 years). There will be 1 GaugeController for all lockers of frax + angle + curve etc. And 1 GaugeController for all strategies on frax + angle + curve etc (in step 4). [Diffchecker](https://www.diffnow.com/report/vynzi) with Angle's GaugeController.
-3. [Risky for 1 new function] **LiquidityGaugeV4.vy** [upgradable] (not covered by coverage plugin): It is a gauge multi rewards contract, so stakers of sdFXS, sdANGLE, sdCRV(later step) will be able to receive rewards in more than one token. In our scenario they will receive rewards in the token collected by lockers (FXS for the FxsLocker and sanUSDC_EUR for the AngleLocker) and also SDT from the SdtDistributor. This kind of gauge supports veSDT boost (i.e. users receiving more SDT as rewards when they have locked more SDT in veSDT contract) and delegation as well.
-[Diffchecker](https://www.diffnow.com/report/rif07) with Angle's LiquidityGaugeV4.
-4. [Risky] **Accumulator.sol**: it's a helper contract to LiquidityGaugeV4, which collects FXS rewards from multiple sources i.e. locker and strategies (for frax locker, and similarly sanUSDC_EUR for angle locker), and feeds them to LiquidityGaugeV4. It was needed cause LiquidityGaugeV4 can only have 1 source for a given reward token.
-5. [Risky] **ClaimRewards.sol**: helper contract that will allow users to claim all their reward tokens i.e. (FXS, SDT) for frax locker and (agEUR, SDT) for angle locker in a single transaction. It also gives them the option to auto-lock reward tokens are lockable i.e. FXS in frax locker, SDT in veSDT contract (only if a veSDT lock was already created by the user).
+#### Smart Contracts (general intended behaviour)
+1. **veSDT.vy** [upgradable] (not covered by coverage plugin): allows users to lock their SDT for a specified amount of time (max 4 years). Also allows them to increase their locked SDT amount and lock time. Additional function on top of Angle's contract is the `deposit_for_from()` method, which allows any address (contract or EOA) to lock more SDT for an existing address with a lock, by itself supplying those SDT. [Diffchecker](https://www.diffnow.com/report/zhef8) with veANGLE
+2. **FeeDistributor.vy** (not covered by coverage plugin): contract that distributes sd3CRV (Stake DAO stablecoin LP token) to all SDT lockers in veSDT. These sdFRAX3CRV are supposed to be automatically received on harvests from all strategies built on top of all lockers, but they can also be manually ERC20 transferred, until the strategies are live. [Diffchecker](https://www.diffnow.com/report/jbkz4) with Angle's FeeDistributor.
+3. **SmartWalletWhitelist.sol**: contract to whitelist smart contracts to allow them to lock SDT in the veSDT contract. It can also revoke existing SDT-locking rights of contracts. [Diffchecker](https://www.diffnow.com/report/0k8fm) with Angle's SmartWalletWhitelist.
+4. **GaugeController.vy** (not covered by coverage plugin): this contract will allow veSDT holders to vote on all locker gauges, to allocate proportion of SDT to each of these gauges (i.e. frax, angle, curve). They can obtain veSDT by locking a certain amount of SDT for a fixed period of time (1 SDT: 1 veSDT at max locking time of 4 years). There will be 1 GaugeController for all lockers of frax + angle + curve etc. And 1 GaugeController for all strategies on frax + angle + curve etc (in step 4). [Diffchecker](https://www.diffnow.com/report/vynzi) with Angle's GaugeController.
+5. **SdtDistributor.sol** [upgradable]: This contract will receive SDT from masterchef to distribute them to all locker gauges. The amount of SDT that every gauge will receive, will be based on the veSDT voting done every 10 days on GaugeContrller contract, from where SdtDistributor will read the voting data. There will be 1 SdtDistributor for all lockers of frax + angle + curve etc. And 1 SdtDistributor for all strategies on frax + angle + curve etc (in step 4). [Diffchecker](https://www.diffnow.com/report/ev2sp) with AngleDistributor.
 6. **veBoostProxy.vy**: proxy contract to manage the veBoost contract (to be deployed in step 4) which will allow users to delegate their veSDT boost to other users. We need to deploy veBoostProxy in step 3 cause LiquidityGaugeV4 contract needs an immutable deployed veBoostProxy address as one of its deployment parameters. [Diffchecker](https://www.diffnow.com/report/tywlq) with Angle's veBoostProxy.
 7. [**Contracts for Upgradability**](https://github.com/StakeDAO/sd-frax-veSDT/tree/feature/step3#contracts-for-upgradability)
 
-## Step 3.5
+### 3 - Strategies</br>
+![Screenshot 2022-03-22 at 2 05 15 PM](image/strategy-breakdown-diagram.png)
 
-### General Understanding
+#### General Understanding
 
-At this step, we add another liquid locker i.e. CRV locker. Its only difference with previous lockers is that its locking contract was already deployed, just that the user interface contract i.e. (CrvDepositor) is now available, which provides users with 3CRV and SDT rewards. It will enable the existing sdveCRV holders to migrate to the new sdCRV token, by forever locking their sdveCRV tokens in the CrvDepositor contract. </br>
+To be able to enjoy the boosting provided by the Lockers, user can deposit into StakeDAO Strategies. Each strategy is associated to a Vault, LiquidityGaugeV4Strat, Strategy. User deposit its LP into the Vault. The latter mint and stake into LGV4Strat receipt token at a 1:1 rate and send Token LP to the Strategy. Strategy socialize deposit for every users by depositing at once through the Locker in the targeted platform (Curve, Angle etc.).
 
-### 1 Core Component:
+Each week, anyone can claim the rewards that would be distributed in a 7 days period in the LGV4Strat Gauge to the users.
 
-![Screenshot 2022-03-22 at 2 05 15 PM](https://user-images.githubusercontent.com/22425782/159440090-7ee170d2-9771-47bc-ad3f-b384aed0cfb0.png)
-
-**CRV locker**: current sdveCRV holders, who locked their CRV using [veCurveVault](https://etherscan.io/address/0x478bBC744811eE8310B461514BDc29D03739084D#code), can now migrate to the new sdCRV token by locking their sdveCRV tokens inside CRVDepositor.sol forever, minting with 1:1 rate. And this will enable them and the new CRV locking users (who will lock CRV using CRVDepositor) to receive 3CRV and SDT rewards.
-      
-### Smart Contracts (general intended behaviour)
-
-1. **CrvDepositor.sol**: contract responsible for collecting CRV from users and locking them in curve. This is low risk because it's forked with very small differences from Depositor contract which is already audited [Diffchecker](https://www.diffnow.com/report/5i68z) with Depositor of Step 1.
-2. **sdCRV.sol**: resultant token received by users, on locking CRV via CrvDepositor. [Diffchecker](https://www.diffchecker.com/iq52c) with sdToken.
-3. **CrvAccumulator.sol**: it's a helper contract to LiquidityGaugeV4, which receives 3CRV rewards from curve locker (StrategyProxy contract to be precise, which is being developed) and CRV rewards from strategies, and notifies them to LiquidityGaugeV4.
-
-### Gauge Types
-Type 0 - Mainnet LG, it will send SDT to the LiquidityGaugeV4 (sdAngle, sdFxs) <br/>
-Type 1 - Mainnet SR, it will send SDT to the classic Staking Reward that does not support veSDT boosting and delegation <br/>
-Type 2 - External, it will send SDT to the delegateGauge address (our multisig) if the delegate gauge for that gauge is not defined. If it is defined the SDT will be send to it and the reward notified
-
-### Caution Points
-
-#### For Depositor migration
-1. In Locker, setDepositor(new depositor) (already happened). The new depositor contract needs to define functions to call at least increaseAmount within the locker.
-#### For Accumulator migration
-1. In Locker, setAccumulator(new accumulator). The new accumulator contract needs to define functions to call claimRewards within the locker.
-#### For Gauge Controller migration
-1. In Locker, setGaugeController(new controller). The new gauge controller needs to define the vote_for_gauge_weights()
-#### For FeeDistributor migration
-1. In Locker, setFeeDistributor(new feeDistributor). The new feeDistributor needs to define the claim() function
-#### For LiquidityGaugeV4 migration
-1. In Accumulator, setGauge(new gauge)
-#### For Locker migration
-1. In Accumulator, setLocker(new locker) [very less likely to ever happen]
-#### For sdToken Operator Contract
-1. There will be a standard interface that all sdToken operator contracts need to follow i.e they need to inherit it and implement all its methods (most importantly `setSdTokenOperator()`)
-   
+#### Smart Contracts (general intended behaviour)
+1. **Vaults** : allows users to lock deposit/withdraw LPs. It will mint the related sdLp token to stake into the LGV4. For strategies, only the vault contract will be able to stake and withdraw them via the LGV4.
+2. **Strategies** : contracts used to deposit/withdraw any LP supported by a platform's gauge, on behalf of the locker, to obtain the boost. It also needs to manage the `harvest()` claiming the native reward token plus extra rewards, and finally notify the amount as reward to the related sdLP LGV4.  
 
 ## Contracts for Upgradability
 These contracts are being directly used from [Openzeppelin's Upgradable Contracts](https://docs.openzeppelin.com/contracts/4.x/api/proxy#TransparentUpgradeableProxy)
@@ -194,39 +106,160 @@ These contracts are being directly used from [Openzeppelin's Upgradable Contract
 2. **ProxyAdmin.sol**: the dedicated Admin contract of TransparentUpgradeableProxy contracts of all upgradable contracts. It allows calling `changeAdmin()` and `upgradeTo()`/`upgradeToAndCall()`  on TransparentUpgradeableProxy.
 3. **AccessControlUpgradeable.sol**: contract used by all upgradable contracts to implement access control.
 
-## Setup
+## State of Continuous Auditing
 
-1. Install dependencies: `yarn install`
-2. Run Docker Desktop, to compile `.vy` files. Install from [here](https://www.docker.com/products/docker-desktop) if not already installed.
-3. Test step1: `npx hardhat test test/step1.ts`
-4. Test edge cases : `npx hardhat test test/edgeCases.ts`
+The repo code has been audited in 2 different previous slots.
 
-## Check Test Coverage
+- First audit (14 of January 2022):
+   -  commit hash [`7e702aba329d5780ef5841f44ad699385b8b428f`](https://github.com/StakeDAO/LiquidLockers-contracts/tree/7e702aba329d5780ef5841f44ad699385b8b428f)
+   -  contracts in scope:
+      - `FxsLocker.sol`
+      - `FxsDepositor.sol`
+      - `sdToken.sol`
+- Second audit (27 of April 2022):
+   -  commit hash [`68b71a7b982d302627766d684d181bb8bb202572`](https://github.com/StakeDAO/LiquidLockers-contracts/tree/68b71a7b982d302627766d684d181bb8bb202572)
+   -  contracts in scope:
+      - `AngleAccumulator.sol`
+      - `AngleLocker.sol`
+      - `BaseAccumulator.sol`
+      - `ClaimRewards.sol`
+      - `CurveAccumulator.sol`
+      - `Depositor.sol`
+      - `FeeDistributor.vy`
+      - `FxsAccumulator.sol`
+      - `GaugeController.vy`
+      - `LiquidityGaugeV4.vy`
+      - `SmartWalletWhitelist.sol`
+      - `SdtDistributor.sol`
+      - `veBoostProxy.vy`
+      - `veSDT.vy`
 
-`npx hardhat coverage --testfiles "test/*.ts"`
-![Coverage_step1](https://user-images.githubusercontent.com/2848253/149667184-8a6661d6-5777-4dbb-9e4a-1caa22608991.png)
+### Contracts in scope
+Sr. No. | Contract | Core | Lines of code
+--- | --- | --- | --- |
+1 | AngleStrategy.sol | Strategy | 187
+2 | AngleVault.sol | Strategy | 125
+3 | AngleVaultGUni.sol | Strategy | 135
+3 | BalancerStrategy.sol | Strategy | 253
+4 | BalancerVault.sol | Strategy | 200
+5 | CurveStrategy.sol | Strategy | 155
+6 | BaseStrategy.sol | Strategy | 69
+7 | LiquidityGaugeV4Strat.vy | Strategy | 667
+
+Vault contracts (230 lines) -> The contracts have around 125 common lines without any difference. The `BalancerVault.sol` contract has defines an extra function, `provideLiquidityAndDeposit()` to manage directly underlying tokens, and it has got 75 extra lines. Instead the curve vault has defines a `setCurveStrategy()` function to manage the strategy migration. The other 2 vaults can't manage directly an LP migration. Also we defined a GUni angle vault version to manage the scaling factor.
+
+Diffchecker
+
+[AngleVault<->AngleVaultGUni](https://www.diffchecker.com/4Zpj0yrZ)
+
+[AngleVault<->BalancerVault](https://www.diffchecker.com/aY39r9Bw)
+
+[AngleVault<->CurveVault](https://www.diffchecker.com/wP2VH3RZ)
+
+Strategy contracts (350 lines) -> The contracts have around 230 common lines of code, the `BalancerStrategy.sol` has defined 20 extra lines to include a different logic fot claiming the platform's native token (BAL), the claiming follow the same logic than in curve, where new tokens would be mint at every claim. The `CurveStrategy.sol` instead needs to manage different type of liquidity gauges, and also the weekly 3CRV claim has managed by this contract, because the curve locker contract has not defined a function to claim them. it required another 90 lines of code.
+
+Diffchecker
+
+[AngleStrategy<->BalancerStrategy](https://www.diffchecker.com/Xs1ACaAC)
+
+[AngleStrategy<->CurveStrategy](https://www.diffchecker.com/op2b1qUY)
+
+Liquidity Gauge (20 lines) -> Since that the original `LiquidityGaugeV4.vy` has been already audited in the previous slots, for this version we just included a logic to give the way only to a vault contract for depositing/withdrawing the related staking LP token. 
+
+Diffchecker
+
+[LiquidityGaugeV4<->LiquidityGaugeV4Strat](https://www.diffchecker.com/t8LD4kVY)
+
+Total lines to be reviewed: 670 
+
+### Contracts out of scope
+
+Since that the entire flow for 3 lockers (Frax/Angle/Curve) have been already audited in the previous slots, and the contracts code is almost the same for the other ones not included, we decided to omit the remaining contracts related to LL for the new slot.
+
+Sr. No. | Contract | Platform | Core Type |
+--- | --- | --- | --- |
+1 | AngleAccumulatorV2.sol | Angle | LL |
+2 | AngleAccumulatorV3.sol | Angle | LL |
+4 | AngleVoter.sol | Angle | LL
+5 | AngleVoterV2.sol | Angle | LL
+3 | AngleVaultFactory.sol | Angle | Strategy |
+4 | veSDTFeeAngleProxy.sol | Angle | Strategy |
+5 | ApWineAccumulator.sol | Ap Wine | LL |
+6 | ApWineDepositor.sol | Ap Wine | LL |
+7 | ApwineLocker.sol | Ap Wine | LL |
+7 | BalancerAccumulator.sol | Balancer | LL |
+8 | BalancerAccumulatorV2.sol | Balancer | LL |
+9 | BalancerDepositor.sol | Balancer | LL |
+10 | BalancerLocker.sol | Balancer | LL
+10 | BalancerVoter.sol | Balancer | LL |
+10 | BalancerVaultFactory.sol | Balancer | Strategy |
+11 | veSDTFeeBalancerProxy.sol | Balancer | Strategy |
+12 | BlackPoolAccumulator.sol | Black Pool | LL |
+13 | BlackPoolDepositor.sol | Black Pool | LL |
+10 | BlackPoolLocker.sol | Black Pool | LL | 
+14 | CrvDepositor.sol | Curve | LL |
+15 | sdCrv.sol | Curve | LL |
+10 | CurveVoter.sol | Curve | LL |
+10 | CurveVoterV2.sol | Curve | LL |
+16 | CurveVaultFactory | Curve | Strategy |
+17 | veSdtFeeCurveProxy.sol | Curve | Strategy |
+10 | FraxVoter.sol | Frax | LL
+18 | FraxProxyFactory.sol | Frax | Strategy 
+19 | veSdtFeeFraxProxy.sol | Frax | Strategy |
+20 | YearnAccumulator.sol | Yearn | LL |
+21 | YearnLocker.sol | Year | LL |
+20 | DepositorV2.sol | All | LL |
 
 ## ETH Mainnet Deployed Contract Addresses
 
-1. [FXS Depositor](https://etherscan.io/address/0xFaF3740167B866b571465B063c6B3A71Ba9b6285#code)
-2. [FXSLocker](https://etherscan.io/address/0xcd3a267de09196c48bbb1d9e842d7d7645ce448f#code)
-3. [FXS sdToken](https://etherscan.io/address/0x402f878bdd1f5c66fdaf0fababcf74741b68ac36#code)
-4. [ANGLE Depositor](https://etherscan.io/address/0x8A97e8B3389D431182aC67c0DF7D46FF8DCE7121#code)
-5. [AngleLocker](https://etherscan.io/address/0xD13F8C25CceD32cdfA79EB5eD654Ce3e484dCAF5#code)
-6. [ANGLE sdToken](https://etherscan.io/address/0x752B4c6e92d96467fE9b9a2522EF07228E00F87c#code)
-7. [FeeDistributor.vy](https://etherscan.io/address/0x29f3dd38dB24d3935CF1bf841e6b2B461A3E5D92#code)
-8. [veSDT TransparentUpgradeableProxy](https://etherscan.io/address/0x0C30476f66034E11782938DF8e4384970B6c9e8a#code)
-9. [veSDT Implementation](https://etherscan.io/address/0x4dcb5571024d14f017b99a7d3cedef670d4718c4#code)
-10. [ProxyAdmin.sol](https://etherscan.io/address/0xfE612c237A81527a86f2Cac1FD19939CF4F91B9B#code)
-11. [SmartWalletWhitelist.sol](https://etherscan.io/address/0x37E8386602d9EBEa2c56dd11d8E142290595f1b5#code)
-12. [SdtDistributor.sol](https://etherscan.io/address/0x06F66Bc79aeD1b49a393bF5fcF68a70499A2B5DC#code)
-13. [SdtDistributor-implementation](https://etherscan.io/address/0x216E1894687061C8E6bCEa8D08482a14DA388272#code)
-14. [LiquidityGaugeV4-sdFXS](https://etherscan.io/address/0xF3C6e8fbB946260e8c2a55d48a5e01C82fD63106#code)
-15. [LiquidityGaugeV4-sdFXS-implementation](https://etherscan.io/address/0x0accA1bd515c191e1A4A81AA406dCa1e75CEfD76#code)
-16. [LiquidityGaugeV4-sdANGLE-implementation](https://etherscan.io/address/0x93c951D3281Cc79e9FE1B1C87e50693D202F4C17#code)
-17. [GaugeController](https://etherscan.io/address/0x75f8f7fa4b6DA6De9F4fE972c811b778cefce882#code)
-18. [FXSAccumulator](https://etherscan.io/address/0x1CC16bEdaaCD15848bcA5eB80188e0931bC59fB2#code)
-19. [ClaimRewards](https://etherscan.io/address/0xf30f23B7FB233172A41b32f82D263c33a0c9F8c2#code)
-20. [ANGLEAccumulator](https://etherscan.io/address/0x943671e6c3A98E28ABdBc60a7ac703b3c0C6aA51#code)
-21. [veBoostProxy](https://etherscan.io/address/0xD67bdBefF01Fc492f1864E61756E5FBB3f173506#code)
-22. [LiquidityGaugeV4-sdANGLE](https://etherscan.io/address/0xE55843a90672f7d8218285e51EE8fF8E233F35d5#code)
+- [veSDT Implementation](https://etherscan.io/address/0x4dcb5571024d14f017b99a7d3cedef670d4718c4#code)
+- [veSDT TransparentUpgradeableProxy](https://etherscan.io/address/0x0C30476f66034E11782938DF8e4384970B6c9e8a#code)
+- [FeeDistributor](https://etherscan.io/address/0x29f3dd38dB24d3935CF1bf841e6b2B461A3E5D92#code)
+
+### Liquid Lockers
+
+LL | Locker | Depositor | sdToken | sdToken LGV4 | Accumulator
+--- | --- | --- | --- | --- | --- |
+Frax|[0xcd3...48f](https://etherscan.io/address/0xcd3a267de09196c48bbb1d9e842d7d7645ce448f#code)|[0xFaF...285](https://etherscan.io/address0xFaF3740167B866b571465B063c6B3A71Ba9b6285#code)|[0x402...c36](https://etherscan.io/address/0x402f878bdd1f5c66fdaf0fababcf74741b68ac36#code)|[0xF3C...106](https://etherscan.io/address/0xF3C6e8fbB946260e8c2a55d48a5e01C82fD63106#code)|[0xcA5...008](https://etherscan.io/address/0xcA53fe979D427a7C2C5F45f54D9d9fAE622B4008#code)
+Angle|[0xD13...AF5](https://etherscan.io/address/0xD13F8C25CceD32cdfA79EB5eD654Ce3e484dCAF5#code)|[0x8A9...121](https://etherscan.io/address/0x8A97e8B3389D431182aC67c0DF7D46FF8DCE7121#code)|[0x752...87c](https://etherscan.io/address/0x752B4c6e92d96467fE9b9a2522EF07228E00F87c#code)|[0xE55..5d5](https://etherscan.io/address/0xE55843a90672f7d8218285e51EE8fF8E233F35d5#code)|[0x5Ed...D2E](https://etherscan.io/address/0x5Ed81291A4B978A25bEA88B0c40Cb42d63F72D2E#code)
+Curve|[0x52f...6B6](https://etherscan.io/address/0x52f541764E6e90eeBc5c21Ff570De0e2D63766B6#code)|[0xc1e...191](https://etherscan.io/address/0xc1e3Ca8A3921719bE0aE3690A0e036feB4f69191#code)|[0xD1b...bB5](https://etherscan.io/address/0xD1b5651E55D4CeeD36251c61c50C889B36F6abB5#code)|[0x7f5...466](https://etherscan.io/address/0x7f50786A0b15723D741727882ee99a0BF34e3466#code)|[0xa44...466](https://etherscan.io/address/0xa44bFD194Fd7185ebecEcE4F7fA87a47DaA01c6A#code)
+Balancer|[0xea7...6A5](https://etherscan.io/address/0xea79d1A83Da6DB43a85942767C389fE0ACf336A5#code)|[0x3e0...D2E](https://etherscan.io/address/0x3e0d44542972859de3CAdaF856B1a4FD351B4D2E#code)|[0xF24...895](https://etherscan.io/address/0xF24d8651578a55b0C119B9910759a351A3458895#code)|[0x3E8...859](https://etherscan.io/address/0x3E8C72655e48591d93e6dfdA16823dB0fF23d859#code)|[0x99e...0C4](https://etherscan.io/address/0x99e8cBa4e91aDeA2C9321344e33FCCCBfBA9b0C4#code)
+Ap Wine|[0xE71...21d](https://etherscan.io/address/0xE71e28a510bC3F98a9E77e847aE5AEF9a2e5721d#code)|[0xFe9...BCf](https://etherscan.io/address/0xFe928ca6a9C0cdf658a26A374b7373B9D6CefBCf#code)|[0x26f...70D](https://etherscan.io/address/0x26f01FE3BE55361b0643bc9d5D60980E37A2770D#code)|[0x9c9...4E0](https://etherscan.io/address/0x9c9d06C7378909C6d0A2A0017Bb409F7fb8004E0#code)|[0xc50...fe5](https://etherscan.io/address/0xc50f67DB3a63641a57d2d3DE9FdA6767E999Efe5#code)
+Blackpool|[0x0a4...461](https://etherscan.io/address/0x0a4dF7809F83e130D8ffa297f03b75318E37B461#code)|[0x219...993](https://etherscan.io/address/0x219f7496fbD30e1F21A20613F9372d608A279993#code)|[0x825...f73](https://etherscan.io/address/0x825Ba129b3EA1ddc265708fcbB9dd660fdD2ef73#code)|[0xa29...865](https://etherscan.io/address/0xa291faEEf794df6216f196a63F514B5B22244865#code)|[0xfAC...fBc](https://etherscan.io/address/0xfAC788261DA6E2aFfCD0e9AB340395378F8CBfBc#code) 
+Yearn|[Locker](/contracts/YearnLocker.sol)|[Depositor](/contracts/locking/DepositorV2.sol)|[sdToken](/contracts/locking/sdToken.sol)|[Gauge](/contracts/staking/LiquidityGaugeV4.vy)|[Accumulator](/contracts/accumulator/YearnAccumulator.sol)|
+
+- [SdtDistributor](https://etherscan.io/address/0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C#code)
+- [GaugeController](https://etherscan.io/address/0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C#code)
+
+### Strategies
+
+LL | Vault Impl | Strategy
+--- | --- | --- |
+Angle|[0xc76...6E4](https://etherscan.io/address/0xc769c19ADa2B6B0f33B37124Fd6523659a0db6E4#code)|[0x226...CAF](https://etherscan.io/address/0x22635427C72e8b0028FeAE1B5e1957508d9D7CAF#code)
+Curve|[0x63a...3cc](https://etherscan.io/address/0x63af3c5e7ba65f751f5739607db87e2f829bf3cc#code)|[0x20F...ED6](https://etherscan.io/address/0x20F1d4Fed24073a9b9d388AfA2735Ac91f079ED6#code)
+Balancer|[0x417...3e1](https://etherscan.io/address/0x417690832AB2974Ea4F077795dC6d0Ba2523f3e1#code)|[0x873...19d](https://etherscan.io/address/0x873b031Ea6E4236E44d933Aae5a66AF6d4DA419d#code)
+
+- [SdtDistributor](https://etherscan.io/address/0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C#code)
+- [GaugeController](https://etherscan.io/address/0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C#code)
+- [LGV4 Impl](https://etherscan.io/address/0x3Dc56D46F0Bd13655EfB29594a2e44534c453BF9#code) (Angle/Curve/Balancer strategies)
+- [LGV4 Impl](https://etherscan.io/address/0x6aDb68d8C15954aD673d8f129857b34dc2F08bf2#code) (Frax strategies)
+
+### Utility
+
+LL | Vault Factory | veSDTFeeProxy | Voter
+--- | --- | --- | --- |
+Angle|[0x66f...801](https://etherscan.io/address/0x66f3d3210F84fe8cC2c77A1f001a395b2Ae0B801#code)|[0xe92...054](https://etherscan.io/address/0xe92aa77c3d8c7347950b2a8d4b2a0adbf0c31054#code)|[0x103...Ab8](https://etherscan.io/address/0x103A24aDF3c60E29eCF4D05ee742cAdc7BA3fAb8#code)
+Curve|[0x566...969](https://etherscan.io/address/0x5662e299147336b31b82ef37a76207d53c97a969#code)|[0x6e3...46f](https://etherscan.io/address/0x6e37f0f744377936205610591eb8787d7be7946f#code)|[0x102...237](https://etherscan.io/address/0x102A4eD45395e065390173E900d1a76A589E0237#code)
+Balancer|[0x6e3...46f](https://etherscan.io/address/0x6e37f0f744377936205610591eb8787d7be7946f#code)|[0xf94...39d](https://etherscan.io/address/0xf94492a9efee2a6a82256e5794c988d3a711539d#code)|[0xff0...1Ff](https://etherscan.io/address/0xff09A9b50A4E9b9AB95D2DCb552E8469f9c891Ff#code)
+
+- [ClaimReward](https://etherscan.io/address/0x633120100e108F03aCe79d6C78Aac9a56db1be0F#code)
+- [ProxyAdmin](https://etherscan.io/address/0xfE612c237A81527a86f2Cac1FD19939CF4F91B9B#code)
+- [SmartWalletWhitelist](https://etherscan.io/address/0x37E8386602d9EBEa2c56dd11d8E142290595f1b5#code)
+
+## Known issues
+
+- AngleVault:
+   - `withdrawAll()` wrongly defined. Since that every LP obtained will be staked directly into the related LGV4, for this reason the `msg.sender`'s balance would be always 0.
+
+- CurveStrategy:
+   - An edge case can happen within the `harvest()` for certain type of curve gauges, with more than one extra reward.
