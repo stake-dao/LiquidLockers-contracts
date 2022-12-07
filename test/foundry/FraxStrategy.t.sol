@@ -77,6 +77,9 @@ contract FraxStrategyTest is BaseTest {
 	IFraxGauge public fxsTempleFraxGauge = IFraxGauge(0x10460d02226d6ef7B2419aE150E6377BdbB7Ef16);
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
+
 		address[] memory path = new address[](2);
 		path[0] = address(fxs);
 		path[1] = address(frax);

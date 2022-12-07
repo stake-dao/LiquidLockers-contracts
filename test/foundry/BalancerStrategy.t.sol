@@ -34,6 +34,9 @@ contract BalancerStrategyTest is BaseTest {
 	ILiquidityGaugeStrat public gauge2;
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
+
 		// Cannot be deployed because the BALANCER_STRATEGY is hardcoded on the vault1 factory contract
 		// So BALANCER_STRATEGY need to be forked from mainnet too
 		strategy = BalancerStrategy(STRATEGY);

@@ -22,6 +22,9 @@ contract BalancerZapperTest is BaseTest {
 	IERC20 public sdBal = IERC20(SD_BAL);
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
+
 		vm.prank(LOCAL_DEPLOYER);
 		zapper = new BalancerZapper();
 		gauge = ILiquidityGauge(SD_BAL_GAUGE);

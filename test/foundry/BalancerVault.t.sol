@@ -53,6 +53,9 @@ contract BalancerVaultTest is BaseTest {
 	TransparentUpgradeableProxy internal proxy;
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
+
 		vm.startPrank(LOCAL_DEPLOYER);
 		proxyAdmin = new ProxyAdmin();
 		helper = IBalancerHelper(Constants.BALANCER_HELPER);

@@ -29,6 +29,9 @@ contract FeeDistributorTest is BaseTest {
 	IVeSDT internal veSDTImpl;
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
+
 		////////////////////////////////////////////////////////////////
 		/// --- START DEPLOYEMENT
 		///////////////////////////////////////////////////////////////

@@ -39,6 +39,9 @@ contract SdLiquidityZapperTest is Test {
 	IERC20 public constant SDBALSTRATGAUGE = IERC20(0x76fB1951F3395031B3ec703a16567ab92E792770);
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
+
 		sdLiquidityZapper = new SdLiquidityZapper();
 		sdLiquidityZapper.addDepositorForCurveBased(
 			address(CRV),

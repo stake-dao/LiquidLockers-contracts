@@ -90,6 +90,9 @@ contract CRVMigrationTest is BaseTest {
 	IGaugeController internal gaugeController;
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
+
 		// Set governance from vesdCRV to local deployer
 		vm.prank(IVeSdCRV(vesdcrv).governance());
 		IVeSdCRV(vesdcrv).setGovernance(LOCAL_DEPLOYER);

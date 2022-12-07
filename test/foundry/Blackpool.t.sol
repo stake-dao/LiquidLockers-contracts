@@ -56,6 +56,9 @@ contract BlackpoolTest is BaseTest {
 	IGaugeController internal gaugeController;
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
+
 		rewardsToken.push(Constants.WETH);
 		rewardsAmount.push(1e18);
 

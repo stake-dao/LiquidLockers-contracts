@@ -60,6 +60,9 @@ contract AngleVaultTest is BaseTest {
 	ILiquidityGauge public liquidityGaugeAngleUSDC = ILiquidityGauge(0x51fE22abAF4a26631b2913E417c0560D547797a7);
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
+
 		address[] memory path = new address[](3);
 		path[0] = Constants.ANGLE;
 		path[1] = Constants.WETH;

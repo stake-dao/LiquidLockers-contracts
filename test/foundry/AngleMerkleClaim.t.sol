@@ -44,6 +44,9 @@ contract AngleMerkleClaimTest is Test {
 	uint256 public constant VESDT_PROXY_FEE = 500;
 	
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 15514425);
+		vm.selectFork(forkId);
+
 		// deploy new angle voter
 		voterV2 = new AngleVoterV2();
 		// change voterV2 governance

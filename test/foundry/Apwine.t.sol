@@ -57,6 +57,9 @@ contract ApwineTest is BaseTest {
 	IGaugeController internal gaugeController;
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
+
 		rewardsToken.push(Constants.APW);
 		//rewardsToken.push(Constants.AG_EUR);
 		rewardsAmount.push(1e18);

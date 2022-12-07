@@ -17,6 +17,8 @@ contract BalancerFeeProxyTest is BaseTest {
     VeSDTFeeBalancerProxy public veSDTFeeProxy;
 
     function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
         vm.prank(LOCAL_DEPLOYER);
         veSDTFeeProxy = new VeSDTFeeBalancerProxy();
     }

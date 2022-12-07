@@ -16,6 +16,8 @@ contract FraxVoterTest is Test {
 	address public constant GOVERNANCE = 0x0dE5199779b43E13B3Bec21e91117E18736BC1A8;
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 15568813);
+		vm.selectFork(forkId);
 		fraxVoter = new FraxVoter();
 		fraxStrategyContract = FraxStrategy(fraxStrategy);
 		vm.prank(GOVERNANCE);

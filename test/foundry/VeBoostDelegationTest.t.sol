@@ -17,6 +17,8 @@ contract VeBoostDelegationTest is Test {
 	uint256 public constant WEEK = 7 * 86400;
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 16133200);
+		vm.selectFork(forkId);
 		boostDelegationV2 = IBoostDelegationV2(
 			deployCode("artifacts/contracts/staking/BoostDelegationV2.vy/BoostDelegationV2.json", abi.encode(VESDT))
 		);
