@@ -14,7 +14,7 @@ ETHERSCAN_API_KEY==${ETHERSCAN_KEY}
 test-angle-vault:; @forge test --match-contract AngleVaultTest
 test-angle-locker:; @forge test --match-contract AngleTest
 test-angle-merkleclaim:; @forge test --match-contract AngleMerkleClaimTest
-test-angle-veSdtFeeProxy:; @forge test --match-contract VeSDTFeeAngleProxyV2Test
+test-angle-veSdtFeeProxy:; @forge test --match-contract VeSDTFeeAngleProxyV2
 
 # APWINE
 test-apwine:; @forge test --match-contract ApwineTest 
@@ -32,7 +32,7 @@ test-blackpool-locker:; @forge test --match-contract BlackpoolTest
 # CURVE #
 test-curve-vault:; @forge test --match-contract CurveVaultTest
 test-curve-voter:; @forge test --match-contract CurveVoterTest
-test-crv-migration:; @forge test --match-contract CRVMigrationTest
+test-crv-migration:; @forge test --match-contract CrvMigrationTest
 
 # FRAX #
 test-frax-voter:; @forge test --match-contract FraxVoterTest 

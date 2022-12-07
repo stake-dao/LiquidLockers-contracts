@@ -60,7 +60,7 @@ interface IVeSdCRV {
 	function claim() external;
 }
 
-contract CRVMigrationTest is BaseTest {
+contract CrvMigrationTest is BaseTest {
 	address internal constant LOCAL_DEPLOYER = address(0xDE);
 	address internal constant ALICE = address(0xAA);
 	address internal constant BOB = address(0xB0B);
