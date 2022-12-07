@@ -18,6 +18,7 @@ library Constants {
 	address public constant WSTETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
 	address public constant OHM = 0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5;
 	address public constant SUSHI = 0x6B3595068778DD592e39A122f4f5a5cF09C90fE2;
+	address public constant TEMPLE = 0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7;
 
 	////////////////////////////////////////////////////////////////
 	/// --- YEARN FINANCE

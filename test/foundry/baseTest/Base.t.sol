@@ -12,6 +12,7 @@ import "contracts/interfaces/IGaugeController.sol";
 import "contracts/interfaces/IBaseLocker.sol";
 import "contracts/interfaces/IBaseDepositor.sol";
 import "contracts/interfaces/IBaseAccumulator.sol";
+import "../../../contracts/interfaces/ISmartWalletChecker.sol";
 
 contract BaseTest is Test {
 	////////////////////////////////////////////////////////////////
@@ -485,6 +486,12 @@ contract BaseTest is Test {
 		vm.stopPrank();
 
 		assertApproxEqRel(IERC20(Constants.VE_SDT).balanceOf(caller), 1_000_000e18, 1e16);
+	}
+
+	function lockSDTWhiteList(address caller) public {
+		vm.prank(IVeToken(Constants.VE_SDT).admin());
+		ISmartWalletChecker(Constants.SDT_SMART_WALLET_CHECKER).approveWallet(caller);
+		lockSDT(caller);
 	}
 
 	function lockSDTCustom(

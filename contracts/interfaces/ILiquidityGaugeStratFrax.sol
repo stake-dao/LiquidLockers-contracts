@@ -15,7 +15,7 @@ interface ILiquidityGaugeStratFrax {
 	function deposit_reward_token(address _rewardToken, uint256 _amount) external;
 
 	function claim_rewards(address _addr) external;
-	
+
 	function claim_rewards(address _addr, address _recipient) external;
 
 	// solhint-disable-next-line
@@ -66,4 +66,12 @@ interface ILiquidityGaugeStratFrax {
 	) external;
 
 	function add_reward(address, address) external;
+
+	function admin() external view returns (address);
+
+	function pool_registry() external view returns (address);
+
+	function pid() external view returns (uint256);
+
+	function totalSupply() external view returns (uint256);
 }
