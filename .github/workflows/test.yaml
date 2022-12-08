@@ -35,7 +35,7 @@ jobs:
         run: forge install
 
       - name: Build project
-        run: make build
+        run: forge build && npx hardhat compile
 
       - name: Run tests
-        run: make test-all
+        run: forge test --no-match-contract Yearn
