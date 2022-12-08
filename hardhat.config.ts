@@ -15,19 +15,6 @@ import "@typechain/hardhat";
 require("dotenv").config();
 
 export default {
-  defaultNetwork: "hardhat",
-  networks: {
-    hardhat: {
-      forking: {
-        url: process.env.MAINNET
-        //blockNumber: 15410500
-      }
-    },
-    mainnet: {
-      url: process.env.MAINNET,
-      accounts: [`0x${process.env.DEPLOYER_PKEY}`]
-    }
-  },
   namedAccounts: {
     deployer: 0
   },
@@ -55,14 +42,6 @@ export default {
         }
       }
     ]
-  },
-  gasReporter: {
-    enabled: false,
-    currency: "USD",
-    coinmarketcap: process.env.COINMARKETCAP_KEY
-  },
-  etherscan: {
-    apiKey: process.env.ETHERSCAN_KEY
   },
   contractSizer: {
     alphaSort: true,
