@@ -2,6 +2,7 @@ include .env
 
 .PHONY: test
 default:; forge fmt && forge build
+build:; forge build && npx hardhat compile
 
 .EXPORT_ALL_VARIABLES:
 ETHERSCAN_API_KEY==${ETHERSCAN_KEY}

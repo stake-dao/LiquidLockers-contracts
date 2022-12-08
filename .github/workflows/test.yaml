@@ -35,7 +35,7 @@ jobs:
         run: forge install
 
       - name: Build project
-        run: forge build
+        run: make build
 
       - name: Run tests
         run: make test-all
