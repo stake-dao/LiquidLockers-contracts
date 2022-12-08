@@ -120,6 +120,7 @@ contract CurveVaultTest is BaseTest {
 		deal(Constants.EUR3, ALICE, AMOUNT);
 		deal(Constants.STECRV, ALICE, AMOUNT);
 		deal(Constants.CRV3, Constants.CURVE_FEE_DISTRIBUTOR, AMOUNT);
+		deal(address(crv), ALICE, AMOUNT);
 
 		vm.prank(IVeToken(Constants.VE_SDT).admin());
 		ISmartWalletChecker(Constants.SDT_SMART_WALLET_CHECKER).approveWallet(ALICE);
@@ -345,10 +346,10 @@ contract CurveVaultTest is BaseTest {
 	}
 
 	function testSendAccumulatedCRVRewardtosdCRVLGFromAccu() public {
+		vm.prank(ALICE);
+		crv.transfer(address(accumulator), AMOUNT);
 		uint256 balanceBefore = crv.balanceOf(SD_CRV_GAUGE);
 
-		//vm.prank(ILiquidityGauge(SD_CRV_GAUGE).admin());
-		//ILiquidityGauge(SD_CRV_GAUGE).add_reward(Constants.CRV, address(accumulator));
 		vm.prank(accumulator.governance());
 		accumulator.notifyAllExtraReward(Constants.CRV);
 
