@@ -57,6 +57,9 @@ contract AngleTest is BaseTest {
 	IGaugeController internal gaugeController;
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
+
 		rewardsToken.push(Constants.SAN_USDC_EUR);
 		//rewardsToken.push(Constants.AG_EUR);
 		rewardsAmount.push(1_000_000e6);

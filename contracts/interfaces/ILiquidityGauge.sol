@@ -17,6 +17,8 @@ interface ILiquidityGauge {
 	// solhint-disable-next-line
 	function claim_rewards_for(address _user, address _recipient) external;
 
+	function working_balances(address _address) external view returns (uint256);
+
 	// // solhint-disable-next-line
 	// function claim_rewards_for(address _user) external;
 
@@ -44,6 +46,10 @@ interface ILiquidityGauge {
 	function add_reward(address, address) external;
 
 	function set_claimer(address) external;
+
+	function admin() external view returns (address);
+
+	function set_reward_distributor(address _rewardToken, address _newDistrib) external;
 
 	function initialize(
 		address staking_token,

@@ -12,6 +12,7 @@ import "contracts/interfaces/IGaugeController.sol";
 import "contracts/interfaces/IBaseLocker.sol";
 import "contracts/interfaces/IBaseDepositor.sol";
 import "contracts/interfaces/IBaseAccumulator.sol";
+import "../../../contracts/interfaces/ISmartWalletChecker.sol";
 
 contract BaseTest is Test {
 	////////////////////////////////////////////////////////////////
@@ -487,6 +488,12 @@ contract BaseTest is Test {
 		assertApproxEqRel(IERC20(Constants.VE_SDT).balanceOf(caller), 1_000_000e18, 1e16);
 	}
 
+	function lockSDTWhiteList(address caller) public {
+		vm.prank(IVeToken(Constants.VE_SDT).admin());
+		ISmartWalletChecker(Constants.SDT_SMART_WALLET_CHECKER).approveWallet(caller);
+		lockSDT(caller);
+	}
+
 	function lockSDTCustom(
 		address caller,
 		address sdt,
@@ -501,8 +508,9 @@ contract BaseTest is Test {
 		(bool success, ) = vesdt.call(createLockCallData);
 		require(success, "lock SDT failed");
 		vm.stopPrank();
+		uint256 max = 4 * Constants.YEAR;
 
-		assertApproxEqRel(IERC20(vesdt).balanceOf(caller), amount, 1e16);
+		assertApproxEqRel(IERC20(vesdt).balanceOf(caller), (amount * (unlockTime - block.timestamp)) / max, 2e16);
 	}
 
 	function simulateRewards(
@@ -516,5 +524,28 @@ contract BaseTest is Test {
 			IERC20(rewardsToken[i]).transfer(rewardReceiver, rewardsAmount[i]);
 			require((balanceBefore - IERC20(rewardsToken[i]).balanceOf(address(this))) == 0, "!not empty");
 		}
+	}
+
+	function bytesToAddressCustom(bytes memory payload, uint256 start) public pure returns (address addr) {
+		assembly {
+			addr := mload(add(payload, start))
+		}
+	}
+
+	function deployBytecode(bytes memory bytecode, bytes memory args) internal returns (address deployed) {
+		bytecode = abi.encodePacked(bytecode, args);
+		assembly {
+			deployed := create(0, add(bytecode, 0x20), mload(bytecode))
+		}
+		require(deployed != address(0), "DEPLOYMENT_FAILED");
+	}
+
+	function sliceUint(bytes memory bs, uint256 start) internal pure returns (uint256) {
+		require(bs.length >= start + 32, "slicing out of range");
+		uint256 x;
+		assembly {
+			x := mload(add(bs, add(0x20, start)))
+		}
+		return x;
 	}
 }

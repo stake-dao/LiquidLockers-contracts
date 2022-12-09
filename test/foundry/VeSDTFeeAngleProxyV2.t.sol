@@ -36,7 +36,7 @@ contract VeSDTFeeAngleProxyV2Test is Test {
 		VeSDTFeeAngleProxyV2.CurveExchangeData memory curveExData = VeSDTFeeAngleProxyV2.CurveExchangeData(AG_EUR_FRAXBP_POOL, 0, 1);
         proxyV2 = new VeSDTFeeAngleProxyV2(angleAgEurSushiPath, curveExData);
 		// set new fee proxy
-		vm.prank(Constants.ANGLE_VOTER_V2);
+		vm.prank(angleStrategy.governance());
 		angleStrategy.setVeSDTProxy(address(proxyV2));
 	}
 

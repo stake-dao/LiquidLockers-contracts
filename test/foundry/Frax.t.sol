@@ -58,6 +58,9 @@ contract FraxTest is BaseTest {
 	IGaugeController internal gaugeController;
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
+
 		rewardsToken.push(Constants.FXS);
 		rewardsAmount.push(2e18);
 

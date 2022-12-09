@@ -17,6 +17,8 @@ contract VeBoostDelegationTest is Test {
 	uint256 public constant WEEK = 7 * 86400;
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 16133200);
+		vm.selectFork(forkId);
 		boostDelegationV2 = IBoostDelegationV2(
 			deployCode("artifacts/contracts/staking/BoostDelegationV2.vy/BoostDelegationV2.json", abi.encode(VESDT))
 		);
@@ -41,6 +43,6 @@ contract VeBoostDelegationTest is Test {
 		uint256 endTime = ((block.timestamp + 60 * 60 * 24 * 30) / WEEK) * WEEK;
 		boostDelegationV2.boost(address(this), 100000e18, endTime, VE_SDT_WHALE);
 		uint256 delegated = boostDelegationV2.delegated_balance(VE_SDT_WHALE);
-		assertApproxEqAbs(delegated, 100000e18, 300000);
+		assertApproxEqRel(delegated, 100000e18, 1e16);
 	}
 }

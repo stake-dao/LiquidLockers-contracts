@@ -35,7 +35,7 @@ jobs:
         run: forge install
 
       - name: Build project
-        run: forge build
+        run: forge build && npx hardhat compile
 
       - name: Run tests
-        run: yarn test:foundry --fork-url https://eth.public-rpc.com
+        run: forge test --no-match-contract Yearn

@@ -47,4 +47,8 @@ interface IGaugeController {
 	) external;
 
 	function add_type(string memory, uint256) external;
+
+	function commit_transfer_ownership(address) external;
+
+	function accept_transfer_ownership() external;
 }

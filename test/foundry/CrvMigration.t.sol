@@ -60,7 +60,7 @@ interface IVeSdCRV {
 	function claim() external;
 }
 
-contract CRVMigrationTest is BaseTest {
+contract CrvMigrationTest is BaseTest {
 	address internal constant LOCAL_DEPLOYER = address(0xDE);
 	address internal constant ALICE = address(0xAA);
 	address internal constant BOB = address(0xB0B);
@@ -90,6 +90,9 @@ contract CRVMigrationTest is BaseTest {
 	IGaugeController internal gaugeController;
 
 	function setUp() public {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
+
 		// Set governance from vesdCRV to local deployer
 		vm.prank(IVeSdCRV(vesdcrv).governance());
 		IVeSdCRV(vesdcrv).setGovernance(LOCAL_DEPLOYER);
