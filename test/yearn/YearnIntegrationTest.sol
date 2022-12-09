@@ -24,40 +24,24 @@ contract YearnIntegrationTest is Test {
     ///////////////////////////////////////////////////////////////
 
 	// External Contracts
-	IRewardPool internal rewardPool;
+	IRewardPool internal rewardPool = IRewardPool(Constants.YFI_REWARD_POOL);
 	YearnLocker internal yearnLocker;
 
 	// Liquid Lockers Contracts
-	IERC20 internal YFI;
-	IVeYFI internal veYFI;
+	IERC20 internal YFI = IERC20(Constants.YFI);
+	IVeYFI internal veYFI = IVeYFI(Constants.VE_YFI);
 	sdToken internal sdYFI;
 
     DepositorV2 internal depositor;
 	ILiquidityGauge internal liquidityGauge;
 	YearnAccumulator internal yearnAccumulator;
 
-
 	// Helper
 	uint internal constant amount = 100e18;
 
 	function setUp() public virtual {
-		YFI = IERC20(Constants.YFI);
-
-		address expectedveYFIAddress = 0xCe71065D4017F316EC606Fe4422e11eB2c47c246;
-		address expectedRewardPoolAddress = 0x185a4dc360CE69bDCceE33b3784B0282f7961aea;
-
-		veYFI = IVeYFI(
-			deployCode(
-				"artifacts/contracts/external/VotingYFI.vy/VotingYFI.json",
-				abi.encode(YFI, expectedRewardPoolAddress)
-			)
-		);
-		rewardPool = IRewardPool(
-			deployCode(
-				"artifacts/contracts/external/RewardPool.vy/RewardPool.json",
-				abi.encode(expectedveYFIAddress, block.timestamp)
-			)
-		);
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
 
 		sdYFI = new sdToken("Stake DAO YFI", "sdYFI");
 	

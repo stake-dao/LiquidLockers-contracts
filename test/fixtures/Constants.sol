@@ -24,6 +24,8 @@ library Constants {
 	/// --- YEARN FINANCE
 	///////////////////////////////////////////////////////////////
 	address public constant YFI = 0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e;
+	address public constant VE_YFI = 0x90c1f9220d90d3966FbeE24045EDd73E1d588aD5;
+	address public constant YFI_REWARD_POOL = 0xb287a1964AEE422911c7b8409f5E5A273c1412fA;
 
 	////////////////////////////////////////////////////////////////
 	/// --- STAKE DAO ADDRESSES
