@@ -50,7 +50,7 @@ test-gaugeController:; @forge test --match-contract GaugeControllerTest
 test-boost-delegation:; @forge test --match-contract VeBoostDelegationTest
 
 # OTHERS #
-test-all:; @forge test --no-match-contract Yearn
+test-all:; @forge test
 
 #################################################
 #        ---------- COVERAGE -----------        #

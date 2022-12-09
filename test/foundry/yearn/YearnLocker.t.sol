@@ -22,26 +22,15 @@ contract YearnLockerTest is Test {
 	IRewardPool internal rewardPool;
 
 	function setUp() public virtual {
+		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+		vm.selectFork(forkId);
+
 		YFI = IERC20(Constants.YFI);
-
-		address expectedRewardPoolAddress = 0x185a4dc360CE69bDCceE33b3784B0282f7961aea;
-		address expectedveYFIAddress = 0xCe71065D4017F316EC606Fe4422e11eB2c47c246;
-
-		veYFI = IVeYFI(
-			deployCode(
-				"artifacts/contracts/external/VotingYFI.vy/VotingYFI.json",
-				abi.encode(YFI, expectedRewardPoolAddress)
-			)
-		);
-		rewardPool = IRewardPool(
-			deployCode(
-				"artifacts/contracts/external/RewardPool.vy/RewardPool.json",
-				abi.encode(expectedveYFIAddress, block.timestamp)
-			)
-		);
+		veYFI = IVeYFI(Constants.VE_YFI);
+		rewardPool = IRewardPool(Constants.YFI_REWARD_POOL);
 
 		// Deploy and Intialize the YearnLocker contract
-		yearnLocker = new YearnLocker(address(this), address(veYFI), address(rewardPool));
+		yearnLocker = new YearnLocker(address(this), Constants.VE_YFI, Constants.YFI_REWARD_POOL);
 		yearnLocker.approveUnderlying();
 
 		// Mint YFI to the YearnLocker contract

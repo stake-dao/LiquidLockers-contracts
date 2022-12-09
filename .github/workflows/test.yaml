@@ -38,4 +38,4 @@ jobs:
         run: forge build && npx hardhat compile
 
       - name: Run tests
-        run: forge test --no-match-contract Yearn
+        run: forge test
