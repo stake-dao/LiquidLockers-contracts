@@ -2,24 +2,25 @@
 pragma solidity ^0.8.7;
 
 interface ILiquidityGaugeFRAX {
-	struct LockedStake {
-		bytes32 kek_id;
-		uint256 start_timestamp;
-		uint256 liquidity;
-		uint256 ending_timestamp;
-		uint256 lock_multiplier; // 6 decimals of precision. 1x = 1000000
-	}
-	function stakingToken() external view returns (address);
+    struct LockedStake {
+        bytes32 kek_id;
+        uint256 start_timestamp;
+        uint256 liquidity;
+        uint256 ending_timestamp;
+        uint256 lock_multiplier; // 6 decimals of precision. 1x = 1000000
+    }
 
-	function getAllRewardTokens() external view returns (address[] memory);
+    function stakingToken() external view returns (address);
 
-	function earned(address account) external view returns (uint256[] memory new_earned);
+    function getAllRewardTokens() external view returns (address[] memory);
 
-	function lockedStakesOf(address account) external view returns (LockedStake[] memory);
+    function earned(address account) external view returns (uint256[] memory new_earned);
 
-	function lockedStakesOfLength(address account) external view returns (uint256);
+    function lockedStakesOf(address account) external view returns (LockedStake[] memory);
 
-	function lockedLiquidityOf(address account) external view returns (uint256);
-	
-	function veFXSMultiplier(address account) external view returns (uint256 vefxs_multiplier);
+    function lockedStakesOfLength(address account) external view returns (uint256);
+
+    function lockedLiquidityOf(address account) external view returns (uint256);
+
+    function veFXSMultiplier(address account) external view returns (uint256 vefxs_multiplier);
 }
