@@ -4,9 +4,9 @@ pragma solidity 0.8.7;
 import "forge-std/Test.sol";
 import "forge-std/Vm.sol";
 
-import { AngleVoter } from "../../contracts/dao/voters/AngleVoter.sol";
-import { AngleVoterV2 } from "../../contracts/dao/voters/AngleVoterV2.sol";
-import { AngleStrategy } from "../../contracts/strategies/angle/AngleStrategy.sol";
+import { AngleVoter } from "contracts/dao/voters/AngleVoter.sol";
+import { AngleVoterV2 } from "contracts/dao/voters/AngleVoterV2.sol";
+import { AngleStrategy } from "contracts/strategies/angle/AngleStrategy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface ILGV4 {

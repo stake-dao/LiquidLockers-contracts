@@ -4,11 +4,11 @@ pragma solidity ^0.8.7;
 // Base Tests
 import "./baseTest/Base.t.sol";
 
-import "../../contracts/factories/BalancerVaultFactory.sol";
-import "../../contracts/strategies/balancer/BalancerStrategy.sol";
-import { VeSDTFeeBalancerProxy } from "../../contracts/accumulators/VeSDTFeeBalancerProxy.sol";
+import "contracts/factories/BalancerVaultFactory.sol";
+import "contracts/strategies/balancer/BalancerStrategy.sol";
+import { VeSDTFeeBalancerProxy } from "contracts/accumulators/VeSDTFeeBalancerProxy.sol";
 
-import "../../contracts/interfaces/ILiquidityGaugeStrat.sol";
+import "contracts/interfaces/ILiquidityGaugeStrat.sol";
 
 contract BalancerStrategyTest is BaseTest {
 	address public constant WSTETH_ETH_BPT = 0x32296969Ef14EB0c6d29669C550D4a0449130230; // 1

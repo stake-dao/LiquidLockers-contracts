@@ -4,16 +4,16 @@ pragma solidity ^0.8.7;
 // Base Tests
 import "./baseTest/Base.t.sol";
 
-import "../../contracts/strategies/curve/CurveStrategy.sol";
-import "../../contracts/strategies/curve/CurveVault.sol";
-import "../../contracts/accumulators/VeSdtFeeCurveProxy.sol";
-import "../../contracts/factories/CurveVaultFactory.sol";
-import "../../contracts/accumulators/CurveAccumulator.sol";
-import "../../contracts/sdtDistributor/SdtDistributorV2.sol";
-import "../../contracts/strategies/angle/AngleVault.sol";
+import "contracts/strategies/curve/CurveStrategy.sol";
+import "contracts/strategies/curve/CurveVault.sol";
+import "contracts/accumulators/VeSdtFeeCurveProxy.sol";
+import "contracts/factories/CurveVaultFactory.sol";
+import "contracts/accumulators/CurveAccumulator.sol";
+import "contracts/sdtDistributor/SdtDistributorV2.sol";
+import "contracts/strategies/angle/AngleVault.sol";
 
-import "../../contracts/interfaces/ILiquidityGaugeStrat.sol";
-import "../../contracts/interfaces/IGaugeController.sol";
+import "contracts/interfaces/ILiquidityGaugeStrat.sol";
+import "contracts/interfaces/IGaugeController.sol";
 import "contracts/interfaces/ISmartWalletChecker.sol";
 
 contract CurveVaultTest is BaseTest {

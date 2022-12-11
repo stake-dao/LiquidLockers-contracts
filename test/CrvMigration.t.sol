@@ -4,20 +4,18 @@ pragma solidity ^0.8.7;
 // Base Tests
 import "./baseTest/Base.t.sol";
 
-import "../../contracts/tokens/sdCRV.sol";
-import "../../contracts/depositors/CrvDepositor.sol";
-import "../../contracts/accumulators/CurveAccumulator.sol";
+import "contracts/tokens/sdCRV.sol";
+import "contracts/depositors/CrvDepositor.sol";
+import "contracts/accumulators/CurveAccumulator.sol";
 
-import "../../contracts/dao/SmartWalletWhitelist.sol";
-import "../../contracts/external/ProxyAdmin.sol";
-import "../../contracts/external/TransparentUpgradeableProxy.sol";
+import "contracts/dao/SmartWalletWhitelist.sol";
+import "contracts/external/ProxyAdmin.sol";
+import "contracts/external/TransparentUpgradeableProxy.sol";
 import "contracts/sdtDistributor/SdtDistributorV2.sol";
 
 // Interface
-import "../../contracts/interfaces/IVeSDT.sol";
-//import "../../contracts/interfaces/IVeSdCRV.sol";
-//import "../../contracts/interfaces/ICurveYCRVVoter.sol";
-import "../../contracts/interfaces/ILiquidityGauge.sol";
+import "contracts/interfaces/IVeSDT.sol";
+import "contracts/interfaces/ILiquidityGauge.sol";
 import "contracts/interfaces/IGaugeController.sol";
 
 interface ICRVStrategyProxy {

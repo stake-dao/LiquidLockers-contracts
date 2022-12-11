@@ -12,7 +12,7 @@ import "contracts/interfaces/IGaugeController.sol";
 import "contracts/interfaces/IBaseLocker.sol";
 import "contracts/interfaces/IBaseDepositor.sol";
 import "contracts/interfaces/IBaseAccumulator.sol";
-import "../../../contracts/interfaces/ISmartWalletChecker.sol";
+import "contracts/interfaces/ISmartWalletChecker.sol";
 
 contract BaseTest is Test {
 	////////////////////////////////////////////////////////////////

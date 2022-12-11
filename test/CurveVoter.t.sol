@@ -5,11 +5,11 @@ pragma solidity ^0.8.7;
 import "./baseTest/Base.t.sol";
 import "./fixtures/LibString.sol";
 
-import "../../contracts/dao/voters/CurveVoterV2.sol";
-import "../../contracts/strategies/curve/CurveStrategy.sol";
+import "contracts/dao/voters/CurveVoterV2.sol";
+import "contracts/strategies/curve/CurveStrategy.sol";
 
-import "../../contracts/interfaces/IGaugeController.sol";
-import "../../contracts/interfaces/ISmartWalletChecker.sol";
+import "contracts/interfaces/IGaugeController.sol";
+import "contracts/interfaces/ISmartWalletChecker.sol";
 
 interface ICurveProtocolVoter {
 	enum VoterState {

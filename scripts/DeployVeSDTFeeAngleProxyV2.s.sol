@@ -4,8 +4,8 @@ pragma solidity 0.8.7;
 import "forge-std/Test.sol";
 import "forge-std/Script.sol";
 
-import { Constants } from "../test/foundry/fixtures/Constants.sol";
-import { VeSDTFeeAngleProxyV2 } from "../contracts/accumulators/VeSDTFeeAngleProxyV2.sol";
+import { Constants } from "test/fixtures/Constants.sol";
+import { VeSDTFeeAngleProxyV2 } from "contracts/accumulators/VeSDTFeeAngleProxyV2.sol";
 
 
 contract DeployVeSDTFeeAngleProxyV2 is Script, Test {

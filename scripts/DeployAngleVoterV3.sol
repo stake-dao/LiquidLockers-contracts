@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "forge-std/Script.sol";
 
 import { AngleVoterV3 } from "contracts/dao/voters/AngleVoterV3.sol";
-import { Constants } from "test/foundry/fixtures/Constants.sol";
+import { Constants } from "test/fixtures/Constants.sol";
 
 contract DeployAngleVoterV3 is Script, Test {
 

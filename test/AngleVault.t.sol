@@ -4,20 +4,20 @@ pragma solidity ^0.8.7;
 // Base Tests
 import "./baseTest/Base.t.sol";
 
-import "../../contracts/external/ProxyAdmin.sol";
-import "../../contracts/lockers/AngleLocker.sol";
-import "../../contracts/factories/AngleVaultFactory.sol";
-import "../../contracts/strategies/angle/AngleVault.sol";
-import "../../contracts/strategies/angle/AngleStrategy.sol";
-import "../../contracts/accumulators/AngleAccumulatorV2.sol";
-import "../../contracts/accumulators/veSDTFeeAngleProxy.sol";
-import "../../contracts/sdtDistributor/SdtDistributorV2.sol";
-import "../../contracts/strategies/angle/AngleVaultGUni.sol";
-import "../../contracts/external/TransparentUpgradeableProxy.sol";
+import "contracts/external/ProxyAdmin.sol";
+import "contracts/lockers/AngleLocker.sol";
+import "contracts/factories/AngleVaultFactory.sol";
+import "contracts/strategies/angle/AngleVault.sol";
+import "contracts/strategies/angle/AngleStrategy.sol";
+import "contracts/accumulators/AngleAccumulatorV2.sol";
+import "contracts/accumulators/veSDTFeeAngleProxy.sol";
+import "contracts/sdtDistributor/SdtDistributorV2.sol";
+import "contracts/strategies/angle/AngleVaultGUni.sol";
+import "contracts/external/TransparentUpgradeableProxy.sol";
 
-import "../../contracts/interfaces/IMasterchef.sol";
-import "../../contracts/interfaces/ISmartWalletChecker.sol";
-import "../../contracts/interfaces/ILiquidityGaugeStrat.sol";
+import "contracts/interfaces/IMasterchef.sol";
+import "contracts/interfaces/ISmartWalletChecker.sol";
+import "contracts/interfaces/ILiquidityGaugeStrat.sol";
 
 contract AngleVaultTest is BaseTest {
 	address public constant BOB = address(0xB0B);

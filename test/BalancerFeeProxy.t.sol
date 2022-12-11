@@ -6,7 +6,7 @@ import "./baseTest/Base.t.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "../../contracts/accumulators/VeSDTFeeBalancerProxy.sol";
+import "contracts/accumulators/VeSDTFeeBalancerProxy.sol";
 
 contract BalancerFeeProxyTest is BaseTest {
 	address public constant LOCAL_DEPLOYER = address(0xDE);

@@ -4,12 +4,12 @@ pragma solidity ^0.8.7;
 // Base Tests
 import "./baseTest/Base.t.sol";
 
-import "../../contracts/dao/SmartWalletWhitelist.sol";
-import "../../contracts/external/ProxyAdmin.sol";
-import "../../contracts/external/TransparentUpgradeableProxy.sol";
+import "contracts/dao/SmartWalletWhitelist.sol";
+import "contracts/external/ProxyAdmin.sol";
+import "contracts/external/TransparentUpgradeableProxy.sol";
 
 // Interface
-import "../../contracts/interfaces/IVeSDT.sol";
+import "contracts/interfaces/IVeSDT.sol";
 
 contract VeSDTProxyTest is BaseTest {
 	address internal constant LOCAL_DEPLOYER = address(0xDE);

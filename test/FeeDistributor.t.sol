@@ -9,8 +9,8 @@ import "contracts/external/ProxyAdmin.sol";
 import "contracts/external/TransparentUpgradeableProxy.sol";
 
 // Interface
-import "../../contracts/interfaces/IFeeDistributor.sol";
-import "../../contracts/interfaces/IVeSDT.sol";
+import "contracts/interfaces/IFeeDistributor.sol";
+import "contracts/interfaces/IVeSDT.sol";
 
 contract FeeDistributorTest is BaseTest {
 	address internal constant LOCAL_DEPLOYER = address(0xDE);

@@ -4,9 +4,9 @@ pragma solidity ^0.8.7;
 // Base Tests
 import "./baseTest/Base.t.sol";
 
-import "../../contracts/zappers/BalancerZapper.sol";
+import "contracts/zappers/BalancerZapper.sol";
 
-import "../../contracts/interfaces/ILiquidityGauge.sol";
+import "contracts/interfaces/ILiquidityGauge.sol";
 
 contract BalancerZapperTest is BaseTest {
 	address public constant SD_BAL = 0xF24d8651578a55b0C119B9910759a351A3458895;

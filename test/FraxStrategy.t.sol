@@ -4,21 +4,21 @@ pragma solidity ^0.8.7;
 // Base Tests
 import "./baseTest/Base.t.sol";
 
-import "../../contracts/lockers/FxsLocker.sol";
-import "../../contracts/external/ProxyAdmin.sol";
-import "../../contracts/strategies/frax/Booster.sol";
-import "../../contracts/strategies/frax/FeeRegistry.sol";
-import "../../contracts/accumulators/FxsAccumulator.sol";
-import "../../contracts/strategies/frax/PoolRegistry.sol";
-import "../../contracts/accumulators/veSDTFeeFraxProxy.sol";
-import "../../contracts/sdtDistributor/SdtDistributorV2.sol";
-import "../../contracts/external/TransparentUpgradeableProxy.sol";
-import { VaultV1 } from "../../contracts/strategies/frax/VaultV1.sol";
-import { FraxStrategy } from "../../contracts/strategies/frax/FraxStrategy.sol";
+import "contracts/lockers/FxsLocker.sol";
+import "contracts/external/ProxyAdmin.sol";
+import "contracts/strategies/frax/Booster.sol";
+import "contracts/strategies/frax/FeeRegistry.sol";
+import "contracts/accumulators/FxsAccumulator.sol";
+import "contracts/strategies/frax/PoolRegistry.sol";
+import "contracts/accumulators/veSDTFeeFraxProxy.sol";
+import "contracts/sdtDistributor/SdtDistributorV2.sol";
+import "contracts/external/TransparentUpgradeableProxy.sol";
+import { VaultV1 } from "contracts/strategies/frax/VaultV1.sol";
+import { FraxStrategy } from "contracts/strategies/frax/FraxStrategy.sol";
 
-import "../../contracts/interfaces/IMasterchef.sol";
-import "../../contracts/interfaces/IGaugeController.sol";
-import "../../contracts/interfaces/ILiquidityGaugeStratFrax.sol";
+import "contracts/interfaces/IMasterchef.sol";
+import "contracts/interfaces/IGaugeController.sol";
+import "contracts/interfaces/ILiquidityGaugeStratFrax.sol";
 
 interface IFraxGauge {
 	struct LockedStake {

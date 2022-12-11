@@ -5,24 +5,24 @@ pragma solidity ^0.8.7;
 import "./baseTest/Base.t.sol";
 
 // Contract
-import "../../contracts/lockers/AngleLocker.sol";
-import "../../contracts/lockers/FxsLocker.sol";
-import "../../contracts/accumulators/AngleAccumulatorV3.sol";
-import "../../contracts/accumulators/FxsAccumulator.sol";
+import "contracts/lockers/AngleLocker.sol";
+import "contracts/lockers/FxsLocker.sol";
+import "contracts/accumulators/AngleAccumulatorV3.sol";
+import "contracts/accumulators/FxsAccumulator.sol";
 
-import "../../contracts/tokens/sdToken.sol";
-import "../../contracts/sdtDistributor/SdtDistributorV2.sol";
-import "../../contracts/dao/SmartWalletWhitelist.sol";
-import "../../contracts/external/ProxyAdmin.sol";
-import "../../contracts/external/TransparentUpgradeableProxy.sol";
-import "../../contracts/sdtDistributor/MasterchefMasterToken.sol";
+import "contracts/tokens/sdToken.sol";
+import "contracts/sdtDistributor/SdtDistributorV2.sol";
+import "contracts/dao/SmartWalletWhitelist.sol";
+import "contracts/external/ProxyAdmin.sol";
+import "contracts/external/TransparentUpgradeableProxy.sol";
+import "contracts/sdtDistributor/MasterchefMasterToken.sol";
 
 // Interface
-import "../../contracts/interfaces/IVeSDT.sol";
-import "../../contracts/interfaces/ISmartWalletChecker.sol";
-import "../../contracts/interfaces/ILiquidityGauge.sol";
-import "../../contracts/interfaces/IGaugeController.sol";
-import "../../contracts/interfaces/IMasterchef.sol";
+import "contracts/interfaces/IVeSDT.sol";
+import "contracts/interfaces/ISmartWalletChecker.sol";
+import "contracts/interfaces/ILiquidityGauge.sol";
+import "contracts/interfaces/IGaugeController.sol";
+import "contracts/interfaces/IMasterchef.sol";
 
 contract SdtDistributorTest is BaseTest {
 	address internal constant LOCAL_DEPLOYER = address(0xDE);
