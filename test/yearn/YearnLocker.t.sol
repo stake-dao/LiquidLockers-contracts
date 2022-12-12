@@ -30,7 +30,7 @@ contract YearnLockerTest is Test {
 		rewardPool = IRewardPool(Constants.YFI_REWARD_POOL);
 
 		// Deploy and Intialize the YearnLocker contract
-		yearnLocker = new YearnLocker(address(this), Constants.VE_YFI, Constants.YFI_REWARD_POOL);
+		yearnLocker = new YearnLocker(address(this), address(this), Constants.VE_YFI, Constants.YFI_REWARD_POOL);
 		yearnLocker.approveUnderlying();
 
 		// Mint YFI to the YearnLocker contract
