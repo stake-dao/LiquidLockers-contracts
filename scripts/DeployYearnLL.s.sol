@@ -54,7 +54,7 @@ contract DeployYearnLL is Script, Test {
 		yearnAccumulator = new YearnAccumulator(address(Constants.YFI), address(liquidityGauge));
 
         // Deploy and Intialize the YearnLocker contract
-        bytes32 lockerSalt = "0x123";
+        bytes32 lockerSalt = "0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e"; // YFI address
 		yearnLocker = new YearnLocker{salt: lockerSalt}(address(yearnAccumulator), address(veYFI), address(rewardPool));
 		yearnLocker.approveUnderlying();
 
