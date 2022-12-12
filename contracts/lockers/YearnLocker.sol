@@ -33,11 +33,12 @@ contract YearnLocker {
 
 	/* ========== CONSTRUCTOR ========== */
 	constructor(
+		address _governance,
 		address _accumulator,
 		address _veToken,
 		address _rewardPool
 	) {
-		governance = msg.sender;
+		governance = _governance;
 		accumulator = _accumulator;
 		VEYFI = _veToken;
 		rewardPool = _rewardPool;

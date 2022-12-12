@@ -66,7 +66,7 @@ contract YearnIntegrationTest is Test {
 
 
 		// Deploy and Intialize the YearnLocker contract
-		yearnLocker = new YearnLocker(address(this), address(veYFI), address(rewardPool));
+		yearnLocker = new YearnLocker(address(this), address(this), address(veYFI), address(rewardPool));
 		yearnLocker.approveUnderlying();
 
         // Deploy Depositor Contract

@@ -31,7 +31,7 @@ contract DeployYearnLL is Script, Test {
     IRewardPool internal rewardPool = IRewardPool(Constants.YFI_REWARD_POOL);
 
     function run() public { 
-        vm.startBroadcast(Constants.SDTNEWDEPLOYER);
+        vm.startBroadcast();
         // deploy sdYFI
         sdYFI = new sdToken("Stake DAO YFI", "sdYFI");
 
@@ -55,7 +55,7 @@ contract DeployYearnLL is Script, Test {
 
         // Deploy and Intialize the YearnLocker contract
         bytes32 lockerSalt = bytes32(uint256(uint160(0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e)) << 96); // YFI address
-		yearnLocker = new YearnLocker{salt: lockerSalt}(address(yearnAccumulator), address(veYFI), address(rewardPool));
+		yearnLocker = new YearnLocker{salt: lockerSalt}(Constants.SDTNEWDEPLOYER, address(yearnAccumulator), address(veYFI), address(rewardPool));
 		yearnLocker.approveUnderlying();
 
         // Deploy Depositor Contract
