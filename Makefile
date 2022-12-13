@@ -50,7 +50,7 @@ test-gaugeController:; @forge test --match-contract GaugeControllerTest
 test-boost-delegation:; @forge test --match-contract VeBoostDelegationTest
 
 # OTHERS #
-test-all:; @forge test --no-match-contract Yearn
+test-all:; @forge test
 
 #################################################
 #        ---------- COVERAGE -----------        #
@@ -63,5 +63,5 @@ coverage-all:; @forge coverage
 ################################################# 
 
 deploy-veSDTFeeAngleProxyV2:; @forge script scripts/DeployVeSDTFeeAngleProxyV2.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast  --verify --etherscan-api-key ${ETHERSCAN_KEY}
-deploy-angleVoterV3:; forge script scripts/DeployAngleVoterV3.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast  --verify --etherscan-api-key ${ETHERSCAN_KEY}
-
+deploy-angleVoterV3:; @forge script scripts/DeployAngleVoterV3.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast  --verify --etherscan-api-key ${ETHERSCAN_KEY}
+deploy-YearnLL:; @forge script scripts/DeployYearnLL.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_KEY}

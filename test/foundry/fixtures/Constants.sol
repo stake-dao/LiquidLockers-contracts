@@ -24,6 +24,8 @@ library Constants {
 	/// --- YEARN FINANCE
 	///////////////////////////////////////////////////////////////
 	address public constant YFI = 0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e;
+	address public constant VE_YFI = 0x90c1f9220d90d3966FbeE24045EDd73E1d588aD5;
+	address public constant YFI_REWARD_POOL = 0xb287a1964AEE422911c7b8409f5E5A273c1412fA;
 
 	////////////////////////////////////////////////////////////////
 	/// --- STAKE DAO ADDRESSES
@@ -32,7 +34,7 @@ library Constants {
 
 	address public constant SDT = 0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F;
 	address public constant VE_SDT = 0x0C30476f66034E11782938DF8e4384970B6c9e8a;
-	address public constant SDT_DISTRIBUTOR = 0x06F66Bc79aeD1b49a393bF5fcF68a70499A2B5DC;
+	address public constant SDT_DISTRIBUTOR = 0x8Dc551B4f5203b51b5366578F42060666D42AB5E;
 	address public constant SDT_DISTRIBUTOR_STRAT = 0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C;
 	address public constant SDT_SMART_WALLET_CHECKER = 0x37E8386602d9EBEa2c56dd11d8E142290595f1b5;
 	address public constant VE_SDT_BOOST_PROXY = 0xD67bdBefF01Fc492f1864E61756E5FBB3f173506;
