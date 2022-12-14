@@ -12,6 +12,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract VeSDTFeeCurveProxyV2Test is Test {
 
 	address public crv;
+	address public usdc;
 	address public frax;
 	CurveStrategy public curveStrategy;
     address[] public crvUsdcSushiPath;
@@ -27,9 +28,10 @@ contract VeSDTFeeCurveProxyV2Test is Test {
 		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
         vm.selectFork(forkId);
 		crv = Constants.CRV;
+		usdc = Constants.USDC;
 		frax = Constants.FRAX;
 		feeD = Constants.FEE_D_SD;
-        crvUsdcSushiPath = [crv, Constants.WETH, Constants.USDC];
+        crvUsdcSushiPath = [crv, Constants.WETH, usdc];
 		curveStrategy = CurveStrategy(Constants.CURVE_STRATEGY);
         proxyV2 = new VeSDTFeeCurveProxyV2(crvUsdcSushiPath);
 		// set new fee proxy
@@ -57,9 +59,11 @@ contract VeSDTFeeCurveProxyV2Test is Test {
 		assertEq(claimableByKeeper, fraxClaimedByKeeper);
 		uint256 callerFraxBalanceAfter = IERC20(frax).balanceOf(alice);
 		uint256 crvBalance = IERC20(crv).balanceOf(address(proxyV2));
+		uint256 usdcBalance = IERC20(usdc).balanceOf(address(proxyV2));
 		uint256 fraxBalance = IERC20(frax).balanceOf(address(proxyV2));
 		uint256 feeDBalanceAfter = IERC20(sdFrax3Crv).balanceOf(feeD);
 		assertEq(crvBalance, 0);
+		assertEq(usdcBalance, 0);
 		assertEq(fraxBalance, 0);
 		assertGt(feeDBalanceAfter, feeDBalanceBefore);
 		assertGt(callerFraxBalanceAfter, callerFraxBalanceBefore);
