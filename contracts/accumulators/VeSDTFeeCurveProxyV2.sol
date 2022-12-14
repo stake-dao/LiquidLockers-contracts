@@ -111,14 +111,6 @@ contract VeSDTFeeCurveProxyV2 is Ownable {
         require(_path[_path.length - 1] == USDC, "wrong final pair");
 		crvToUsdcPath = _path;
 	}
-
-    // /// @notice function to set curve exchange data
-	// /// @param _exchangeData exchange data (pool, fromIndex, toIndex)
-    // function setCurveExchangeData(CurveExchangeData calldata _exchangeData) external onlyOwner {
-    //     address pool = _exchangeData.pool;
-    //     require(pool != address(0), "zero address");
-    //     curveExchangeData = _exchangeData;
-    // }
     
     /// @notice function to recover any ERC20 and send them to the owner
 	/// @param _token token address
