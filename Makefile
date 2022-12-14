@@ -34,6 +34,7 @@ test-blackpool-locker:; @forge test --match-contract BlackpoolTest
 test-curve-vault:; @forge test --match-contract CurveVaultTest
 test-curve-voter:; @forge test --match-contract CurveVoterTest
 test-crv-migration:; @forge test --match-contract CrvMigrationTest
+test-curve-veSdtFeeProxy:; @forge test --match-contract VeSDTFeeCurveProxyV2
 
 # FRAX #
 test-frax-voter:; @forge test --match-contract FraxVoterTest 
