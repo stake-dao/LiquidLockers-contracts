@@ -134,4 +134,9 @@ library Constants {
 	///////////////////////////////////////////////////////////////
 	address public constant ANGLE_STRATEGY = 0x22635427C72e8b0028FeAE1B5e1957508d9D7CAF;
 	address public constant ANGLE_VOTER_V2 = 0xBabe5d223fB31A37ce184481678A6667AC8CD98B;
+
+	////////////////////////////////////////////////////////////////
+	/// --- CURVE LL
+	///////////////////////////////////////////////////////////////
+	address public constant CURVE_STRATEGY = 0x20F1d4Fed24073a9b9d388AfA2735Ac91f079ED6;
 }
