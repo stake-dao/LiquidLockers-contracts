@@ -6,7 +6,7 @@ import "forge-std/Script.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { sdToken } from "contracts/tokens/sdToken.sol";
-import { Constants } from "test/foundry/fixtures/Constants.sol";
+import { Constants } from "test/fixtures/Constants.sol";
 import { DepositorV2 } from "contracts/depositors/DepositorV2.sol";
 import { ILiquidityGauge } from "contracts/interfaces/ILiquidityGauge.sol";
 import { IRewardPool } from "contracts/interfaces/IRewardPool.sol";

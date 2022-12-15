@@ -7,7 +7,7 @@ import "forge-std/console.sol";
 
 import { YearnLocker } from "contracts/lockers/YearnLocker.sol";
 import { IVeYFI } from "contracts/interfaces/IVeYFI.sol";
-import { Constants } from "test/foundry/fixtures/Constants.sol";
+import { Constants } from "test/fixtures/Constants.sol";
 import { IRewardPool } from "contracts/interfaces/IRewardPool.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
