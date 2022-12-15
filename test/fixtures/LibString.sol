@@ -87,11 +87,7 @@ library LibString {
     /// The output is prefixed with "0x" encoded using 2 hexadecimal digits per byte,
     /// giving a total length of `length * 2` bytes.
     /// Reverts if `length` is too small for the output to contain all the digits.
-    function toHexStringNoPrefix(uint256 value, uint256 length)
-        internal
-        pure
-        returns (string memory str)
-    {
+    function toHexStringNoPrefix(uint256 value, uint256 length) internal pure returns (string memory str) {
         /// @solidity memory-safe-assembly
         assembly {
             let start := mload(0x40)
@@ -434,11 +430,7 @@ library LibString {
     /// @dev Returns the byte index of the first location of `search` in `subject`,
     /// searching from left to right.
     /// Returns `NOT_FOUND` (i.e. `type(uint256).max`) if the `search` is not found.
-    function indexOf(string memory subject, string memory search)
-        internal
-        pure
-        returns (uint256 result)
-    {
+    function indexOf(string memory subject, string memory search) internal pure returns (uint256 result) {
         result = indexOf(subject, search, 0);
     }
 
@@ -484,20 +476,12 @@ library LibString {
     /// @dev Returns the byte index of the first location of `search` in `subject`,
     /// searching from right to left.
     /// Returns `NOT_FOUND` (i.e. `type(uint256).max`) if the `search` is not found.
-    function lastIndexOf(string memory subject, string memory search)
-        internal
-        pure
-        returns (uint256 result)
-    {
+    function lastIndexOf(string memory subject, string memory search) internal pure returns (uint256 result) {
         result = lastIndexOf(subject, search, uint256(int256(-1)));
     }
 
     /// @dev Returns whether `subject` starts with `search`.
-    function startsWith(string memory subject, string memory search)
-        internal
-        pure
-        returns (bool result)
-    {
+    function startsWith(string memory subject, string memory search) internal pure returns (bool result) {
         /// @solidity memory-safe-assembly
         assembly {
             let searchLength := mload(search)
@@ -514,11 +498,7 @@ library LibString {
     }
 
     /// @dev Returns whether `subject` ends with `search`.
-    function endsWith(string memory subject, string memory search)
-        internal
-        pure
-        returns (bool result)
-    {
+    function endsWith(string memory subject, string memory search) internal pure returns (bool result) {
         /// @solidity memory-safe-assembly
         assembly {
             let searchLength := mload(search)
@@ -542,11 +522,7 @@ library LibString {
     }
 
     /// @dev Returns `subject` repeated `times`.
-    function repeat(string memory subject, uint256 times)
-        internal
-        pure
-        returns (string memory result)
-    {
+    function repeat(string memory subject, uint256 times) internal pure returns (string memory result) {
         /// @solidity memory-safe-assembly
         assembly {
             let subjectLength := mload(subject)
@@ -579,11 +555,7 @@ library LibString {
 
     /// @dev Returns a copy of `subject` sliced from `start` to `end` (exclusive).
     /// `start` and `end` are byte offsets.
-    function slice(string memory subject, uint256 start, uint256 end)
-        internal
-        pure
-        returns (string memory result)
-    {
+    function slice(string memory subject, uint256 start, uint256 end) internal pure returns (string memory result) {
         /// @solidity memory-safe-assembly
         assembly {
             let subjectLength := mload(subject)
@@ -612,21 +584,13 @@ library LibString {
 
     /// @dev Returns a copy of `subject` sliced from `start` to the end of the string.
     /// `start` is a byte offset.
-    function slice(string memory subject, uint256 start)
-        internal
-        pure
-        returns (string memory result)
-    {
+    function slice(string memory subject, uint256 start) internal pure returns (string memory result) {
         result = slice(subject, start, uint256(int256(-1)));
     }
 
     /// @dev Returns all the indices of `search` in `subject`.
     /// The indices are byte offsets.
-    function indicesOf(string memory subject, string memory search)
-        internal
-        pure
-        returns (uint256[] memory result)
-    {
+    function indicesOf(string memory subject, string memory search) internal pure returns (uint256[] memory result) {
         /// @solidity memory-safe-assembly
         assembly {
             let subjectLength := mload(subject)
@@ -681,11 +645,7 @@ library LibString {
     }
 
     /// @dev Returns a arrays of strings based on the `delimiter` inside of the `subject` string.
-    function split(string memory subject, string memory delimiter)
-        internal
-        pure
-        returns (string[] memory result)
-    {
+    function split(string memory subject, string memory delimiter) internal pure returns (string[] memory result) {
         uint256[] memory indices = indicesOf(subject, delimiter);
         /// @solidity memory-safe-assembly
         assembly {
@@ -730,11 +690,7 @@ library LibString {
 
     /// @dev Returns a concatenated string of `a` and `b`.
     /// Cheaper than `string.concat()` and does not de-align the free memory pointer.
-    function concat(string memory a, string memory b)
-        internal
-        pure
-        returns (string memory result)
-    {
+    function concat(string memory a, string memory b) internal pure returns (string memory result) {
         /// @solidity memory-safe-assembly
         assembly {
             let w := not(31)
@@ -767,11 +723,7 @@ library LibString {
     }
 
     /// @dev Returns a copy of the string in either lowercase or UPPERCASE.
-    function toCase(string memory subject, bool toUpper)
-        internal
-        pure
-        returns (string memory result)
-    {
+    function toCase(string memory subject, bool toUpper) internal pure returns (string memory result) {
         /// @solidity memory-safe-assembly
         assembly {
             let length := mload(subject)
@@ -958,10 +910,7 @@ library LibString {
             result :=
                 mul(
                     // Load the length and the bytes of `a` and `b`.
-                    or(
-                        shl(shl(3, sub(0x1f, aLength)), mload(add(a, aLength))),
-                        mload(sub(add(b, 0x1e), aLength))
-                    ),
+                    or(shl(shl(3, sub(0x1f, aLength)), mload(add(a, aLength))), mload(sub(add(b, 0x1e), aLength))),
                     // `totalLength != 0 && totalLength < 31`. Abuses underflow.
                     // Assumes that the lengths are valid and within the block gas limit.
                     lt(sub(add(aLength, mload(b)), 1), 0x1e)
@@ -972,11 +921,7 @@ library LibString {
     /// @dev Unpacks strings packed using {packTwo}.
     /// Returns the empty strings if `packed` is `bytes32(0)`.
     /// If `packed` is not an output of {packTwo}, the output behaviour is undefined.
-    function unpackTwo(bytes32 packed)
-        internal
-        pure
-        returns (string memory resultA, string memory resultB)
-    {
+    function unpackTwo(bytes32 packed) internal pure returns (string memory resultA, string memory resultB) {
         /// @solidity memory-safe-assembly
         assembly {
             // Grab the free memory pointer.

@@ -9,16 +9,16 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "contracts/accumulators/VeSDTFeeBalancerProxy.sol";
 
 contract BalancerFeeProxyTest is BaseTest {
-	address public constant LOCAL_DEPLOYER = address(0xDE);
-	address public constant ALICE = address(0xAA);
+    address public constant LOCAL_DEPLOYER = address(0xDE);
+    address public constant ALICE = address(0xAA);
 
     uint256 public constant AMOUNT = 100e18;
 
     VeSDTFeeBalancerProxy public veSDTFeeProxy;
 
     function setUp() public {
-		uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
-		vm.selectFork(forkId);
+        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+        vm.selectFork(forkId);
         vm.prank(LOCAL_DEPLOYER);
         veSDTFeeProxy = new VeSDTFeeBalancerProxy();
     }
@@ -37,9 +37,8 @@ contract BalancerFeeProxyTest is BaseTest {
         uint256 balanceClaimerAfter = IERC20(Constants.BAL).balanceOf(ALICE);
         uint256 balanceFeeDistAfter = IERC20(Constants.SDFRAX3CRV).balanceOf(Constants.FEE_D_SD);
 
-        assertEq(balanceClaimerAfter - balanceClaimerBefore, AMOUNT*claimerFee/baseFee, "ERROR_01");
+        assertEq(balanceClaimerAfter - balanceClaimerBefore, AMOUNT * claimerFee / baseFee, "ERROR_01");
         assertGt(balanceFeeDistAfter - balanceFeeDistBefore, 350e18, "ERROR_02");
-        assertEq(IERC20(Constants.BAL).balanceOf(address(veSDTFeeProxy)),0, "ERROR_03");
+        assertEq(IERC20(Constants.BAL).balanceOf(address(veSDTFeeProxy)), 0, "ERROR_03");
     }
-
 }

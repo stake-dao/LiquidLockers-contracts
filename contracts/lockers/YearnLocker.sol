@@ -31,18 +31,13 @@ contract YearnLocker {
     event AccumulatorChanged(address indexed newAccumulator);
     event RewardPoolChanged(address indexed newRewardPool);
 
-	/* ========== CONSTRUCTOR ========== */
-	constructor(
-		address _governance,
-		address _accumulator,
-		address _veToken,
-		address _rewardPool
-	) {
-		governance = _governance;
-		accumulator = _accumulator;
-		VEYFI = _veToken;
-		rewardPool = _rewardPool;
-	}
+    /* ========== CONSTRUCTOR ========== */
+    constructor(address _governance, address _accumulator, address _veToken, address _rewardPool) {
+        governance = _governance;
+        accumulator = _accumulator;
+        VEYFI = _veToken;
+        rewardPool = _rewardPool;
+    }
 
     /* ========== MODIFIERS ========== */
     modifier onlyGovernance() {
