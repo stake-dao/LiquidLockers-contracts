@@ -32,7 +32,7 @@ See package.json for more commands.
 ## Architecture Overview (3 core components)</br>
 
 ### 1 - Liquid Lockers</br>
-![Screenshot 2022-03-22 at 2 05 15 PM](image/liquid-locker-diagram.png)
+![liquid-locker-diagram](https://user-images.githubusercontent.com/55331875/207043343-218480fb-d25d-4f49-b296-56e755a80aca.png)
 
 #### General Understanding
 
@@ -66,7 +66,7 @@ It is one of the core features of the new architecture released by Stake DAO, it
 [Diffchecker](https://www.diffnow.com/report/rif07) with Angle's LiquidityGaugeV4.
 
 ### 2 - Governance</br>
-![Screenshot 2021-12-08 at 9 17 11 PM](https://user-images.githubusercontent.com/22425782/145238612-22e9374d-baf0-4c07-8543-b1aab536ffb8.png) </br>
+![Governance](https://user-images.githubusercontent.com/55331875/207043501-ab236e12-0643-46d8-aa70-8c425b120ef1.png)
 
 At this step, users will be able to vote, using veSDT, via the GaugeController, for deciding the SDT rewards allocation to different locker gauges. Also, via the LiquidityGaugeV4, users who have locked any token, will receive SDT, along with other extra tokens like FXS, agEUR, CRV rewards, and they can also boost their SDT rewards by locking more SDT (i.e. holding more veSDT). </br>
 
@@ -88,7 +88,7 @@ At this step, users will be able to vote, using veSDT, via the GaugeController, 
 7. [**Contracts for Upgradability**](https://github.com/StakeDAO/sd-frax-veSDT/tree/feature/step3#contracts-for-upgradability)
 
 ### 3 - Strategies</br>
-![Screenshot 2022-03-22 at 2 05 15 PM](image/strategy-breakdown-diagram.png)
+![strategy-breakdown-diagram](https://user-images.githubusercontent.com/55331875/207043611-df719a4b-8ad6-439e-a9b4-60b091c2210e.png)
 
 #### General Understanding
 

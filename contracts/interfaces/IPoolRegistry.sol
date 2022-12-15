@@ -2,45 +2,27 @@
 pragma solidity ^0.8.7;
 
 interface IPoolRegistry {
-	function poolLength() external view returns (uint256);
+    function poolLength() external view returns (uint256);
 
-	function poolInfo(uint256 _pid)
-		external
-		view
-		returns (
-			address,
-			address,
-			address,
-			address,
-			uint8
-		);
+    function poolInfo(uint256 _pid) external view returns (address, address, address, address, uint8);
 
-	function vaultMap(uint256 _pid, address _user) external view returns (address vault);
-	
-	function vaultPid(address _vault) external view returns(uint256 pid);
+    function vaultMap(uint256 _pid, address _user) external view returns (address vault);
 
-	function addUserVault(uint256 _pid, address _user)
-		external
-		returns (
-			address vault,
-			address stakeAddress,
-			address stakeToken,
-			address rewards
-		);
+    function vaultPid(address _vault) external view returns (uint256 pid);
 
-	function deactivatePool(uint256 _pid) external;
+    function addUserVault(uint256 _pid, address _user)
+        external
+        returns (address vault, address stakeAddress, address stakeToken, address rewards);
 
-	function createNewPoolRewards(uint256 _pid) external;
+    function deactivatePool(uint256 _pid) external;
 
-	function addPool(
-		address _implementation,
-		address _stakingAddress,
-		address _stakingToken
-	) external;
+    function createNewPoolRewards(uint256 _pid) external;
 
-	function setRewardImplementation(address _imp) external;
+    function addPool(address _implementation, address _stakingAddress, address _stakingToken) external;
 
-	function setDistributor(address _distributor) external;
+    function setRewardImplementation(address _imp) external;
 
-	function setOperator(address _op) external;
+    function setDistributor(address _distributor) external;
+
+    function setOperator(address _op) external;
 }

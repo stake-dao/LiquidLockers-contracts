@@ -31,11 +31,7 @@ interface FraxStakingRewardsMultiGauge {
     function calcCurCombinedWeight(address account)
         external
         view
-        returns (
-            uint256 old_combined_weight,
-            uint256 new_vefxs_multiplier,
-            uint256 new_combined_weight
-        );
+        returns (uint256 old_combined_weight, uint256 new_vefxs_multiplier, uint256 new_combined_weight);
 
     // All the reward tokens
     function getAllRewardTokens() external view returns (address[] memory);
