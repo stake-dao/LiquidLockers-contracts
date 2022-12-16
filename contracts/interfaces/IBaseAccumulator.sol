@@ -2,5 +2,5 @@
 pragma solidity ^0.8.7;
 
 interface IBaseAccumulator {
-	function claimerFee() external view returns (uint256);
+    function claimerFee() external view returns (uint256);
 }

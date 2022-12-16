@@ -1,6 +1,6 @@
 /**
- *Submitted for verification at Etherscan.io on 2022-05-13
-*/
+ * Submitted for verification at Etherscan.io on 2022-05-13
+ */
 
 // File: contracts\interfaces\MathUtil.sol
 
@@ -24,31 +24,33 @@ library MathUtil {
 pragma solidity ^0.8.7;
 
 interface IBooster {
-   function addPool(address _implementation, address _stakingAddress, address _stakingToken) external;
-   function deactivatePool(uint256 _pid) external;
-   function voteGaugeWeight(address _controller, address _gauge, uint256 _weight) external;
-   function setDelegate(address _delegateContract, address _delegate, bytes32 _space) external;
-   function owner() external returns(address);
-   function rewardManager() external returns(address);
+    function addPool(address _implementation, address _stakingAddress, address _stakingToken) external;
+    function deactivatePool(uint256 _pid) external;
+    function voteGaugeWeight(address _controller, address _gauge, uint256 _weight) external;
+    function setDelegate(address _delegateContract, address _delegate, bytes32 _space) external;
+    function owner() external returns (address);
+    function rewardManager() external returns (address);
 }
 
 // File: contracts\interfaces\IVoterProxy.sol
 pragma solidity ^0.8.7;
 
-interface IVoterProxy{
-    function operator() external view returns(address);
-    function gov() external view returns(address);
-    function governance() external view returns(address);
+interface IVoterProxy {
+    function operator() external view returns (address);
+    function gov() external view returns (address);
+    function governance() external view returns (address);
 }
 
 // File: contracts\interfaces\IPoolRegistry.sol
 pragma solidity ^0.8.7;
 
 interface IPoolRegistry {
-    function poolLength() external view returns(uint256);
-    function poolInfo(uint256 _pid) external view returns(address, address, address, uint8);
-    function vaultMap(uint256 _pid, address _user) external view returns(address vault);
-    function addUserVault(uint256 _pid, address _user) external returns(address vault, address stakeAddress, address stakeToken, address rewards);
+    function poolLength() external view returns (uint256);
+    function poolInfo(uint256 _pid) external view returns (address, address, address, uint8);
+    function vaultMap(uint256 _pid, address _user) external view returns (address vault);
+    function addUserVault(uint256 _pid, address _user)
+        external
+        returns (address vault, address stakeAddress, address stakeToken, address rewards);
     function deactivatePool(uint256 _pid) external;
     function addPool(address _implementation, address _stakingAddress, address _stakingToken) external;
     function setRewardActiveOnCreation(bool _active) external;
@@ -59,42 +61,37 @@ interface IPoolRegistry {
 
 pragma solidity ^0.8.7;
 
-interface IRewards{
-    
+interface IRewards {
     struct EarnedData {
         address token;
         uint256 amount;
     }
-    
+
     function initialize(uint256 _pid, bool _startActive) external;
     function addReward(address _rewardsToken, address _distributor) external;
-    function approveRewardDistributor(
-        address _rewardsToken,
-        address _distributor,
-        bool _approved
-    ) external;
+    function approveRewardDistributor(address _rewardsToken, address _distributor, bool _approved) external;
     function deposit(address _owner, uint256 _amount) external;
     function withdraw(address _owner, uint256 _amount) external;
     function getReward(address _forward) external;
     function notifyRewardAmount(address _rewardsToken, uint256 _reward) external;
     function balanceOf(address account) external view returns (uint256);
-    function claimableRewards(address _account) external view returns(EarnedData[] memory userRewards);
+    function claimableRewards(address _account) external view returns (EarnedData[] memory userRewards);
     function rewardTokens(uint256 _rid) external view returns (address);
-    function rewardTokenLength() external view returns(uint256);
-    function active() external view returns(bool);
+    function rewardTokenLength() external view returns (uint256);
+    function active() external view returns (bool);
 }
 
 // File: contracts\interfaces\IRewardHook.sol
 
 pragma solidity ^0.8.7;
 
-interface IRewardHook{
-    enum HookType{
+interface IRewardHook {
+    enum HookType {
         Deposit,
         Withdraw,
         RewardClaim
     }
-    
+
     function onRewardClaim(HookType _type, uint256 _pid) external;
 }
 
@@ -159,11 +156,7 @@ interface IERC20 {
      *
      * Emits a {Transfer} event.
      */
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external returns (bool);
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
 
     /**
      * @dev Emitted when `value` tokens are moved from one account (`from`) to
@@ -181,7 +174,6 @@ interface IERC20 {
 }
 
 // File: @openzeppelin\contracts\utils\Address.sol
-
 
 pragma solidity ^0.8.0;
 
@@ -237,7 +229,7 @@ library Address {
     function sendValue(address payable recipient, uint256 amount) internal {
         require(address(this).balance >= amount, "Address: insufficient balance");
 
-        (bool success, ) = recipient.call{value: amount}("");
+        (bool success,) = recipient.call{value: amount}("");
         require(success, "Address: unable to send value, recipient may have reverted");
     }
 
@@ -269,11 +261,10 @@ library Address {
      *
      * _Available since v3.1._
      */
-    function functionCall(
-        address target,
-        bytes memory data,
-        string memory errorMessage
-    ) internal returns (bytes memory) {
+    function functionCall(address target, bytes memory data, string memory errorMessage)
+        internal
+        returns (bytes memory)
+    {
         return functionCallWithValue(target, data, 0, errorMessage);
     }
 
@@ -288,11 +279,7 @@ library Address {
      *
      * _Available since v3.1._
      */
-    function functionCallWithValue(
-        address target,
-        bytes memory data,
-        uint256 value
-    ) internal returns (bytes memory) {
+    function functionCallWithValue(address target, bytes memory data, uint256 value) internal returns (bytes memory) {
         return functionCallWithValue(target, data, value, "Address: low-level call with value failed");
     }
 
@@ -302,12 +289,10 @@ library Address {
      *
      * _Available since v3.1._
      */
-    function functionCallWithValue(
-        address target,
-        bytes memory data,
-        uint256 value,
-        string memory errorMessage
-    ) internal returns (bytes memory) {
+    function functionCallWithValue(address target, bytes memory data, uint256 value, string memory errorMessage)
+        internal
+        returns (bytes memory)
+    {
         require(address(this).balance >= value, "Address: insufficient balance for call");
         require(isContract(target), "Address: call to non-contract");
 
@@ -331,11 +316,11 @@ library Address {
      *
      * _Available since v3.3._
      */
-    function functionStaticCall(
-        address target,
-        bytes memory data,
-        string memory errorMessage
-    ) internal view returns (bytes memory) {
+    function functionStaticCall(address target, bytes memory data, string memory errorMessage)
+        internal
+        view
+        returns (bytes memory)
+    {
         require(isContract(target), "Address: static call to non-contract");
 
         (bool success, bytes memory returndata) = target.staticcall(data);
@@ -358,11 +343,10 @@ library Address {
      *
      * _Available since v3.4._
      */
-    function functionDelegateCall(
-        address target,
-        bytes memory data,
-        string memory errorMessage
-    ) internal returns (bytes memory) {
+    function functionDelegateCall(address target, bytes memory data, string memory errorMessage)
+        internal
+        returns (bytes memory)
+    {
         require(isContract(target), "Address: delegate call to non-contract");
 
         (bool success, bytes memory returndata) = target.delegatecall(data);
@@ -375,11 +359,11 @@ library Address {
      *
      * _Available since v4.3._
      */
-    function verifyCallResult(
-        bool success,
-        bytes memory returndata,
-        string memory errorMessage
-    ) internal pure returns (bytes memory) {
+    function verifyCallResult(bool success, bytes memory returndata, string memory errorMessage)
+        internal
+        pure
+        returns (bytes memory)
+    {
         if (success) {
             return returndata;
         } else {
@@ -402,7 +386,6 @@ library Address {
 
 pragma solidity ^0.8.0;
 
-
 /**
  * @title SafeERC20
  * @dev Wrappers around ERC20 operations that throw on failure (when the token
@@ -415,20 +398,11 @@ pragma solidity ^0.8.0;
 library SafeERC20 {
     using Address for address;
 
-    function safeTransfer(
-        IERC20 token,
-        address to,
-        uint256 value
-    ) internal {
+    function safeTransfer(IERC20 token, address to, uint256 value) internal {
         _callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));
     }
 
-    function safeTransferFrom(
-        IERC20 token,
-        address from,
-        address to,
-        uint256 value
-    ) internal {
+    function safeTransferFrom(IERC20 token, address from, address to, uint256 value) internal {
         _callOptionalReturn(token, abi.encodeWithSelector(token.transferFrom.selector, from, to, value));
     }
 
@@ -439,11 +413,7 @@ library SafeERC20 {
      * Whenever possible, use {safeIncreaseAllowance} and
      * {safeDecreaseAllowance} instead.
      */
-    function safeApprove(
-        IERC20 token,
-        address spender,
-        uint256 value
-    ) internal {
+    function safeApprove(IERC20 token, address spender, uint256 value) internal {
         // safeApprove should only be called when setting an initial allowance,
         // or when resetting it to zero. To increase and decrease it, use
         // 'safeIncreaseAllowance' and 'safeDecreaseAllowance'
@@ -454,20 +424,12 @@ library SafeERC20 {
         _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, value));
     }
 
-    function safeIncreaseAllowance(
-        IERC20 token,
-        address spender,
-        uint256 value
-    ) internal {
+    function safeIncreaseAllowance(IERC20 token, address spender, uint256 value) internal {
         uint256 newAllowance = token.allowance(address(this), spender) + value;
         _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
     }
 
-    function safeDecreaseAllowance(
-        IERC20 token,
-        address spender,
-        uint256 value
-    ) internal {
+    function safeDecreaseAllowance(IERC20 token, address spender, uint256 value) internal {
         unchecked {
             uint256 oldAllowance = token.allowance(address(this), spender);
             require(oldAllowance >= value, "SafeERC20: decreased allowance below zero");
@@ -498,10 +460,9 @@ library SafeERC20 {
 // File: contracts\MultiRewards.sol
 
 pragma solidity ^0.8.7;
-contract MultiRewards is IRewards{
+
+contract MultiRewards is IRewards {
     using SafeERC20 for IERC20;
-
-
 
     /* ========== STATE VARIABLES ========== */
 
@@ -523,7 +484,7 @@ contract MultiRewards is IRewards{
     mapping(address => Reward) public rewardData;
 
     // Duration that rewards are streamed over
-    uint256 public constant rewardsDuration = 86400 * 7;
+    uint256 public constant rewardsDuration = 86_400 * 7;
 
     // reward token -> distributor -> is approved to add rewards
     mapping(address => mapping(address => bool)) public rewardDistributors;
@@ -532,11 +493,10 @@ contract MultiRewards is IRewards{
     mapping(address => mapping(address => uint256)) public userRewardPerTokenPaid;
     mapping(address => mapping(address => uint256)) public rewards;
 
-  
     //mappings for balance data
     mapping(address => uint256) public balances;
     uint256 public totalSupply;
- 
+
     address public immutable poolRegistry;
     uint256 public poolId;
     bool public override active;
@@ -548,12 +508,12 @@ contract MultiRewards is IRewards{
         poolRegistry = _poolRegistry;
     }
 
-    function initialize(uint256 _pid, bool _startActive) external override{
-        require(!init,"already init");
+    function initialize(uint256 _pid, bool _startActive) external override {
+        require(!init, "already init");
 
         //set variables
         poolId = _pid;
-        if(_startActive){
+        if (_startActive) {
             active = true;
         }
         init = true;
@@ -562,16 +522,13 @@ contract MultiRewards is IRewards{
     /* ========== ADMIN CONFIGURATION ========== */
 
     //turn on rewards contract
-    function setActive() external onlyOwner{
+    function setActive() external onlyOwner {
         active = true;
         emit Activate();
     }
 
     // Add a new reward token to be distributed to stakers
-    function addReward(
-        address _rewardsToken,
-        address _distributor
-    ) public override onlyOwner {
+    function addReward(address _rewardsToken, address _distributor) public override onlyOwner {
         require(active, "!active");
         require(rewardData[_rewardsToken].lastUpdateTime == 0);
 
@@ -583,110 +540,103 @@ contract MultiRewards is IRewards{
     }
 
     // Modify approval for an address to call notifyRewardAmount
-    function approveRewardDistributor(
-        address _rewardsToken,
-        address _distributor,
-        bool _approved
-    ) external override onlyOwner {
+    function approveRewardDistributor(address _rewardsToken, address _distributor, bool _approved)
+        external
+        override
+        onlyOwner
+    {
         require(rewardData[_rewardsToken].lastUpdateTime > 0);
         rewardDistributors[_rewardsToken][_distributor] = _approved;
         emit RewardDistributorApproved(_rewardsToken, _distributor);
     }
 
-    function setRewardHook( address _hook ) external onlyOwner{
+    function setRewardHook(address _hook) external onlyOwner {
         rewardHook = _hook;
         emit HookSet(_hook);
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    function deposit(address _owner, uint256 _amount) external override updateReward(msg.sender){
+    function deposit(address _owner, uint256 _amount) external override updateReward(msg.sender) {
         //only allow registered vaults to call
-        require(IPoolRegistry(poolRegistry).vaultMap(poolId,_owner) == msg.sender, "!auth");
+        require(IPoolRegistry(poolRegistry).vaultMap(poolId, _owner) == msg.sender, "!auth");
 
         balances[msg.sender] += _amount;
         totalSupply += _amount;
         emit Deposited(msg.sender, _amount);
 
-        if(rewardHook != address(0)){
-            try IRewardHook(rewardHook).onRewardClaim(IRewardHook.HookType.Deposit, poolId){
-            }catch{}
+        if (rewardHook != address(0)) {
+            try IRewardHook(rewardHook).onRewardClaim(IRewardHook.HookType.Deposit, poolId) {} catch {}
         }
     }
 
-    function withdraw(address _owner, uint256 _amount) external override updateReward(msg.sender){
+    function withdraw(address _owner, uint256 _amount) external override updateReward(msg.sender) {
         //only allow registered vaults to call
-        require(IPoolRegistry(poolRegistry).vaultMap(poolId,_owner) == msg.sender, "!auth");
+        require(IPoolRegistry(poolRegistry).vaultMap(poolId, _owner) == msg.sender, "!auth");
 
         balances[msg.sender] -= _amount;
         totalSupply -= _amount;
         emit Withdrawn(msg.sender, _amount);
 
-        if(rewardHook != address(0)){
-            try IRewardHook(rewardHook).onRewardClaim(IRewardHook.HookType.Withdraw, poolId){
-            }catch{}
+        if (rewardHook != address(0)) {
+            try IRewardHook(rewardHook).onRewardClaim(IRewardHook.HookType.Withdraw, poolId) {} catch {}
         }
     }
-
 
     /* ========== VIEWS ========== */
 
-    function _rewardPerToken(address _rewardsToken) internal view returns(uint256) {
+    function _rewardPerToken(address _rewardsToken) internal view returns (uint256) {
         if (totalSupply == 0) {
             return rewardData[_rewardsToken].rewardPerTokenStored;
         }
-        return
-        rewardData[_rewardsToken].rewardPerTokenStored 
-        + (
-            (_lastTimeRewardApplicable(rewardData[_rewardsToken].periodFinish) - rewardData[_rewardsToken].lastUpdateTime)     
-            * rewardData[_rewardsToken].rewardRate
-            * 1e18
-            / totalSupply
-        );
+        return rewardData[_rewardsToken].rewardPerTokenStored
+            + (
+                (
+                    _lastTimeRewardApplicable(rewardData[_rewardsToken].periodFinish)
+                        - rewardData[_rewardsToken].lastUpdateTime
+                ) * rewardData[_rewardsToken].rewardRate * 1e18 / totalSupply
+            );
     }
 
-    function _earned(
-        address _user,
-        address _rewardsToken,
-        uint256 _balance
-    ) internal view returns(uint256) {
-        return (_balance * (_rewardPerToken(_rewardsToken) - userRewardPerTokenPaid[_user][_rewardsToken] ) / 1e18) + rewards[_user][_rewardsToken];
+    function _earned(address _user, address _rewardsToken, uint256 _balance) internal view returns (uint256) {
+        return (_balance * (_rewardPerToken(_rewardsToken) - userRewardPerTokenPaid[_user][_rewardsToken]) / 1e18)
+            + rewards[_user][_rewardsToken];
     }
 
-    function _lastTimeRewardApplicable(uint256 _finishTime) internal view returns(uint256){
+    function _lastTimeRewardApplicable(uint256 _finishTime) internal view returns (uint256) {
         return MathUtil.min(block.timestamp, _finishTime);
     }
 
-    function lastTimeRewardApplicable(address _rewardsToken) public view returns(uint256) {
+    function lastTimeRewardApplicable(address _rewardsToken) public view returns (uint256) {
         return _lastTimeRewardApplicable(rewardData[_rewardsToken].periodFinish);
     }
 
-    function rewardPerToken(address _rewardsToken) external view returns(uint256) {
+    function rewardPerToken(address _rewardsToken) external view returns (uint256) {
         return _rewardPerToken(_rewardsToken);
     }
 
-    function getRewardForDuration(address _rewardsToken) external view returns(uint256) {
+    function getRewardForDuration(address _rewardsToken) external view returns (uint256) {
         return rewardData[_rewardsToken].rewardRate * rewardsDuration;
     }
 
     // Address and claimable amount of all reward tokens for the given account
-    function claimableRewards(address _account) external view override returns(EarnedData[] memory userRewards) {
+    function claimableRewards(address _account) external view override returns (EarnedData[] memory userRewards) {
         userRewards = new EarnedData[](rewardTokens.length);
         for (uint256 i = 0; i < userRewards.length; i++) {
             address token = rewardTokens[i];
             userRewards[i].token = token;
-            userRewards[i].amount = _earned(_account, token,  balances[_account]);
+            userRewards[i].amount = _earned(_account, token, balances[_account]);
         }
         return userRewards;
     }
 
-    function balanceOf(address _user) external view override returns(uint256 amount) {
+    function balanceOf(address _user) external view override returns (uint256 amount) {
         return balances[_user];
     }
 
     // Claim all pending rewards
     function getReward(address _forward) public override updateReward(msg.sender) {
-        for (uint i; i < rewardTokens.length; i++) {
+        for (uint256 i; i < rewardTokens.length; i++) {
             address _rewardsToken = rewardTokens[i];
             uint256 reward = rewards[msg.sender][_rewardsToken];
             if (reward > 0) {
@@ -695,16 +645,14 @@ contract MultiRewards is IRewards{
                 emit RewardPaid(msg.sender, _rewardsToken, reward);
             }
         }
-        if(rewardHook != address(0)){
-            try IRewardHook(rewardHook).onRewardClaim(IRewardHook.HookType.RewardClaim, poolId){
-            }catch{}
+        if (rewardHook != address(0)) {
+            try IRewardHook(rewardHook).onRewardClaim(IRewardHook.HookType.RewardClaim, poolId) {} catch {}
         }
     }
 
-
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function rewardTokenLength() external view override returns(uint256){
+    function rewardTokenLength() external view override returns (uint256) {
         return rewardTokens.length;
     }
 
@@ -732,7 +680,7 @@ contract MultiRewards is IRewards{
         // handle the transfer of reward tokens via `transferFrom` to reduce the number
         // of transactions required and ensure correctness of the _reward amount
         IERC20(_rewardsToken).safeTransferFrom(msg.sender, address(this), _reward);
-        
+
         emit RewardAdded1(_rewardsToken, _reward);
     }
 
@@ -752,12 +700,12 @@ contract MultiRewards is IRewards{
 
     modifier updateReward(address _account) {
         uint256 userBal = balances[_account];
-        for (uint i = 0; i < rewardTokens.length; i++) {
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
             address token = rewardTokens[i];
             rewardData[token].rewardPerTokenStored = _rewardPerToken(token);
             rewardData[token].lastUpdateTime = _lastTimeRewardApplicable(rewardData[token].periodFinish);
             if (_account != address(0)) {
-                rewards[_account][token] = _earned(_account, token, userBal );
+                rewards[_account][token] = _earned(_account, token, userBal);
                 userRewardPerTokenPaid[_account][token] = rewardData[token].rewardPerTokenStored;
             }
         }

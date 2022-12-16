@@ -27,11 +27,7 @@ interface LiquidityGauge {
     // solhint-disable-next-line
     function reward_tokens(uint256 _i) external view returns (address);
 
-    function withdraw(
-        uint256 _value,
-        address _addr,
-        bool _claim_rewards
-    ) external;
+    function withdraw(uint256 _value, address _addr, bool _claim_rewards) external;
 
     // solhint-disable-next-line
     function reward_data(address _tokenReward) external view returns (Reward memory);
