@@ -9,7 +9,7 @@ import "contracts/strategies/balancer/BalancerVault.sol";
 import "contracts/accumulators/BalancerAccumulator.sol";
 import "contracts/external/TransparentUpgradeableProxy.sol";
 import "contracts/external/ProxyAdmin.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "openzeppelin-contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 import "contracts/interfaces/ILiquidityGaugeStrat.sol";
 
