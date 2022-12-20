@@ -7,7 +7,7 @@ import "forge-std/Vm.sol";
 import {Constants} from "./fixtures/Constants.sol";
 import {CurveStrategy} from "contracts/strategies/curve/CurveStrategy.sol";
 import {VeSDTFeeCurveProxyV2} from "contracts/accumulators/VeSDTFeeCurveProxyV2.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-contracts/token/ERC20/IERC20.sol";
 
 contract VeSDTFeeCurveProxyV2Test is Test {
     address public crv;

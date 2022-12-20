@@ -12,7 +12,7 @@ import {DepositorV2} from "contracts/depositors/DepositorV2.sol";
 import {Constants} from "test/fixtures/Constants.sol";
 import {Constants} from "test/fixtures/Constants.sol";
 import {IRewardPool} from "contracts/interfaces/IRewardPool.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
 import {ILiquidityGauge} from "contracts/interfaces/ILiquidityGauge.sol";
 import {YearnAccumulator} from "contracts/accumulators/YearnAccumulator.sol";
 import {TransparentUpgradeableProxy} from "contracts/external/TransparentUpgradeableProxy.sol";
