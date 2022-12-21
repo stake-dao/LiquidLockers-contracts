@@ -44,7 +44,7 @@ contract YearnIntegrationTest is Test {
 
         sdYFI = new sdToken("Stake DAO YFI", "sdYFI");
 
-        address liquidityGaugeImpl = deployCode("artifacts/contracts/staking/LiquidityGaugeV4.vy/LiquidityGaugeV4.json");
+        address liquidityGaugeImpl = deployCode("artifacts/vyper-contracts/LiquidityGaugeV4.vy/LiquidityGaugeV4.json");
 
         // Deploy LiquidityGauge
         liquidityGauge = ILiquidityGauge(

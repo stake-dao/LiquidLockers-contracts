@@ -96,8 +96,8 @@ contract GaugeControllerTest is BaseTest {
             "Vote-escrowed SDT",
             "veSDT"
         );
-        veSDTImpl = IVeSDT(deployCode("artifacts/contracts/dao/veSDT.vy/veSDT.json"));
-        veSDTImplNew = IVeSDT(deployCode("artifacts/contracts/dao/veSDT.vy/veSDT.json"));
+        veSDTImpl = IVeSDT(deployCode("artifacts/vyper-contracts/veSDT.vy/veSDT.json"));
+        veSDTImplNew = IVeSDT(deployCode("artifacts/vyper-contracts/veSDT.vy/veSDT.json"));
         proxy = new TransparentUpgradeableProxy(address(veSDTImpl), address(proxyAdmin), veSDTData);
         veSDT = IVeSDT(address(proxy));
         vm.stopPrank();
@@ -105,7 +105,7 @@ contract GaugeControllerTest is BaseTest {
         // Deploy Gauge Controller
         gaugeController = IGaugeController(
             deployCode(
-                "artifacts/contracts/dao/GaugeController.vy/GaugeController.json",
+                "artifacts/vyper-contracts/GaugeController.vy/GaugeController.json",
                 abi.encode(Constants.SDT, address(veSDT), LOCAL_DEPLOYER)
             )
         );
@@ -142,7 +142,7 @@ contract GaugeControllerTest is BaseTest {
 
         // Deploy LGV4 model
         liquidityGaugeImpl =
-            ILiquidityGauge(deployCode("artifacts/contracts/staking/LiquidityGaugeV4.vy/LiquidityGaugeV4.json"));
+            ILiquidityGauge(deployCode("artifacts/vyper-contracts/LiquidityGaugeV4.vy/LiquidityGaugeV4.json"));
         // Deploy Liquidity Gauge V4 for Angle
         bytes memory lgData = abi.encodeWithSignature(
             "initialize(address,address,address,address,address,address)",

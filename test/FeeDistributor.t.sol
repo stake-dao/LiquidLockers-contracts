@@ -52,7 +52,7 @@ contract FeeDistributorTest is BaseTest {
             "Vote-escrowed SDT",
             "veSDT"
         );
-        veSDTImpl = IVeSDT(deployCode("artifacts/contracts/dao/veSDT.vy/veSDT.json"));
+        veSDTImpl = IVeSDT(deployCode("artifacts/vyper-contracts/veSDT.vy/veSDT.json"));
         proxy = new TransparentUpgradeableProxy(address(veSDTImpl), address(proxyAdmin), veSDTData);
         veSDT = IVeSDT(address(proxy));
         vm.stopPrank();
@@ -165,7 +165,7 @@ contract FeeDistributorTest is BaseTest {
         vm.prank(LOCAL_DEPLOYER);
         feeDistributor = IFeeDistributor(
             deployCode(
-                "artifacts/contracts/dao/FeeDistributor.vy/FeeDistributor.json",
+                "artifacts/vyper-contracts/FeeDistributor.vy/FeeDistributor.json",
                 abi.encode(address(veSDT), block.timestamp, reward, LOCAL_DEPLOYER, Constants.STAKE_DAO_MULTISIG)
             )
         );

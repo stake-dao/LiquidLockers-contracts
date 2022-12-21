@@ -85,7 +85,7 @@ contract BalancerVaultTest is BaseTest {
             "gauge"
         );
         liquidityGaugeImpl = ILiquidityGaugeStrat(
-            deployCode("artifacts/contracts/staking/LiquidityGaugeV4Strat.vy/LiquidityGaugeV4Strat.json")
+            deployCode("artifacts/vyper-contracts/LiquidityGaugeV4Strat.vy/LiquidityGaugeV4Strat.json")
         );
         proxy = new TransparentUpgradeableProxy(address(liquidityGaugeImpl), address(proxyAdmin), lgData);
         liquidityGauge = ILiquidityGaugeStrat(address(proxy));
