@@ -4,7 +4,7 @@ pragma solidity ^0.8.7;
 // Base Tests
 import "./baseTest/Base.t.sol";
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-contracts/token/ERC20/IERC20.sol";
 
 import "contracts/accumulators/VeSDTFeeBalancerProxy.sol";
 

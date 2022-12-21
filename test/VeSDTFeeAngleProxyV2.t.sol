@@ -7,7 +7,7 @@ import "forge-std/Vm.sol";
 import {Constants} from "./fixtures/Constants.sol";
 import {AngleStrategy} from "contracts/strategies/angle/AngleStrategy.sol";
 import {VeSDTFeeAngleProxyV2} from "contracts/accumulators/VeSDTFeeAngleProxyV2.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-contracts/token/ERC20/IERC20.sol";
 
 contract VeSDTFeeAngleProxyV2Test is Test {
     address public angle;

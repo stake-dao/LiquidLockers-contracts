@@ -74,12 +74,12 @@ contract AngleVaultTest is BaseTest {
         distributorImpl = new SdtDistributorV2();
         gaugeController = IGaugeController(
             deployCode(
-                "artifacts/contracts/dao/GaugeController.vy/GaugeController.json",
+                "artifacts/vyper-contracts/GaugeController.vy/GaugeController.json",
                 abi.encode(Constants.SDT, Constants.VE_SDT, LOCAL_DEPLOYER)
             )
         );
         liquidityGaugeStratImpl = ILiquidityGaugeStrat(
-            deployCode("artifacts/contracts/staking/LiquidityGaugeV4Strat.vy/LiquidityGaugeV4Strat.json")
+            deployCode("artifacts/vyper-contracts/LiquidityGaugeV4Strat.vy/LiquidityGaugeV4Strat.json")
         );
         bytes memory distributorData = abi.encodeWithSignature(
             "initialize(address,address,address,address)",

@@ -4,7 +4,7 @@ pragma solidity 0.8.7;
 
 import "../../strategies/angle/AngleStrategy.sol";
 import "../../interfaces/ISDTDistributor.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-contracts/token/ERC20/IERC20.sol";
 
 interface IMerkle {
     function claim(address[] memory, address[] memory, uint256[] memory, bytes32[][] memory) external;

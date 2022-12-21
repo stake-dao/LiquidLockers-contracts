@@ -86,7 +86,7 @@ contract AngleTest is BaseTest {
         // Deploy Gauge Controller
         gaugeController = IGaugeController(
             deployCode(
-                "artifacts/contracts/dao/GaugeController.vy/GaugeController.json",
+                "artifacts/vyper-contracts/GaugeController.vy/GaugeController.json",
                 abi.encode(Constants.SDT, Constants.VE_SDT, LOCAL_DEPLOYER)
             )
         );
@@ -119,7 +119,7 @@ contract AngleTest is BaseTest {
             address(sdtDistributor)
         );
         liquidityGaugeImpl =
-            ILiquidityGauge(deployCode("artifacts/contracts/staking/LiquidityGaugeV4.vy/LiquidityGaugeV4.json"));
+            ILiquidityGauge(deployCode("artifacts/vyper-contracts/LiquidityGaugeV4.vy/LiquidityGaugeV4.json"));
         proxy = new TransparentUpgradeableProxy(address(liquidityGaugeImpl), address(proxyAdmin), lgData);
         liquidityGauge = ILiquidityGauge(address(proxy));
         ////////////////////////////////////////////////////////////////

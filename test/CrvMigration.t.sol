@@ -115,7 +115,7 @@ contract CrvMigrationTest is BaseTest {
             "Vote-escrowed SDT",
             "veSDT"
         );
-        veSDTImpl = IVeSDT(deployCode("artifacts/contracts/dao/veSDT.vy/veSDT.json"));
+        veSDTImpl = IVeSDT(deployCode("artifacts/vyper-contracts/veSDT.vy/veSDT.json"));
         proxy = new TransparentUpgradeableProxy(address(veSDTImpl), address(proxyAdmin), veSDTData);
         veSDT = IVeSDT(address(proxy));
 
@@ -128,7 +128,7 @@ contract CrvMigrationTest is BaseTest {
         // Deploy Gauge Controller
         gaugeController = IGaugeController(
             deployCode(
-                "artifacts/contracts/dao/GaugeController.vy/GaugeController.json",
+                "artifacts/vyper-contracts/GaugeController.vy/GaugeController.json",
                 abi.encode(Constants.SDT, Constants.VE_SDT, LOCAL_DEPLOYER)
             )
         );
@@ -156,7 +156,7 @@ contract CrvMigrationTest is BaseTest {
             address(sdtDistributor)
         );
         liquidityGaugeImpl =
-            ILiquidityGauge(deployCode("artifacts/contracts/staking/LiquidityGaugeV4.vy/LiquidityGaugeV4.json"));
+            ILiquidityGauge(deployCode("artifacts/vyper-contracts/LiquidityGaugeV4.vy/LiquidityGaugeV4.json"));
         proxy = new TransparentUpgradeableProxy(address(liquidityGaugeImpl), address(proxyAdmin), lgData);
         liquidityGauge = ILiquidityGauge(address(proxy));
 
