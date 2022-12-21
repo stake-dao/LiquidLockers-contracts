@@ -106,12 +106,8 @@ contract AngleVaultTest is BaseTest {
         vm.recordLogs();
         factory.cloneAndInit(address(liquidityGaugeAngleUSDC));
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        emit log_uint(logs.length);
         bytes memory eventData1 = logs[0].data;
-        emit log_bytes(eventData1);
         bytes memory eventData3 = logs[2].data;
-        emit log_bytes(eventData3);
-
         vaultUSDC = AngleVault(bytesToAddressCustom(eventData1, 32));
         liquidityGaugeUSDC = ILiquidityGaugeStrat(bytesToAddressCustom(eventData3, 32));
 
