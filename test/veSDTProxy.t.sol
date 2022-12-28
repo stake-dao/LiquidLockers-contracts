@@ -15,7 +15,7 @@ contract VeSDTProxyTest is BaseTest {
     address internal constant LOCAL_DEPLOYER = address(0xDE);
     address internal constant ALICE = address(0xAA);
     address internal constant BOB = address(0xB0B);
-    address internal token = Constants.SDT;
+    address internal token = AddressBook.SDT;
 
     uint256 internal constant INIITIAL_AMOUNT_TO_LOCK = 1_000e18;
     uint256 internal constant MAX_DURATION = 60 * 60 * 24 * 365 * 4;
@@ -75,7 +75,7 @@ contract VeSDTProxyTest is BaseTest {
         uint256 balanceLockerBefore = IERC20(token).balanceOf(address(veSDT));
         uint256 balanceUserBefore = IERC20(token).balanceOf(ALICE);
         vm.prank(ALICE);
-        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + Constants.WEEK);
+        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + 1 weeks);
         uint256 balanceLockerAfter = IERC20(token).balanceOf(address(veSDT));
         uint256 balanceUserAfter = IERC20(token).balanceOf(ALICE);
 
@@ -92,7 +92,7 @@ contract VeSDTProxyTest is BaseTest {
         uint256 balanceLockerBefore = IERC20(token).balanceOf(address(veSDT));
         uint256 balanceUserBefore = IERC20(token).balanceOf(ALICE);
         vm.prank(ALICE);
-        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK / 2, block.timestamp + Constants.WEEK);
+        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK / 2, block.timestamp + 1 weeks);
 
         upgradeProxy();
 

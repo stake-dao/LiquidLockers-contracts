@@ -26,10 +26,9 @@ import "contracts/interfaces/IMasterchef.sol";
 contract ApwineTest is BaseTest {
     address internal constant LOCAL_DEPLOYER = address(0xDE);
     address internal constant ALICE = address(0xAA);
-    address internal token = Constants.APW;
-    address internal veToken = Constants.VEAPW;
-    address internal feeDistributor = Constants.APWINE_FEE_DISTRIBUTOR;
-    //address internal angleGaugeController = Constants.ANGLE_GAUGE_CONTROLLER;
+    address internal token = AddressBook.APW;
+    address internal veToken = AddressBook.VEAPW;
+    address internal feeDistributor = AddressBook.APWINE_FEE_DISTRIBUTOR;
     address[] internal rewardsToken;
 
     uint256 internal constant INITIAL_AMOUNT_TO_LOCK = 10e18;
@@ -60,8 +59,8 @@ contract ApwineTest is BaseTest {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 16141993);
         vm.selectFork(forkId);
 
-        rewardsToken.push(Constants.APW);
-        //rewardsToken.push(Constants.AG_EUR);
+        rewardsToken.push(AddressBook.APW);
+        //rewardsToken.push(AddressBook.AG_EUR);
         rewardsAmount.push(1e18);
         //rewardsAmount.push(1e18);
 
@@ -87,12 +86,12 @@ contract ApwineTest is BaseTest {
         gaugeController = IGaugeController(
             deployCode(
                 "artifacts/contracts/dao/GaugeController.vy/GaugeController.json",
-                abi.encode(Constants.SDT, Constants.VE_SDT, LOCAL_DEPLOYER)
+                abi.encode(AddressBook.SDT, AddressBook.VE_SDT, LOCAL_DEPLOYER)
             )
         );
 
         // Deploy SDT Distributor
-        veSDT = IVeToken(Constants.VE_SDT);
+        veSDT = IVeToken(AddressBook.VE_SDT);
         bytes memory sdtDistributorData = abi.encodeWithSignature(
             "initialize(address,address,address,address)",
             address(gaugeController),
@@ -105,7 +104,7 @@ contract ApwineTest is BaseTest {
         sdtDistributor = SdtDistributorV2(address(proxy));
 
         // Masterchef
-        masterchef = IMasterchef(Constants.MASTERCHEF);
+        masterchef = IMasterchef(AddressBook.MASTERCHEF);
         masterChefToken = MasterchefMasterToken(address(sdtDistributor.masterchefToken()));
 
         // Deploy Liquidity Gauge V4
@@ -113,9 +112,9 @@ contract ApwineTest is BaseTest {
             "initialize(address,address,address,address,address,address)",
             address(_sdToken),
             LOCAL_DEPLOYER,
-            Constants.SDT,
-            Constants.VE_SDT,
-            Constants.VE_SDT_BOOST_PROXY, // to mock
+            AddressBook.SDT,
+            AddressBook.VE_SDT,
+            AddressBook.VE_SDT_BOOST_PROXY, // to mock
             address(sdtDistributor)
         );
         liquidityGaugeImpl =
@@ -126,10 +125,10 @@ contract ApwineTest is BaseTest {
         /// --- END DEPLOYEMENT
         ///////////////////////////////////////////////////////////////
         vm.stopPrank();
-        vm.prank(IVeToken(Constants.VE_SDT).admin());
-        ISmartWalletChecker(Constants.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
-        vm.prank(ISmartWalletChecker(Constants.APWINE_SMART_WALLET_CHECKER).dao());
-        ISmartWalletChecker(Constants.APWINE_SMART_WALLET_CHECKER).approveWallet(address(locker));
+        vm.prank(IVeToken(AddressBook.VE_SDT).admin());
+        ISmartWalletChecker(AddressBook.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
+        vm.prank(ISmartWalletChecker(AddressBook.APWINE_SMART_WALLET_CHECKER).dao());
+        ISmartWalletChecker(AddressBook.APWINE_SMART_WALLET_CHECKER).approveWallet(address(locker));
 
         // Add masterchef token to masterchef
         vm.prank(masterchef.owner());
@@ -147,7 +146,7 @@ contract ApwineTest is BaseTest {
         accumulator.setGauge(address(liquidityGauge));
         accumulator.setClaimerFee(ACCUMULATOR_CLAIMER_FEE);
         accumulator.setLockerFee(ACCUMULATOR_CLAIMER_FEE);
-        accumulator.setFeeReceiver(Constants.STAKE_DAO_MULTISIG);
+        accumulator.setFeeReceiver(AddressBook.STAKE_DAO_MULTISIG);
         accumulator.setSdtDistributor(address(sdtDistributor));
         accumulator.setLocker(address(locker));
         liquidityGauge.add_reward(rewardsToken[0], address(accumulator));
@@ -207,7 +206,7 @@ contract ApwineTest is BaseTest {
         address rewardsReceiver = address(this);
         listCallData[0] = abi.encodeWithSignature("claimRewards(address,address)", rewardsToken[0], rewardsReceiver);
         simulateRewards(rewardsToken, rewardsAmount, feeDistributor);
-        timeJump(2 * Constants.WEEK);
+        timeJump(2 weeks);
         claimReward(LOCAL_DEPLOYER, address(locker), rewardsToken, rewardsReceiver, listCallData);
     }
 
@@ -724,7 +723,7 @@ contract ApwineTest is BaseTest {
         address rewardsReceiver = address(liquidityGauge);
         listCallData[0] = abi.encodeWithSignature("claimAndNotify(uint256)", rewardsAmount[0] / 1e6);
         simulateRewards(rewardsToken, rewardsAmount, feeDistributor);
-        timeJump(2 * Constants.WEEK);
+        timeJump(2 weeks);
         claimRewardAndNotify(
             LOCAL_DEPLOYER, address(accumulator), rewardsToken, rewardsReceiver, address(liquidityGauge), listCallData
         );
@@ -736,7 +735,7 @@ contract ApwineTest is BaseTest {
         address rewardsReceiver = address(liquidityGauge);
         listCallData[0] = abi.encodeWithSignature("claimAndNotifyAll()");
         simulateRewards(rewardsToken, rewardsAmount, feeDistributor);
-        timeJump(2 * Constants.WEEK);
+        timeJump(2 weeks);
         claimRewardAndNotify(
             LOCAL_DEPLOYER, address(accumulator), rewardsToken, rewardsReceiver, address(liquidityGauge), listCallData
         );

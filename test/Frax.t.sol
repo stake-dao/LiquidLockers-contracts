@@ -27,10 +27,10 @@ import "contracts/interfaces/IMasterchef.sol";
 contract FraxTest is BaseTest {
     address internal constant LOCAL_DEPLOYER = address(0xDE);
     address internal constant ALICE = address(0xAA);
-    address internal token = Constants.FXS;
-    address internal veToken = Constants.VE_FXS;
-    address internal yieldDistributor = Constants.FRAX_YIELD_DISTRIBUTOR;
-    address internal fraxGaugeController = Constants.FRAX_GAUGE_CONTROLLER;
+    address internal token = AddressBook.FXS;
+    address internal veToken = AddressBook.VE_FXS;
+    address internal yieldDistributor = AddressBook.FRAX_YIELD_DISTRIBUTOR;
+    address internal fraxGaugeController = AddressBook.FRAX_GAUGE_CONTROLLER;
     address[] internal rewardsToken;
 
     uint256 internal constant INITIAL_AMOUNT_TO_LOCK = 10e18;
@@ -61,7 +61,7 @@ contract FraxTest is BaseTest {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
         vm.selectFork(forkId);
 
-        rewardsToken.push(Constants.FXS);
+        rewardsToken.push(AddressBook.FXS);
         rewardsAmount.push(2e18);
 
         vm.startPrank(LOCAL_DEPLOYER);
@@ -86,12 +86,12 @@ contract FraxTest is BaseTest {
         gaugeController = IGaugeController(
             deployCode(
                 "artifacts/contracts/dao/GaugeController.vy/GaugeController.json",
-                abi.encode(Constants.SDT, Constants.VE_SDT, LOCAL_DEPLOYER)
+                abi.encode(AddressBook.SDT, AddressBook.VE_SDT, LOCAL_DEPLOYER)
             )
         );
 
         // Deploy SDT Distributor
-        veSDT = IVeToken(Constants.VE_SDT);
+        veSDT = IVeToken(AddressBook.VE_SDT);
         bytes memory sdtDistributorData = abi.encodeWithSignature(
             "initialize(address,address,address,address)",
             address(gaugeController),
@@ -104,7 +104,7 @@ contract FraxTest is BaseTest {
         sdtDistributor = SdtDistributorV2(address(proxy));
 
         // Masterchef
-        masterchef = IMasterchef(Constants.MASTERCHEF);
+        masterchef = IMasterchef(AddressBook.MASTERCHEF);
         masterChefToken = MasterchefMasterToken(address(sdtDistributor.masterchefToken()));
 
         // Deploy Liquidity Gauge V4
@@ -112,9 +112,9 @@ contract FraxTest is BaseTest {
             "initialize(address,address,address,address,address,address)",
             address(_sdToken),
             LOCAL_DEPLOYER,
-            Constants.SDT,
-            Constants.VE_SDT,
-            Constants.VE_SDT_BOOST_PROXY, // to mock
+            AddressBook.SDT,
+            AddressBook.VE_SDT,
+            AddressBook.VE_SDT_BOOST_PROXY, // to mock
             address(sdtDistributor)
         );
         liquidityGaugeImpl =
@@ -125,10 +125,10 @@ contract FraxTest is BaseTest {
         /// --- END DEPLOYEMENT
         ///////////////////////////////////////////////////////////////
         vm.stopPrank();
-        vm.prank(IVeToken(Constants.VE_SDT).admin());
-        ISmartWalletChecker(Constants.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
-        vm.prank(ISmartWalletChecker(Constants.FRAX_SMART_WALLET_CHECKER).owner());
-        ISmartWalletChecker(Constants.FRAX_SMART_WALLET_CHECKER).approveWallet(address(locker));
+        vm.prank(IVeToken(AddressBook.VE_SDT).admin());
+        ISmartWalletChecker(AddressBook.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
+        vm.prank(ISmartWalletChecker(AddressBook.FRAX_SMART_WALLET_CHECKER).owner());
+        ISmartWalletChecker(AddressBook.FRAX_SMART_WALLET_CHECKER).approveWallet(address(locker));
 
         // Add masterchef token to masterchef
         vm.prank(masterchef.owner());
@@ -204,7 +204,7 @@ contract FraxTest is BaseTest {
         listCallData[0] = abi.encodeWithSignature("claimFXSRewards(address)", rewardsReceiver);
         //simulateRewards(rewardsToken, rewardsAmount, yieldDistributor);
         dealFXS(yieldDistributor, rewardsAmount[0]);
-        timeJump(2 * Constants.WEEK);
+        timeJump(2 weeks);
         claimReward(LOCAL_DEPLOYER, address(locker), rewardsToken, rewardsReceiver, listCallData);
     }
 
@@ -742,7 +742,7 @@ contract FraxTest is BaseTest {
         address rewardsReceiver = address(liquidityGauge);
         listCallData[0] = abi.encodeWithSignature("claimAndNotify(uint256)", rewardsAmount[0] / 1e14);
         dealFXS(yieldDistributor, rewardsAmount[0]);
-        timeJump(2 * Constants.WEEK);
+        timeJump(2 weeks);
         claimRewardAndNotify(
             LOCAL_DEPLOYER, address(accumulator), rewardsToken, rewardsReceiver, address(liquidityGauge), listCallData
         );
@@ -754,7 +754,7 @@ contract FraxTest is BaseTest {
         address rewardsReceiver = address(liquidityGauge);
         listCallData[0] = abi.encodeWithSignature("claimAndNotifyAll()");
         dealFXS(yieldDistributor, rewardsAmount[0]);
-        timeJump(2 * Constants.WEEK);
+        timeJump(2 weeks);
         claimRewardAndNotify(
             LOCAL_DEPLOYER, address(accumulator), rewardsToken, rewardsReceiver, address(liquidityGauge), listCallData
         );
@@ -813,7 +813,7 @@ contract FraxTest is BaseTest {
     ///////////////////////////////////////////////////////////////
     /// @notice using deal for giving FXS token doesn't work
     function dealFXS(address receiver, uint256 amount) public {
-        vm.prank(Constants.VE_FXS);
-        IERC20(Constants.FXS).transfer(receiver, amount);
+        vm.prank(AddressBook.VE_FXS);
+        IERC20(AddressBook.FXS).transfer(receiver, amount);
     }
 }

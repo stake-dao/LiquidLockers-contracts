@@ -4,7 +4,8 @@ pragma solidity 0.8.7;
 import "forge-std/Test.sol";
 import "forge-std/Vm.sol";
 
-import {Constants} from "./fixtures/Constants.sol";
+import {AddressBook} from "@addressbook/AddressBook.sol";
+
 import {CurveStrategy} from "contracts/strategies/curve/CurveStrategy.sol";
 import {VeSDTFeeCurveProxyV2} from "contracts/accumulators/VeSDTFeeCurveProxyV2.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -26,12 +27,12 @@ contract VeSDTFeeCurveProxyV2Test is Test {
     function setUp() public {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
         vm.selectFork(forkId);
-        crv = Constants.CRV;
-        usdc = Constants.USDC;
-        frax = Constants.FRAX;
-        feeD = Constants.FEE_D_SD;
-        crvUsdcSushiPath = [crv, Constants.WETH, usdc];
-        curveStrategy = CurveStrategy(Constants.CURVE_STRATEGY);
+        crv = AddressBook.CRV;
+        usdc = AddressBook.USDC;
+        frax = AddressBook.FRAX;
+        feeD = AddressBook.FEE_D_SD;
+        crvUsdcSushiPath = [crv, AddressBook.WETH, usdc];
+        curveStrategy = CurveStrategy(AddressBook.CURVE_STRATEGY);
         proxyV2 = new VeSDTFeeCurveProxyV2(crvUsdcSushiPath);
         // set new fee proxy
         vm.prank(curveStrategy.governance());

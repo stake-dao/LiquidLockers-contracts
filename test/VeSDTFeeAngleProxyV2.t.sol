@@ -4,7 +4,8 @@ pragma solidity 0.8.7;
 import "forge-std/Test.sol";
 import "forge-std/Vm.sol";
 
-import {Constants} from "./fixtures/Constants.sol";
+import {AddressBook} from "@addressbook/AddressBook.sol";
+
 import {AngleStrategy} from "contracts/strategies/angle/AngleStrategy.sol";
 import {VeSDTFeeAngleProxyV2} from "contracts/accumulators/VeSDTFeeAngleProxyV2.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -26,12 +27,12 @@ contract VeSDTFeeAngleProxyV2Test is Test {
     function setUp() public {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
         vm.selectFork(forkId);
-        angle = Constants.ANGLE;
-        agEur = Constants.AG_EUR;
-        frax = Constants.FRAX;
+        angle = AddressBook.ANGLE;
+        agEur = AddressBook.AG_EUR;
+        frax = AddressBook.FRAX;
         angleAgEurSushiPath = [angle, agEur];
-        feeD = Constants.FEE_D_SD;
-        angleStrategy = AngleStrategy(Constants.ANGLE_STRATEGY);
+        feeD = AddressBook.FEE_D_SD;
+        angleStrategy = AngleStrategy(AddressBook.ANGLE_STRATEGY);
         VeSDTFeeAngleProxyV2.CurveExchangeData memory curveExData =
             VeSDTFeeAngleProxyV2.CurveExchangeData(AG_EUR_FRAXBP_POOL, 0, 1);
         proxyV2 = new VeSDTFeeAngleProxyV2(angleAgEurSushiPath, curveExData);

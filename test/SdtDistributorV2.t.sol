@@ -30,9 +30,9 @@ contract SdtDistributorTest is BaseTest {
     address internal constant BOB = address(0xB0B);
     address internal constant GAUGE_FAKE = address(0xBABE);
     address internal constant MASTER_CHEF = 0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c;
-    address internal token = Constants.SDT;
-    address internal angle = Constants.ANGLE;
-    address internal fxs = Constants.FXS;
+    address internal token = AddressBook.SDT;
+    address internal angle = AddressBook.ANGLE;
+    address internal fxs = AddressBook.FXS;
 
     uint256 internal constant INIITIAL_AMOUNT_TO_LOCK = 1_000e18;
     uint256 internal constant MAX_DURATION = 60 * 60 * 24 * 365 * 4;
@@ -97,7 +97,7 @@ contract SdtDistributorTest is BaseTest {
         gaugeController = IGaugeController(
             deployCode(
                 "artifacts/contracts/dao/GaugeController.vy/GaugeController.json",
-                abi.encode(Constants.SDT, address(veSDT), LOCAL_DEPLOYER)
+                abi.encode(AddressBook.SDT, address(veSDT), LOCAL_DEPLOYER)
             )
         );
 
@@ -118,8 +118,8 @@ contract SdtDistributorTest is BaseTest {
         _sdFxs = new sdToken("Stake DAO FXS", "_sdFxs");
 
         // Deploy Accumulator
-        angleAccumulator = new AngleAccumulatorV3(Constants.AG_EUR, address(0));
-        fxsAccumulator = new FxsAccumulator(Constants.FXS, address(0));
+        angleAccumulator = new AngleAccumulatorV3(AddressBook.AG_EUR, address(0));
+        fxsAccumulator = new FxsAccumulator(AddressBook.FXS, address(0));
 
         // Deploy Locker
         angleLocker = new AngleLocker(address(angleAccumulator));
@@ -133,9 +133,9 @@ contract SdtDistributorTest is BaseTest {
             "initialize(address,address,address,address,address,address)",
             address(_sdAngle),
             address(this),
-            Constants.SDT,
+            AddressBook.SDT,
             address(veSDT),
-            Constants.VE_SDT_BOOST_PROXY,
+            AddressBook.VE_SDT_BOOST_PROXY,
             address(sdtDistributor)
         );
         proxy = new TransparentUpgradeableProxy(address(liquidityGaugeImpl), address(proxyAdmin), lgData);
@@ -146,9 +146,9 @@ contract SdtDistributorTest is BaseTest {
             "initialize(address,address,address,address,address,address)",
             address(_sdFxs),
             address(this),
-            Constants.SDT,
+            AddressBook.SDT,
             address(veSDT),
-            Constants.VE_SDT_BOOST_PROXY,
+            AddressBook.VE_SDT_BOOST_PROXY,
             address(sdtDistributor)
         );
         proxy = new TransparentUpgradeableProxy(address(liquidityGaugeImpl), address(proxyAdmin), lgData);
@@ -157,7 +157,7 @@ contract SdtDistributorTest is BaseTest {
         ////////////////////////////////////////////////////////////////
         /// --- START SETTERS
         ///////////////////////////////////////////////////////////////
-        angleLiquidityGauge.add_reward(Constants.SAN_USDC_EUR, address(angleAccumulator));
+        angleLiquidityGauge.add_reward(AddressBook.SAN_USDC_EUR, address(angleAccumulator));
         fxsLiquidityGauge.add_reward(fxs, address(fxsAccumulator));
 
         vm.startPrank(LOCAL_DEPLOYER);
@@ -169,7 +169,7 @@ contract SdtDistributorTest is BaseTest {
 
         smartWalletWhitelist.approveWallet(ALICE);
         vm.stopPrank();
-        lockSDTCustom(ALICE, token, address(veSDT), 1_000_000e18, block.timestamp + Constants.YEAR * 4);
+        lockSDTCustom(ALICE, token, address(veSDT), 1_000_000e18, block.timestamp + 4 * 365 days);
 
         uint256 typeZeroWeight = gaugeController.get_type_weight(int128(0));
         uint256 typeOneWeight = gaugeController.get_type_weight(int128(1));
@@ -202,7 +202,7 @@ contract SdtDistributorTest is BaseTest {
         vm.prank(LOCAL_DEPLOYER);
         sdtDistributor.approveGauge(address(angleLiquidityGauge));
 
-        timeJump(Constants.WEEK + Constants.DAY);
+        timeJump(8 days);
 
         uint256 timestamp = block.timestamp - (block.timestamp % 86_400);
         uint256 balanceBefore = IERC20(token).balanceOf(address(angleLiquidityGauge));
@@ -229,13 +229,13 @@ contract SdtDistributorTest is BaseTest {
         uint256 balanceBefore1 = IERC20(token).balanceOf(address(angleLiquidityGauge));
         uint256 balanceBefore2 = IERC20(token).balanceOf(address(fxsLiquidityGauge));
 
-        timeJump(Constants.WEEK + Constants.DAY);
+        timeJump(8 days);
 
         sdtDistributor.distribute(address(angleLiquidityGauge));
         uint256 timestamp = block.timestamp - (block.timestamp % 86_400);
         uint256 lastPull1 = sdtDistributor.pulls(timestamp);
 
-        timeJump(Constants.DAY * 32);
+        timeJump(32 days);
         sdtDistributor.distribute(address(fxsLiquidityGauge));
         timestamp = block.timestamp - (block.timestamp % 86_400);
         uint256 lastPull2 = sdtDistributor.pulls(timestamp);
@@ -262,12 +262,12 @@ contract SdtDistributorTest is BaseTest {
         uint256 balanceBefore1 = IERC20(token).balanceOf(address(angleLiquidityGauge));
         uint256 balanceBefore2 = IERC20(token).balanceOf(address(fxsLiquidityGauge));
 
-        timeJump(Constants.DAY * 8);
+        timeJump(8 days);
         sdtDistributor.distribute(address(angleLiquidityGauge));
         uint256 timestamp = block.timestamp - (block.timestamp % 86_400);
         uint256 lastPull1 = sdtDistributor.pulls(timestamp);
 
-        timeJump(Constants.DAY * 38);
+        timeJump(38 days);
         sdtDistributor.distribute(address(fxsLiquidityGauge));
         timestamp = block.timestamp - (block.timestamp % 86_400);
         uint256 lastPull2 = sdtDistributor.pulls(timestamp);
@@ -284,7 +284,7 @@ contract SdtDistributorTest is BaseTest {
     function test04NoDistributeToGaugeWith0Weight() public {
         vm.startPrank(LOCAL_DEPLOYER);
         sdtDistributor.approveGauge(address(angleLiquidityGauge));
-        timeJump(Constants.DAY * 8);
+        timeJump(8 days);
 
         uint256 balanceBefore1 = IERC20(token).balanceOf(address(angleLiquidityGauge));
         sdtDistributor.distribute(address(angleLiquidityGauge));
@@ -311,7 +311,7 @@ contract SdtDistributorTest is BaseTest {
         uint256 balanceBefore1 = IERC20(token).balanceOf(address(angleLiquidityGauge));
         uint256 balanceBefore2 = IERC20(token).balanceOf(address(fxsLiquidityGauge));
 
-        timeJump(Constants.DAY * 8);
+        timeJump(8 days);
 
         address[] memory list = new address[](2);
         list[0] = address(angleLiquidityGauge);

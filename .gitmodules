@@ -1,3 +1,6 @@
 [submodule "lib/forge-std"]
 	path = lib/forge-std
 	url = https://github.com/brockelmore/forge-std
+[submodule "lib/AddressBook"]
+	path = lib/AddressBook
+	url = https://github.com/StakeDAO/AddressBook
