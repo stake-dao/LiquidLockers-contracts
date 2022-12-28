@@ -34,9 +34,9 @@ contract GaugeControllerTest is BaseTest {
     address internal constant BOB = address(0xB0B);
     address internal constant GAUGE_FAKE = address(0xBABE);
     address internal constant MASTER_CHEF = 0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c;
-    address internal token = Constants.SDT;
-    address internal angle = Constants.ANGLE;
-    address internal fxs = Constants.FXS;
+    address internal token = AddressBook.SDT;
+    address internal angle = AddressBook.ANGLE;
+    address internal fxs = AddressBook.FXS;
 
     uint256 internal constant INIITIAL_AMOUNT_TO_LOCK = 1_000e18;
     uint256 internal constant MAX_DURATION = 60 * 60 * 24 * 365 * 4;
@@ -106,7 +106,7 @@ contract GaugeControllerTest is BaseTest {
         gaugeController = IGaugeController(
             deployCode(
                 "artifacts/contracts/dao/GaugeController.vy/GaugeController.json",
-                abi.encode(Constants.SDT, address(veSDT), LOCAL_DEPLOYER)
+                abi.encode(AddressBook.SDT, address(veSDT), LOCAL_DEPLOYER)
             )
         );
 
@@ -129,8 +129,8 @@ contract GaugeControllerTest is BaseTest {
         _sdFxs = new sdToken("Stake DAO FXS", "_sdFxs");
 
         // Deploy Accumulator
-        angleAccumulator = new AngleAccumulatorV3(Constants.AG_EUR, address(0));
-        fxsAccumulator = new FxsAccumulator(Constants.FXS, address(0));
+        angleAccumulator = new AngleAccumulatorV3(AddressBook.AG_EUR, address(0));
+        fxsAccumulator = new FxsAccumulator(AddressBook.FXS, address(0));
 
         // Deploy Locker
         angleLocker = new AngleLocker(address(angleAccumulator));
@@ -148,9 +148,9 @@ contract GaugeControllerTest is BaseTest {
             "initialize(address,address,address,address,address,address)",
             address(_sdAngle),
             address(this),
-            Constants.SDT,
+            AddressBook.SDT,
             address(veSDT),
-            Constants.VE_SDT_BOOST_PROXY,
+            AddressBook.VE_SDT_BOOST_PROXY,
             address(sdtDistributor)
         );
         proxy = new TransparentUpgradeableProxy(address(liquidityGaugeImpl), address(proxyAdmin), lgData);
@@ -161,9 +161,9 @@ contract GaugeControllerTest is BaseTest {
             "initialize(address,address,address,address,address,address)",
             address(_sdFxs),
             address(this),
-            Constants.SDT,
+            AddressBook.SDT,
             address(veSDT),
-            Constants.VE_SDT_BOOST_PROXY,
+            AddressBook.VE_SDT_BOOST_PROXY,
             address(sdtDistributor)
         );
         proxy = new TransparentUpgradeableProxy(address(liquidityGaugeImpl), address(proxyAdmin), lgData);
@@ -188,7 +188,7 @@ contract GaugeControllerTest is BaseTest {
         fxsAccumulator.setClaimerFee(ACCUMULATOR_CLAIMER_FEE);
         fxsAccumulator.setSdtDistributor(address(sdtDistributor));
         fxsAccumulator.setLocker(address(fxsLocker));
-        angleLiquidityGauge.add_reward(Constants.SAN_USDC_EUR, address(angleAccumulator));
+        angleLiquidityGauge.add_reward(AddressBook.SAN_USDC_EUR, address(angleAccumulator));
         fxsLiquidityGauge.add_reward(fxs, address(fxsAccumulator));
         angleLiquidityGauge.set_claimer(address(claimRewards));
         fxsLiquidityGauge.set_claimer(address(claimRewards));
@@ -206,7 +206,7 @@ contract GaugeControllerTest is BaseTest {
 
         smartWalletWhitelist.approveWallet(ALICE);
         vm.stopPrank();
-        lockSDTCustom(ALICE, token, address(veSDT), 1_000_000e18, block.timestamp + Constants.YEAR * 4);
+        lockSDTCustom(ALICE, token, address(veSDT), 1_000_000e18, block.timestamp + 4 * 365 days);
 
         uint256 typeZeroWeight = gaugeController.get_type_weight(int128(0));
         uint256 typeOneWeight = gaugeController.get_type_weight(int128(1));
@@ -268,7 +268,6 @@ contract GaugeControllerTest is BaseTest {
         uint256 wholePercent = 10000;
         uint256 angleVotePerc = 8000;
         uint256 fxsVotePerc = 2000;
-        uint256 veSDTBalance = veSDT.balanceOf(ALICE);
 
         // vote
         vm.startPrank(ALICE);
@@ -276,7 +275,7 @@ contract GaugeControllerTest is BaseTest {
         gaugeController.vote_for_gauge_weights(address(fxsLiquidityGauge), fxsVotePerc);
         vm.stopPrank();
 
-        timeJump(Constants.WEEK);
+        timeJump(1 weeks);
         gaugeController.checkpoint_gauge(address(angleLiquidityGauge));
 
         uint256 angleRelWeight = gaugeController.gauge_relative_weight(address(angleLiquidityGauge));

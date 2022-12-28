@@ -55,10 +55,10 @@ contract BalancerVaultTest is BaseTest {
 
         vm.startPrank(LOCAL_DEPLOYER);
         proxyAdmin = new ProxyAdmin();
-        helper = IBalancerHelper(Constants.BALANCER_HELPER);
-        accumulator = BalancerAccumulator(IBaseLocker(Constants.BALANCER_LOCKER).accumulator());
+        helper = IBalancerHelper(AddressBook.BALANCER_HELPER);
+        accumulator = BalancerAccumulator(IBaseLocker(AddressBook.BALANCER_LOCKER).accumulator());
         strategy = new BalancerStrategy(
-    ILocker(Constants.BALANCER_LOCKER),
+    ILocker(AddressBook.BALANCER_LOCKER),
     LOCAL_DEPLOYER,
     LOCAL_DEPLOYER,
     accumulator,
@@ -77,9 +77,9 @@ contract BalancerVaultTest is BaseTest {
             "initialize(address,address,address,address,address,address,address,string)",
             address(vault),
             LOCAL_DEPLOYER,
-            Constants.SDT,
-            Constants.VE_SDT,
-            Constants.VE_SDT_BOOST_PROXY,
+            AddressBook.SDT,
+            AddressBook.VE_SDT,
+            AddressBook.VE_SDT_BOOST_PROXY,
             LOCAL_DEPLOYER,
             address(vault),
             "gauge"
@@ -95,9 +95,9 @@ contract BalancerVaultTest is BaseTest {
             "initialize(address,address,address,address,address,address,address,string)",
             address(weightedPoolVault),
             LOCAL_DEPLOYER,
-            Constants.SDT,
-            Constants.VE_SDT,
-            Constants.VE_SDT_BOOST_PROXY,
+            AddressBook.SDT,
+            AddressBook.VE_SDT,
+            AddressBook.VE_SDT_BOOST_PROXY,
             LOCAL_DEPLOYER,
             address(weightedPoolVault),
             "gauge"
@@ -109,23 +109,23 @@ contract BalancerVaultTest is BaseTest {
         weightedPoolVault.setLiquidityGauge(address(weightedPoolLiquidityGauge));
         vm.stopPrank();
 
-        deal(Constants.WSTETH, LOCAL_DEPLOYER, 1_000e18);
-        deal(Constants.WETH, LOCAL_DEPLOYER, 1_000e18);
-        deal(Constants.DAI, LOCAL_DEPLOYER, 1_000e18);
-        deal(Constants.OHM, LOCAL_DEPLOYER, 1_000e18);
+        deal(AddressBook.WSTETH, LOCAL_DEPLOYER, 1_000e18);
+        deal(AddressBook.WETH, LOCAL_DEPLOYER, 1_000e18);
+        deal(AddressBook.DAI, LOCAL_DEPLOYER, 1_000e18);
+        deal(AddressBook.OHM, LOCAL_DEPLOYER, 1_000e18);
     }
 
     function testDepositWithUnderlyingToken() public {
         vm.startPrank(LOCAL_DEPLOYER);
-        IERC20(Constants.WSTETH).approve(address(vault), type(uint256).max);
-        IERC20(Constants.WETH).approve(address(vault), type(uint256).max);
+        IERC20(AddressBook.WSTETH).approve(address(vault), type(uint256).max);
+        IERC20(AddressBook.WETH).approve(address(vault), type(uint256).max);
         address[] memory array1 = new address[](2);
         uint256[] memory array2 = new uint256[](2);
-        array1[0] = address(Constants.WSTETH);
-        array1[1] = address(Constants.WETH);
+        array1[0] = address(AddressBook.WSTETH);
+        array1[1] = address(AddressBook.WETH);
         array2[0] = 1e18;
         array2[1] = 1e18;
-        (uint256 bptOut,) = IBalancerHelper(Constants.BALANCER_HELPER).queryJoin(
+        (uint256 bptOut,) = IBalancerHelper(AddressBook.BALANCER_HELPER).queryJoin(
             STETH_STABLE_POOL_ID,
             LOCAL_DEPLOYER,
             LOCAL_DEPLOYER,
@@ -138,8 +138,8 @@ contract BalancerVaultTest is BaseTest {
         uint256 expectedLiquidityGaugeTokenAmount = bptOut - keeperCut;
         uint256 lpBalanceAfter = IERC20(STETH_STABLE_POOL).balanceOf(address(vault));
         uint256 gaugeTokenBalanceAfter = liquidityGauge.balanceOf(LOCAL_DEPLOYER);
-        uint256 wETHBalanceOfVault = IERC20(Constants.WETH).balanceOf(address(vault));
-        uint256 wstETHBalanceOfVault = IERC20(Constants.WSTETH).balanceOf(address(vault));
+        uint256 wETHBalanceOfVault = IERC20(AddressBook.WETH).balanceOf(address(vault));
+        uint256 wstETHBalanceOfVault = IERC20(AddressBook.WSTETH).balanceOf(address(vault));
 
         assertEq(lpBalanceAfter, bptOut, "ERROR_010");
         assertEq(gaugeTokenBalanceAfter, expectedLiquidityGaugeTokenAmount, "ERROR_011");
@@ -149,18 +149,18 @@ contract BalancerVaultTest is BaseTest {
 
     function testDepositWithUnderlyingTokenToWeightedPool() public {
         vm.startPrank(LOCAL_DEPLOYER);
-        IERC20(Constants.OHM).approve(address(weightedPoolVault), type(uint256).max);
-        IERC20(Constants.DAI).approve(address(weightedPoolVault), type(uint256).max);
-        IERC20(Constants.WETH).approve(address(weightedPoolVault), type(uint256).max);
+        IERC20(AddressBook.OHM).approve(address(weightedPoolVault), type(uint256).max);
+        IERC20(AddressBook.DAI).approve(address(weightedPoolVault), type(uint256).max);
+        IERC20(AddressBook.WETH).approve(address(weightedPoolVault), type(uint256).max);
         address[] memory array1 = new address[](3);
         uint256[] memory array2 = new uint256[](3);
-        array1[0] = address(Constants.OHM);
-        array1[1] = address(Constants.DAI);
-        array1[2] = address(Constants.WETH);
+        array1[0] = address(AddressBook.OHM);
+        array1[1] = address(AddressBook.DAI);
+        array1[2] = address(AddressBook.WETH);
         array2[0] = 10e18;
         array2[1] = 170e18;
         array2[2] = 1e18;
-        (uint256 bptOut,) = IBalancerHelper(Constants.BALANCER_HELPER).queryJoin(
+        (uint256 bptOut,) = IBalancerHelper(AddressBook.BALANCER_HELPER).queryJoin(
             OHM_DAI_WETH_POOL_ID,
             LOCAL_DEPLOYER,
             LOCAL_DEPLOYER,
@@ -174,9 +174,9 @@ contract BalancerVaultTest is BaseTest {
         uint256 gaugeTokenBalanceAfter = weightedPoolLiquidityGauge.balanceOf(LOCAL_DEPLOYER);
 
         uint256 lpBalanceAfter = IERC20(OHM_DAI_WETH_POOL).balanceOf(address(weightedPoolVault));
-        uint256 wETHBalanceOfVault = IERC20(Constants.WETH).balanceOf(address(weightedPoolVault));
-        uint256 daiBalanceOfVault = IERC20(Constants.DAI).balanceOf(address(weightedPoolVault));
-        uint256 ohmBalanceOfVault = IERC20(Constants.OHM).balanceOf(address(weightedPoolVault));
+        uint256 wETHBalanceOfVault = IERC20(AddressBook.WETH).balanceOf(address(weightedPoolVault));
+        uint256 daiBalanceOfVault = IERC20(AddressBook.DAI).balanceOf(address(weightedPoolVault));
+        uint256 ohmBalanceOfVault = IERC20(AddressBook.OHM).balanceOf(address(weightedPoolVault));
 
         assertEq(lpBalanceAfter, bptOut, "ERROR_020");
         assertEq(gaugeTokenBalanceAfter, expectedLiquidityGaugeTokenAmount, "ERROR_021");
@@ -187,16 +187,16 @@ contract BalancerVaultTest is BaseTest {
 
     function testDepositWithSingleUnderlyingToken() public {
         vm.startPrank(LOCAL_DEPLOYER);
-        IERC20(Constants.OHM).approve(address(weightedPoolVault), type(uint256).max);
+        IERC20(AddressBook.OHM).approve(address(weightedPoolVault), type(uint256).max);
         address[] memory array1 = new address[](3);
         uint256[] memory array2 = new uint256[](3);
-        array1[0] = address(Constants.OHM);
-        array1[1] = address(Constants.DAI);
-        array1[2] = address(Constants.WETH);
+        array1[0] = address(AddressBook.OHM);
+        array1[1] = address(AddressBook.DAI);
+        array1[2] = address(AddressBook.WETH);
         array2[0] = 10e18;
         array2[1] = 0;
         array2[2] = 0;
-        (uint256 bptOut,) = IBalancerHelper(Constants.BALANCER_HELPER).queryJoin(
+        (uint256 bptOut,) = IBalancerHelper(AddressBook.BALANCER_HELPER).queryJoin(
             OHM_DAI_WETH_POOL_ID,
             LOCAL_DEPLOYER,
             LOCAL_DEPLOYER,
@@ -206,7 +206,7 @@ contract BalancerVaultTest is BaseTest {
         vm.stopPrank();
 
         uint256 lpBalanceAfter = IERC20(OHM_DAI_WETH_POOL).balanceOf(address(weightedPoolVault));
-        uint256 ohmBalanceOfVault = IERC20(Constants.OHM).balanceOf(address(weightedPoolVault));
+        uint256 ohmBalanceOfVault = IERC20(AddressBook.OHM).balanceOf(address(weightedPoolVault));
 
         assertEq(ohmBalanceOfVault, 0, "ERROR_030");
         assertEq(lpBalanceAfter, bptOut, "ERROR_031");

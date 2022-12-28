@@ -26,10 +26,10 @@ import "contracts/interfaces/IMasterchef.sol";
 contract BalancerTest is BaseTest {
     address internal constant LOCAL_DEPLOYER = address(0xDE);
     address internal constant ALICE = address(0xAA);
-    address internal token = Constants.BALANCER_POOL_TOKEN;
-    address internal veToken = Constants.VE_BAL;
-    address internal feeDistributor = Constants.BALANCER_FEE_DISTRIBUTOR;
-    address internal balancerGaugeController = Constants.BALANCER_GAUGE_CONTROLLER;
+    address internal token = AddressBook.BALANCER_POOL_TOKEN;
+    address internal veToken = AddressBook.VE_BAL;
+    address internal feeDistributor = AddressBook.BALANCER_FEE_DISTRIBUTOR;
+    address internal balancerGaugeController = AddressBook.BALANCER_GAUGE_CONTROLLER;
     address[] internal rewardsToken;
 
     uint256 internal constant INITIAL_AMOUNT_TO_LOCK = 10e18;
@@ -60,8 +60,8 @@ contract BalancerTest is BaseTest {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
         vm.selectFork(forkId);
 
-        rewardsToken.push(Constants.BAL);
-        rewardsToken.push(Constants.BB_A_USD);
+        rewardsToken.push(AddressBook.BAL);
+        rewardsToken.push(AddressBook.BB_A_USD);
         rewardsAmount.push(2e18);
         rewardsAmount.push(1e18);
 
@@ -87,12 +87,12 @@ contract BalancerTest is BaseTest {
         gaugeController = IGaugeController(
             deployCode(
                 "artifacts/contracts/dao/GaugeController.vy/GaugeController.json",
-                abi.encode(Constants.SDT, Constants.VE_SDT, LOCAL_DEPLOYER)
+                abi.encode(AddressBook.SDT, AddressBook.VE_SDT, LOCAL_DEPLOYER)
             )
         );
 
         // Deploy SDT Distributor
-        veSDT = IVeToken(Constants.VE_SDT);
+        veSDT = IVeToken(AddressBook.VE_SDT);
         bytes memory sdtDistributorData = abi.encodeWithSignature(
             "initialize(address,address,address,address)",
             address(gaugeController),
@@ -105,7 +105,7 @@ contract BalancerTest is BaseTest {
         sdtDistributor = SdtDistributorV2(address(proxy));
 
         // Masterchef
-        masterchef = IMasterchef(Constants.MASTERCHEF);
+        masterchef = IMasterchef(AddressBook.MASTERCHEF);
         masterChefToken = MasterchefMasterToken(address(sdtDistributor.masterchefToken()));
 
         // Deploy Liquidity Gauge V4
@@ -113,9 +113,9 @@ contract BalancerTest is BaseTest {
             "initialize(address,address,address,address,address,address)",
             address(_sdToken),
             LOCAL_DEPLOYER,
-            Constants.SDT,
-            Constants.VE_SDT,
-            Constants.VE_SDT_BOOST_PROXY, // to mock
+            AddressBook.SDT,
+            AddressBook.VE_SDT,
+            AddressBook.VE_SDT_BOOST_PROXY, // to mock
             address(sdtDistributor)
         );
         liquidityGaugeImpl =
@@ -126,10 +126,10 @@ contract BalancerTest is BaseTest {
         /// --- END DEPLOYEMENT
         ///////////////////////////////////////////////////////////////
         vm.stopPrank();
-        vm.prank(IVeToken(Constants.VE_SDT).admin());
-        ISmartWalletChecker(Constants.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
-        vm.prank(Constants.BALANCER_MULTI_SIG);
-        ISmartWalletChecker(Constants.BALANCER_SMART_WALLET_CHECKER).allowlistAddress(address(locker));
+        vm.prank(IVeToken(AddressBook.VE_SDT).admin());
+        ISmartWalletChecker(AddressBook.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
+        vm.prank(AddressBook.BALANCER_MULTI_SIG);
+        ISmartWalletChecker(AddressBook.BALANCER_SMART_WALLET_CHECKER).allowlistAddress(address(locker));
 
         // Add masterchef token to masterchef
         vm.prank(masterchef.owner());
@@ -209,7 +209,7 @@ contract BalancerTest is BaseTest {
         listCallData[0] = abi.encodeWithSignature("claimRewards(address,address)", rewardsToken[0], rewardsReceiver);
         listCallData[1] = abi.encodeWithSignature("claimRewards(address,address)", rewardsToken[1], rewardsReceiver);
         simulateRewards(rewardsToken, rewardsAmount, feeDistributor);
-        timeJump(2 * Constants.WEEK);
+        timeJump(2 weeks);
         claimReward(LOCAL_DEPLOYER, address(locker), rewardsToken, rewardsReceiver, listCallData);
     }
 
@@ -219,7 +219,7 @@ contract BalancerTest is BaseTest {
         address rewardsReceiver = address(this);
         listCallData[0] = abi.encodeWithSignature("claimAllRewards(address[],address)", rewardsToken, rewardsReceiver);
         simulateRewards(rewardsToken, rewardsAmount, feeDistributor);
-        timeJump(2 * Constants.WEEK);
+        timeJump(2 weeks);
         claimReward(LOCAL_DEPLOYER, address(locker), rewardsToken, rewardsReceiver, listCallData);
     }
 
@@ -757,7 +757,7 @@ contract BalancerTest is BaseTest {
         listCallData[0] = abi.encodeWithSignature("claimAndNotify(uint256)", rewardsAmount[0] / 1e14);
         rewardsToken.pop();
         simulateRewards(rewardsToken, rewardsAmount, feeDistributor);
-        timeJump(2 * Constants.WEEK);
+        timeJump(2 weeks);
         claimRewardAndNotify(
             LOCAL_DEPLOYER, address(accumulator), rewardsToken, rewardsReceiver, address(liquidityGauge), listCallData
         );
@@ -770,7 +770,7 @@ contract BalancerTest is BaseTest {
         listCallData[0] = abi.encodeWithSignature("claimAndNotifyAll()");
         rewardsToken.pop();
         simulateRewards(rewardsToken, rewardsAmount, feeDistributor);
-        timeJump(2 * Constants.WEEK);
+        timeJump(2 weeks);
         claimRewardAndNotify(
             LOCAL_DEPLOYER, address(accumulator), rewardsToken, rewardsReceiver, address(liquidityGauge), listCallData
         );
@@ -782,7 +782,7 @@ contract BalancerTest is BaseTest {
         address rewardsReceiver = address(liquidityGauge);
         listCallData[0] = abi.encodeWithSignature("claimAllRewardsAndNotify()");
         simulateRewards(rewardsToken, rewardsAmount, feeDistributor);
-        timeJump(2 * Constants.WEEK);
+        timeJump(2 weeks);
         claimRewardAndNotify(
             LOCAL_DEPLOYER, address(accumulator), rewardsToken, rewardsReceiver, address(liquidityGauge), listCallData
         );

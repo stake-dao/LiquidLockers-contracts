@@ -53,8 +53,8 @@ contract CurveVoterTest is BaseTest {
     CurveVoterV2 public voter;
     CurveStrategy public strategy;
 
-    ICurveProtocolVoter public protocol = ICurveProtocolVoter(Constants.CURVE_PROTOCOL_VOTER);
-    IGaugeController public gc = IGaugeController(Constants.CURVE_PROTOCOL_GC);
+    ICurveProtocolVoter public protocol = ICurveProtocolVoter(AddressBook.CURVE_PROTOCOL_VOTER);
+    IGaugeController public gc = IGaugeController(AddressBook.CURVE_PROTOCOL_GC);
 
     function setUp() public {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 16124919);
@@ -71,7 +71,7 @@ contract CurveVoterTest is BaseTest {
         timeJump(1 days);
         uint256 voteId = protocol.votesLength() - 1;
         vm.prank(voter.governance());
-        voter.vote(voteId, true, Constants.CURVE_PROTOCOL_VOTER);
+        voter.vote(voteId, true, AddressBook.CURVE_PROTOCOL_VOTER);
         assertEq(abi.encode(protocol.getVoterState(voteId, crvLocker)), abi.encode(ICurveProtocolVoter.VoterState.Yea));
     }
 

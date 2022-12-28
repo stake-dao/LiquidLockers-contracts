@@ -4,11 +4,12 @@ pragma solidity 0.8.7;
 import "forge-std/Test.sol";
 import "forge-std/Script.sol";
 
-import {Constants} from "../test/fixtures/Constants.sol";
+import {AddressBook} from "@addressbook/AddressBook.sol";
+
 import {VeSDTFeeCurveProxyV2} from "../contracts/accumulators/VeSDTFeeCurveProxyV2.sol";
 
 contract DeployVeSDTFeeCurveProxyV2 is Script, Test {
-    address[] public crvUsdcSushiPath = [Constants.CRV, Constants.WETH, Constants.USDC];
+    address[] public crvUsdcSushiPath = [AddressBook.CRV, AddressBook.WETH, AddressBook.USDC];
 
     function run() public {
         vm.startBroadcast();

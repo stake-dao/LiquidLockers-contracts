@@ -68,10 +68,10 @@ contract FraxStrategyTest is BaseTest {
     ILiquidityGaugeStratFrax public lgFake;
     ILiquidityGaugeStratFrax public lgFxsTemple;
 
-    IERC20 public fxs = IERC20(Constants.FXS);
-    IERC20 public sdt = IERC20(Constants.SDT);
-    IERC20 public frax = IERC20(Constants.FRAX);
-    IERC20 public temple = IERC20(Constants.TEMPLE);
+    IERC20 public fxs = IERC20(AddressBook.FXS);
+    IERC20 public sdt = IERC20(AddressBook.SDT);
+    IERC20 public frax = IERC20(AddressBook.FRAX);
+    IERC20 public temple = IERC20(AddressBook.TEMPLE);
     IERC20 public fxsTemple = IERC20(0x6021444f1706f15465bEe85463BCc7d7cC17Fc03);
     IMasterchef public masterChef = IMasterchef(0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c);
     IFraxGauge public fxsTempleFraxGauge = IFraxGauge(0x10460d02226d6ef7B2419aE150E6377BdbB7Ef16);
@@ -89,7 +89,7 @@ contract FraxStrategyTest is BaseTest {
         gaugeController = IGaugeController(
             deployCode(
                 "artifacts/contracts/dao/GaugeController.vy/GaugeController.json",
-                abi.encode(Constants.SDT, Constants.VE_SDT, LOCAL_DEPLOYER)
+                abi.encode(AddressBook.SDT, AddressBook.VE_SDT, LOCAL_DEPLOYER)
             )
         );
         bytes memory distributorData = abi.encodeWithSignature(
@@ -428,11 +428,11 @@ contract FraxStrategyTest is BaseTest {
 
         assertEq(fxs.balanceOf(address(feeProxy)), 0);
         assertGt(frax.balanceOf(BOB), 0);
-        assertGt(IERC20(Constants.SDFRAX3CRV).balanceOf(feeProxy.FEE_DISTRIBUTOR()), 0);
+        assertGt(IERC20(AddressBook.SDFRAX3CRV).balanceOf(feeProxy.FEE_DISTRIBUTOR()), 0);
     }
 
     function transferFXS(address to, uint256 amount) internal {
-        vm.prank(Constants.FXS_WHALE);
+        vm.prank(AddressBook.FXS_WHALE);
         fxs.transfer(to, amount);
     }
 }

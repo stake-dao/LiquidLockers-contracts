@@ -15,8 +15,8 @@ import "contracts/interfaces/IVeSDT.sol";
 contract FeeDistributorTest is BaseTest {
     address internal constant LOCAL_DEPLOYER = address(0xDE);
     address internal constant ALICE = address(0xAA);
-    address internal token = Constants.SDT;
-    address internal reward = Constants.SD3CRV;
+    address internal token = AddressBook.SDT;
+    address internal reward = AddressBook.SD3CRV;
 
     uint256 internal constant INIITIAL_AMOUNT_TO_LOCK = 1_000e18;
 
@@ -73,10 +73,10 @@ contract FeeDistributorTest is BaseTest {
         deployFeeDistributor();
 
         deal(reward, address(feeDistributor), 10e18);
-        timeJump(Constants.WEEK);
+        timeJump(1 weeks);
         vm.prank(ALICE);
-        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + 3 * Constants.WEEK);
-        timeJump(Constants.WEEK * 5);
+        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + 3 weeks);
+        timeJump(5 weeks);
         uint256 rewardBalanceBeforeUser = IERC20(reward).balanceOf(ALICE);
 
         vm.prank(ALICE);
@@ -88,10 +88,10 @@ contract FeeDistributorTest is BaseTest {
     }
 
     function test02ClaimDuringDepositingFees() public {
-        timeJump(Constants.WEEK);
+        timeJump(1 weeks);
         vm.prank(ALICE);
-        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + 8 * Constants.WEEK);
-        timeJump(Constants.WEEK);
+        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + 8 weeks);
+        timeJump(1 weeks);
 
         deployFeeDistributor();
 
@@ -101,10 +101,10 @@ contract FeeDistributorTest is BaseTest {
                 deal(reward, address(feeDistributor), 1e18);
                 IFeeDistributor(address(feeDistributor)).checkpoint_token();
                 IFeeDistributor(address(feeDistributor)).checkpoint_total_supply();
-                timeJump(Constants.DAY);
+                timeJump(1 days);
             }
         }
-        timeJump(Constants.WEEK);
+        timeJump(1 weeks);
         IFeeDistributor(address(feeDistributor)).checkpoint_token();
         IFeeDistributor(address(feeDistributor)).checkpoint_total_supply();
         vm.stopPrank();
@@ -117,16 +117,16 @@ contract FeeDistributorTest is BaseTest {
 
     function test03ClaimBeforeFeeAreAdded() public {
         vm.prank(ALICE);
-        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + 8 * Constants.WEEK);
-        timeJump(Constants.WEEK);
+        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + 8 weeks);
+        timeJump(1 weeks);
 
-        timeJump(Constants.WEEK * 5);
+        timeJump(5 weeks);
 
         deployFeeDistributor();
         vm.startPrank(LOCAL_DEPLOYER);
         deal(reward, address(feeDistributor), 10e18);
         IFeeDistributor(address(feeDistributor)).checkpoint_token();
-        timeJump(Constants.WEEK);
+        timeJump(1 weeks);
         IFeeDistributor(address(feeDistributor)).checkpoint_token();
         vm.stopPrank();
 
@@ -166,7 +166,7 @@ contract FeeDistributorTest is BaseTest {
         feeDistributor = IFeeDistributor(
             deployCode(
                 "artifacts/contracts/dao/FeeDistributor.vy/FeeDistributor.json",
-                abi.encode(address(veSDT), block.timestamp, reward, LOCAL_DEPLOYER, Constants.STAKE_DAO_MULTISIG)
+                abi.encode(address(veSDT), block.timestamp, reward, LOCAL_DEPLOYER, AddressBook.STAKE_DAO_MULTISIG)
             )
         );
     }

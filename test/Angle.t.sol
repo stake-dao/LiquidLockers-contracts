@@ -26,10 +26,10 @@ import "contracts/interfaces/IMasterchef.sol";
 contract AngleTest is BaseTest {
     address internal constant LOCAL_DEPLOYER = address(0xDE);
     address internal constant ALICE = address(0xAA);
-    address internal token = Constants.ANGLE;
-    address internal veToken = Constants.VEANGLE;
-    address internal feeDistributor = Constants.ANGLE_FEE_DITRIBUTOR;
-    address internal angleGaugeController = Constants.ANGLE_GAUGE_CONTROLLER;
+    address internal token = AddressBook.ANGLE;
+    address internal veToken = AddressBook.VEANGLE;
+    address internal feeDistributor = AddressBook.ANGLE_FEE_DITRIBUTOR;
+    address internal angleGaugeController = AddressBook.ANGLE_GAUGE_CONTROLLER;
     address[] internal rewardsToken;
 
     uint256 internal constant INITIAL_AMOUNT_TO_LOCK = 10e18;
@@ -60,8 +60,8 @@ contract AngleTest is BaseTest {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 16141993);
         vm.selectFork(forkId);
 
-        rewardsToken.push(Constants.SAN_USDC_EUR);
-        //rewardsToken.push(Constants.AG_EUR);
+        rewardsToken.push(AddressBook.SAN_USDC_EUR);
+        //rewardsToken.push(AddressBook.AG_EUR);
         rewardsAmount.push(1_000_000e6);
         //rewardsAmount.push(1e18);
 
@@ -81,18 +81,18 @@ contract AngleTest is BaseTest {
         depositor = new Depositor(address(token), address(locker), address(_sdToken));
 
         // Deploy Accumulator
-        accumulator = new AngleAccumulatorV3(Constants.AG_EUR, address(0));
+        accumulator = new AngleAccumulatorV3(AddressBook.AG_EUR, address(0));
 
         // Deploy Gauge Controller
         gaugeController = IGaugeController(
             deployCode(
                 "artifacts/contracts/dao/GaugeController.vy/GaugeController.json",
-                abi.encode(Constants.SDT, Constants.VE_SDT, LOCAL_DEPLOYER)
+                abi.encode(AddressBook.SDT, AddressBook.VE_SDT, LOCAL_DEPLOYER)
             )
         );
 
         // Deploy SDT Distributor
-        veSDT = IVeToken(Constants.VE_SDT);
+        veSDT = IVeToken(AddressBook.VE_SDT);
         bytes memory sdtDistributorData = abi.encodeWithSignature(
             "initialize(address,address,address,address)",
             address(gaugeController),
@@ -105,7 +105,7 @@ contract AngleTest is BaseTest {
         sdtDistributor = SdtDistributorV2(address(proxy));
 
         // Masterchef
-        masterchef = IMasterchef(Constants.MASTERCHEF);
+        masterchef = IMasterchef(AddressBook.MASTERCHEF);
         masterChefToken = MasterchefMasterToken(address(sdtDistributor.masterchefToken()));
 
         // Deploy Liquidity Gauge V4
@@ -113,9 +113,9 @@ contract AngleTest is BaseTest {
             "initialize(address,address,address,address,address,address)",
             address(_sdToken),
             LOCAL_DEPLOYER,
-            Constants.SDT,
-            Constants.VE_SDT,
-            Constants.VE_SDT_BOOST_PROXY, // to mock
+            AddressBook.SDT,
+            AddressBook.VE_SDT,
+            AddressBook.VE_SDT_BOOST_PROXY, // to mock
             address(sdtDistributor)
         );
         liquidityGaugeImpl =
@@ -126,10 +126,10 @@ contract AngleTest is BaseTest {
         /// --- END DEPLOYEMENT
         ///////////////////////////////////////////////////////////////
         vm.stopPrank();
-        vm.prank(IVeToken(Constants.VE_SDT).admin());
-        ISmartWalletChecker(Constants.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
-        vm.prank(ISmartWalletChecker(Constants.ANGLE_SMART_WALLET_CHECKER).admin());
-        ISmartWalletChecker(Constants.ANGLE_SMART_WALLET_CHECKER).approveWallet(address(locker));
+        vm.prank(IVeToken(AddressBook.VE_SDT).admin());
+        ISmartWalletChecker(AddressBook.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
+        vm.prank(ISmartWalletChecker(AddressBook.ANGLE_SMART_WALLET_CHECKER).admin());
+        ISmartWalletChecker(AddressBook.ANGLE_SMART_WALLET_CHECKER).approveWallet(address(locker));
 
         // Add masterchef token to masterchef
         vm.prank(masterchef.owner());
@@ -148,8 +148,8 @@ contract AngleTest is BaseTest {
         accumulator.setClaimerFee(ACCUMULATOR_CLAIMER_FEE);
         accumulator.setSdtDistributor(address(sdtDistributor));
         accumulator.setLocker(address(locker));
-        liquidityGauge.add_reward(Constants.SAN_USDC_EUR, address(accumulator));
-        liquidityGauge.add_reward(Constants.AG_EUR, address(accumulator));
+        liquidityGauge.add_reward(AddressBook.SAN_USDC_EUR, address(accumulator));
+        liquidityGauge.add_reward(AddressBook.AG_EUR, address(accumulator));
         gaugeController.add_type("Mainnet staking", 1e18);
         gaugeController.add_gauge(address(liquidityGauge), 0, 0);
         gaugeController.vote_for_gauge_weights(address(liquidityGauge), 10000);
@@ -207,7 +207,7 @@ contract AngleTest is BaseTest {
         address rewardsReceiver = address(this);
         listCallData[0] = abi.encodeWithSignature("claimRewards(address,address)", rewardsToken[0], rewardsReceiver);
         simulateRewards(rewardsToken, rewardsAmount, feeDistributor);
-        timeJump(2 * Constants.WEEK);
+        timeJump(2 weeks);
         claimReward(LOCAL_DEPLOYER, address(locker), rewardsToken, rewardsReceiver, listCallData);
     }
 
@@ -742,10 +742,10 @@ contract AngleTest is BaseTest {
         bytes[] memory listCallData = new bytes[](1);
         address rewardsReceiver = address(liquidityGauge);
         listCallData[0] = abi.encodeWithSignature("claimAndNotify(uint256)", rewardsAmount[0] / 1e6);
-        deal(Constants.SDT, rewardsReceiver, 1e18);
+        deal(AddressBook.SDT, rewardsReceiver, 1e18);
         simulateRewards(rewardsToken, rewardsAmount, address(accumulator));
         // Rewards are swap on the Accumulator from san_usdc_eur to ageur
-        rewardsToken[0] = Constants.AG_EUR;
+        rewardsToken[0] = AddressBook.AG_EUR;
         claimRewardAndNotify(
             LOCAL_DEPLOYER, address(accumulator), rewardsToken, rewardsReceiver, address(liquidityGauge), listCallData
         );
@@ -756,10 +756,10 @@ contract AngleTest is BaseTest {
         bytes[] memory listCallData = new bytes[](1);
         address rewardsReceiver = address(liquidityGauge);
         listCallData[0] = abi.encodeWithSignature("claimAndNotifyAll()");
-        deal(Constants.SDT, rewardsReceiver, 1e18);
+        deal(AddressBook.SDT, rewardsReceiver, 1e18);
         simulateRewards(rewardsToken, rewardsAmount, address(accumulator));
         // Rewards are swap on the Accumulator from san_usdc_eur to ageur
-        rewardsToken[0] = Constants.AG_EUR;
+        rewardsToken[0] = AddressBook.AG_EUR;
         claimRewardAndNotify(
             LOCAL_DEPLOYER, address(accumulator), rewardsToken, rewardsReceiver, address(liquidityGauge), listCallData
         );

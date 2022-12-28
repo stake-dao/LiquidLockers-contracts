@@ -18,7 +18,7 @@ contract BalancerZapperTest is BaseTest {
 
     BalancerZapper public zapper;
     ILiquidityGauge public gauge;
-    IERC20 public bal = IERC20(Constants.BAL);
+    IERC20 public bal = IERC20(AddressBook.BAL);
     IERC20 public sdBal = IERC20(SD_BAL);
 
     function setUp() public {
@@ -29,8 +29,8 @@ contract BalancerZapperTest is BaseTest {
         zapper = new BalancerZapper();
         gauge = ILiquidityGauge(SD_BAL_GAUGE);
 
-        deal(Constants.BAL, LOCAL_DEPLOYER, AMOUNT * 100);
-        deal(Constants.BAL, ALICE, AMOUNT * 100);
+        deal(AddressBook.BAL, LOCAL_DEPLOYER, AMOUNT * 100);
+        deal(AddressBook.BAL, ALICE, AMOUNT * 100);
         vm.prank(LOCAL_DEPLOYER);
         bal.approve(address(zapper), type(uint256).max);
         vm.prank(ALICE);

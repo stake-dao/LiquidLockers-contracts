@@ -3,7 +3,8 @@ pragma solidity ^0.8.7;
 
 import "forge-std/Test.sol";
 
-import "../fixtures/Constants.sol";
+import {AddressBook} from "@addressbook/AddressBook.sol";
+
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "contracts/interfaces/IVeToken.sol";
@@ -47,7 +48,7 @@ contract BaseTest is Test {
         assertEq(lockedBalance.amount, lockedBalanceBefore.amount + int256(initialAmountToLock), "locked amount");
         assertEq(
             lockedBalance.end,
-            lockedBalanceBefore.end + ((block.timestamp + initialPeriodToLock) / Constants.WEEK) * Constants.WEEK,
+            lockedBalanceBefore.end + ((block.timestamp + initialPeriodToLock) / 1 weeks) * 1 weeks,
             "locked end time"
         );
         assertApproxEqRel(
@@ -81,10 +82,7 @@ contract BaseTest is Test {
 
         IVeToken.LockedBalance memory lockedBalance = IVeToken(veToken).locked(address(locker));
         assertApproxEqAbs(
-            lockedBalance.end,
-            lockedBalanceBefore.end + (endPeriodLock / Constants.WEEK) * Constants.WEEK,
-            Constants.WEEK,
-            "locked end time"
+            lockedBalance.end, lockedBalanceBefore.end + (endPeriodLock / 1 weeks) * 1 weeks, 1 weeks, "locked end time"
         );
     }
 
@@ -188,8 +186,8 @@ contract BaseTest is Test {
         if (amountToLock != 0) {
             assertApproxEqAbs(
                 IVeToken(veToken).locked(locker).end,
-                (((lockedBalanceBefore.end + waitBeforeLock) / Constants.WEEK) * Constants.WEEK),
-                Constants.WEEK,
+                (((lockedBalanceBefore.end + waitBeforeLock) / 1 weeks) * 1 weeks),
+                1 weeks,
                 "locked end"
             );
         }
@@ -273,7 +271,7 @@ contract BaseTest is Test {
                 IERC20(rewardToken).balanceOf(caller), (rewardAmount * fees) / 10000, "reward token balance caller"
             );
         }
-        assertGt(IERC20(Constants.SDT).balanceOf(gauge), 0, "SDT balance in gauge");
+        assertGt(IERC20(AddressBook.SDT).balanceOf(gauge), 0, "SDT balance in gauge");
     }
 
     function notifyExtraReward(
@@ -299,7 +297,7 @@ contract BaseTest is Test {
                 "reward token balance caller"
             );
         }
-        assertGt(IERC20(Constants.SDT).balanceOf(gauge), 0, "SDT balance in gauge");
+        assertGt(IERC20(AddressBook.SDT).balanceOf(gauge), 0, "SDT balance in gauge");
     }
 
     function depositToken(address caller, address accumulator, address token, uint256 amount, bytes memory callData)
@@ -340,7 +338,7 @@ contract BaseTest is Test {
     ) internal {
         claimReward(caller, accumulator, rewardsToken, rewardsReceiver, callData);
 
-        assertGt(IERC20(Constants.SDT).balanceOf(gauge), 0, "SDT balance in gauge");
+        assertGt(IERC20(AddressBook.SDT).balanceOf(gauge), 0, "SDT balance in gauge");
     }
 
     ////////////////////////////////////////////////////////////////
@@ -447,21 +445,21 @@ contract BaseTest is Test {
 
     function lockSDT(address caller) public {
         vm.startPrank(caller);
-        deal(Constants.SDT, caller, 1_000_000e18);
-        IERC20(Constants.SDT).approve(Constants.VE_SDT, 1_000_000e18);
+        deal(AddressBook.SDT, caller, 1_000_000e18);
+        IERC20(AddressBook.SDT).approve(AddressBook.VE_SDT, 1_000_000e18);
         bytes memory createLockCallData = abi.encodeWithSignature(
             "create_lock(uint256,uint256)", 1_000_000e18, block.timestamp + 60 * 60 * 24 * 364 * 4
         );
-        (bool success,) = Constants.VE_SDT.call(createLockCallData);
+        (bool success,) = AddressBook.VE_SDT.call(createLockCallData);
         require(success, "lock SDT failed");
         vm.stopPrank();
 
-        assertApproxEqRel(IERC20(Constants.VE_SDT).balanceOf(caller), 1_000_000e18, 1e16);
+        assertApproxEqRel(IERC20(AddressBook.VE_SDT).balanceOf(caller), 1_000_000e18, 1e16);
     }
 
     function lockSDTWhiteList(address caller) public {
-        vm.prank(IVeToken(Constants.VE_SDT).admin());
-        ISmartWalletChecker(Constants.SDT_SMART_WALLET_CHECKER).approveWallet(caller);
+        vm.prank(IVeToken(AddressBook.VE_SDT).admin());
+        ISmartWalletChecker(AddressBook.SDT_SMART_WALLET_CHECKER).approveWallet(caller);
         lockSDT(caller);
     }
 
@@ -473,7 +471,7 @@ contract BaseTest is Test {
         (bool success,) = vesdt.call(createLockCallData);
         require(success, "lock SDT failed");
         vm.stopPrank();
-        uint256 max = 4 * Constants.YEAR;
+        uint256 max = 4 * 365 days;
 
         assertApproxEqRel(IERC20(vesdt).balanceOf(caller), (amount * (unlockTime - block.timestamp)) / max, 2e16);
     }

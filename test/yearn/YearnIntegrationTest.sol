@@ -5,12 +5,12 @@ import "forge-std/Vm.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
+import {AddressBook} from "@addressbook/AddressBook.sol";
+
 import {sdToken} from "contracts/tokens/sdToken.sol";
 import {YearnLocker} from "contracts/lockers/YearnLocker.sol";
 import {IVeYFI} from "contracts/interfaces/IVeYFI.sol";
 import {DepositorV2} from "contracts/depositors/DepositorV2.sol";
-import {Constants} from "test/fixtures/Constants.sol";
-import {Constants} from "test/fixtures/Constants.sol";
 import {IRewardPool} from "contracts/interfaces/IRewardPool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ILiquidityGauge} from "contracts/interfaces/ILiquidityGauge.sol";
@@ -23,12 +23,12 @@ contract YearnIntegrationTest is Test {
     ///////////////////////////////////////////////////////////////
 
     // External Contracts
-    IRewardPool internal rewardPool = IRewardPool(Constants.YFI_REWARD_POOL);
+    IRewardPool internal rewardPool = IRewardPool(AddressBook.YFI_REWARD_POOL);
     YearnLocker internal yearnLocker;
 
     // Liquid Lockers Contracts
-    IERC20 internal YFI = IERC20(Constants.YFI);
-    IVeYFI internal veYFI = IVeYFI(Constants.VE_YFI);
+    IERC20 internal YFI = IERC20(AddressBook.YFI);
+    IVeYFI internal veYFI = IVeYFI(AddressBook.VE_YFI);
     sdToken internal sdYFI;
 
     DepositorV2 internal depositor;
@@ -51,15 +51,15 @@ contract YearnIntegrationTest is Test {
             address(
                 new TransparentUpgradeableProxy(
                 liquidityGaugeImpl,
-                Constants.PROXY_ADMIN,
+                AddressBook.PROXY_ADMIN,
                 abi.encodeWithSignature(
                 "initialize(address,address,address,address,address,address)",
                 address(sdYFI),
                 address(this),
-                Constants.SDT,
-                Constants.VE_SDT,
-                Constants.VE_SDT_BOOST_PROXY,
-                Constants.SDT_DISTRIBUTOR
+                AddressBook.SDT,
+                AddressBook.VE_SDT,
+                AddressBook.VE_SDT_BOOST_PROXY,
+                AddressBook.SDT_DISTRIBUTOR
                 )
                 )
             )
@@ -70,23 +70,23 @@ contract YearnIntegrationTest is Test {
         yearnLocker.approveUnderlying();
 
         // Deploy Depositor Contract
-        depositor = new DepositorV2(Constants.YFI, address(yearnLocker), address(sdYFI), 4 * Constants.YEAR);
+        depositor = new DepositorV2(AddressBook.YFI, address(yearnLocker), address(sdYFI), 4*365 days);
         depositor.setGauge(address(liquidityGauge));
         sdYFI.setOperator(address(depositor));
         yearnLocker.setYFIDepositor(address(depositor));
 
         // Deploy Accumulator Contract
-        yearnAccumulator = new YearnAccumulator(address(Constants.YFI), address(liquidityGauge));
+        yearnAccumulator = new YearnAccumulator(address(AddressBook.YFI), address(liquidityGauge));
         yearnAccumulator.setLocker(address(yearnLocker));
         yearnLocker.setAccumulator(address(yearnAccumulator));
 
         // Add Reward to LGV4
-        liquidityGauge.add_reward(Constants.YFI, address(yearnAccumulator));
+        liquidityGauge.add_reward(AddressBook.YFI, address(yearnAccumulator));
 
         // Mint YFI to the adresss(this)
         deal(address(YFI), address(yearnLocker), amount);
 
-        yearnLocker.createLock(amount, block.timestamp + 4 * Constants.YEAR);
+        yearnLocker.createLock(amount, block.timestamp + 4 * 365 days);
 
         // Mint YFI to the adresss(this)
         deal(address(YFI), address(this), amount);
@@ -122,8 +122,8 @@ contract YearnIntegrationTest is Test {
         assertEq(liquidityGauge.balanceOf(address(this)), amount);
         uint256 oldEnd = veYFI.locked(address(yearnLocker)).end;
         // Increase Time
-        vm.warp(block.timestamp + 2 * Constants.WEEK);
-        uint256 newExpectedEnd = (block.timestamp + 4 * Constants.YEAR) / Constants.WEEK * Constants.WEEK;
+        vm.warp(block.timestamp + 2 weeks);
+        uint256 newExpectedEnd = (block.timestamp + 4 * 365 days) / 1 weeks * 1 weeks;
 
         deal(address(YFI), address(this), amount);
         YFI.approve(address(depositor), amount);
@@ -140,7 +140,7 @@ contract YearnIntegrationTest is Test {
         // Fill the Reward Pool with YFI.
         deal(address(YFI), address(rewardPool), amount);
 
-        vm.warp(block.timestamp + 2 * Constants.WEEK);
+        vm.warp(block.timestamp + 2 weeks);
         rewardPool.checkpoint_token();
 
         assertEq(YFI.balanceOf(address(liquidityGauge)), 0);

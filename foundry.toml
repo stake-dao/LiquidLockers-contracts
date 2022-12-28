@@ -13,6 +13,7 @@ gas_reports = ["*"]
 remappings = [
     '@openzeppelin/=node_modules/@openzeppelin/',
     '@openzeppelin/contracts-upgradeable=node_modules/@openzeppelin/contracts-upgradeable',
+    '@addressbook=lib/AddressBook/src/',
     'forge-std=lib/forge-std/src/'
 ]
 
