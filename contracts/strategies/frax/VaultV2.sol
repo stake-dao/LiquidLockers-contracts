@@ -98,7 +98,7 @@ contract StakingProxyBase {
     address public constant FXS =
         address(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
     address public constant vefxsProxy =
-        address(0x59CFCD384746ec3035299D90782Be065e466800B);
+        address(0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f);
     address public constant FEE_REGISTRY =
         address(0x0f1dc3Bd5fE8a3034d6Df0A411Efc7916830d19c);
     address public constant POOL_REGISTRY =
