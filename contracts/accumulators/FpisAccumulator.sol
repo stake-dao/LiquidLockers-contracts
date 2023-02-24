@@ -12,8 +12,10 @@ contract FpisAccumulator is BaseAccumulator {
 
     address public bribeRecipient;
     address public daoRecipient;
+    address public veSdtFeeProxy;
     uint256 public bribeFee;
     uint256 public daoFee;
+    uint256 public veSdtFeeProxyFee;
     /* ========== CONSTRUCTOR ========== */
     constructor(address _tokenReward, address _gauge) BaseAccumulator(_tokenReward, _gauge) {}
 
@@ -38,14 +40,31 @@ contract FpisAccumulator is BaseAccumulator {
         _distributeSDT();
     }
 
+    /// @notice Reserve fees for dao, bribe and veSdtFeeProxy
+    /// @param _amount amount to charge fees 
     function _chargeFee(uint256 _amount) internal returns(uint256) {
+        uint256 gaugeAmount = _amount;
         // dao part
-        uint256 daoAmount = (_amount * daoFee) / 10_000;
-        IERC20(tokenReward).transfer(daoRecipient, daoAmount);
+        if (daoFee > 0) {
+            uint256 daoAmount = (_amount * daoFee) / 10_000;
+            IERC20(tokenReward).transfer(daoRecipient, daoAmount);
+            gaugeAmount -= daoAmount;
+        }
+        
         // bribe part
-        uint256 bribeAmount = (_amount * bribeFee) / 10_000;
-        IERC20(tokenReward).transfer(bribeRecipient, bribeAmount);
-        return _amount - daoAmount - bribeAmount;
+        if (bribeFee > 0) {
+            uint256 bribeAmount = (_amount * bribeFee) / 10_000;
+            IERC20(tokenReward).transfer(bribeRecipient, bribeAmount);
+            gaugeAmount -= bribeAmount;
+        }
+        
+        // veSDTFeeProxy part
+        if (veSdtFeeProxyFee > 0) {
+            uint veSdtFeeProxyAmount = (_amount * veSdtFeeProxyFee) / 10_000;
+            IERC20(tokenReward).transfer(veSdtFeeProxy, veSdtFeeProxyAmount);
+            gaugeAmount -= veSdtFeeProxyAmount;
+        }
+        return gaugeAmount;
     }
 
     /// @notice Set DAO recipient
@@ -63,11 +82,18 @@ contract FpisAccumulator is BaseAccumulator {
         bribeRecipient = _bribeRecipient;
     }
 
+    /// @notice Set VeSdtFeeProxy
+    /// @param _veSdtFeeProxy proxy address
+    function setVeSdtFeeProxy(address _veSdtFeeProxy) external {
+        if (msg.sender != governance) revert NOT_ALLOWED();
+        veSdtFeeProxy = _veSdtFeeProxy;
+    }
+
     /// @notice Set fees reserved to the DAO at every claim
     /// @param _daoFee fee (100 = 1%)
     function setDaoFee(uint256 _daoFee) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        if (_daoFee > 10_000 || _daoFee + bribeFee > 10_000) revert FEE_TOO_HIGH();
+        if (_daoFee > 10_000 || _daoFee + bribeFee + veSdtFeeProxyFee > 10_000) revert FEE_TOO_HIGH();
         daoFee = _daoFee;
     }
 
@@ -75,7 +101,15 @@ contract FpisAccumulator is BaseAccumulator {
     /// @param _bribeFee fee (100 = 1%)
     function setBribeFee(uint256 _bribeFee) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        if (_bribeFee > 10_000 || _bribeFee + daoFee > 10_000) revert FEE_TOO_HIGH();
+        if (_bribeFee > 10_000 || _bribeFee + daoFee + veSdtFeeProxyFee > 10_000) revert FEE_TOO_HIGH();
         bribeFee = _bribeFee;
+    }
+
+    /// @notice Set fees reserved to bribes at every claim
+    /// @param _veSdtFeeProxyFee fee (100 = 1%)
+    function setVeSdtFeeProxyFee(uint256 _veSdtFeeProxyFee) external {
+        if (msg.sender != governance) revert NOT_ALLOWED();
+        if (_veSdtFeeProxyFee > 10_000 || _veSdtFeeProxyFee + daoFee + bribeFee > 10_000) revert FEE_TOO_HIGH();
+        veSdtFeeProxyFee = _veSdtFeeProxyFee;
     }
 }
