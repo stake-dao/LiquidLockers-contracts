@@ -67,7 +67,7 @@ contract FpisAccumulator is BaseAccumulator {
     /// @param _daoFee fee (100 = 1%)
     function setDaoFee(uint256 _daoFee) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        if (_daoFee > 10_000) revert FEE_TOO_HIGH();
+        if (_daoFee > 10_000 || _daoFee + bribeFee > 10_000) revert FEE_TOO_HIGH();
         daoFee = _daoFee;
     }
 
@@ -75,7 +75,7 @@ contract FpisAccumulator is BaseAccumulator {
     /// @param _bribeFee fee (100 = 1%)
     function setBribeFee(uint256 _bribeFee) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        if (_bribeFee > 10_000) revert FEE_TOO_HIGH();
+        if (_bribeFee > 10_000 || _bribeFee + daoFee > 10_000) revert FEE_TOO_HIGH();
         bribeFee = _bribeFee;
     }
 }

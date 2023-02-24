@@ -6,7 +6,7 @@ import "openzeppelin-contracts/token/ERC20/IERC20.sol";
 import "../interfaces/IVeFPIS.sol";
 import "../interfaces/IYieldDistributor.sol";
 
-/// @title FxsLocker
+/// @title FpisLocker
 /// @author StakeDAO
 /// @notice Locks the FPIS tokens to veFPIS contract
 contract FpisLocker {
@@ -59,7 +59,7 @@ contract FpisLocker {
     /// @param _value The amount of token to be locked
     /// @param _unlockTime The duration for which the token is to be locked
     function createLock(uint256 _value, uint256 _unlockTime) external onlyGovernance {
-        IveFPIS(veFPIS).create_lock(_value, _unlockTime);
+        IVeFPIS(veFPIS).create_lock(_value, _unlockTime);
         IYieldDistributor(yieldDistributor).checkpoint();
         emit LockCreated(msg.sender, _value, _unlockTime);
     }
@@ -68,20 +68,20 @@ contract FpisLocker {
     /// @dev The FPIS needs to be transferred to this contract before calling
     /// @param _value The amount by which the lock amount is to be increased
     function increaseAmount(uint256 _value) external onlyGovernanceOrDepositor {
-        IveFPIS(veFPIS).increase_amount(_value);
+        IVeFPIS(veFPIS).increase_amount(_value);
         IYieldDistributor(yieldDistributor).checkpoint();
     }
 
     /// @notice Increases the duration for which FPIS is locked in veFPIS for the user calling the function
     /// @param _unlockTime The duration in seconds for which the token is to be locked
     function increaseUnlockTime(uint256 _unlockTime) external onlyGovernanceOrDepositor {
-        IveFPIS(veFPIS).increase_unlock_time(_unlockTime);
+        IVeFPIS(veFPIS).increase_unlock_time(_unlockTime);
         IYieldDistributor(yieldDistributor).checkpoint();
     }
 
     /// @notice Claim the FPIS reward from the FPIS Yield Distributor at 0xE6D31C144BA99Af564bE7E81261f7bD951b802F6
     /// @param _recipient The address which will receive the claimedFPIS reward
-    function claimFXSRewards(address _recipient) external onlyGovernanceOrAcc {
+    function claimFPISRewards(address _recipient) external onlyGovernanceOrAcc {
         IYieldDistributor(yieldDistributor).getYield();
         emit FPISClaimed(_recipient, IERC20(fpis).balanceOf(address(this)));
         IERC20(fpis).safeTransfer(_recipient, IERC20(fpis).balanceOf(address(this)));
@@ -91,7 +91,7 @@ contract FpisLocker {
     /// @dev call only after lock time expires
     /// @param _recipient The address which will receive the released FPIS
     function release(address _recipient) external onlyGovernance {
-        IveFPIS(veFPIS).withdraw();
+        IVeFPIS(veFPIS).withdraw();
         uint256 balance = IERC20(fpis).balanceOf(address(this));
 
         IERC20(fpis).safeTransfer(_recipient, balance);
