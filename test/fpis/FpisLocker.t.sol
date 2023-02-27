@@ -32,7 +32,6 @@ contract FpisLockerTest is Test {
         yieldDistributor = IYieldDistributor(Constants.FPIS_YIELD_DISTRIBUTOR);
 
         sww = new SmartWalletWhitelist(address(this));
-        emit log_address(address(sww));
 
         // Deploy and Intialize the FpisLocker contract
         fpisLocker = new FpisLocker(address(this));

@@ -50,6 +50,10 @@ test-feeDistributor:; @forge test --match-contract FeeDistributorTest
 test-gaugeController:; @forge test --match-contract GaugeControllerTest
 test-boost-delegation:; @forge test --match-contract VeBoostDelegationTest
 
+# FPIS #
+test-fpis-locker:; @forge test --match-contract FpisLocker
+test-fpis-integration:; @forge test --match-contract FpisIntegrationTest
+
 # OTHERS #
 test-all:; @forge test
 
