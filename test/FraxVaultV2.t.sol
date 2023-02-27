@@ -7,6 +7,7 @@ import {VaultV2} from "contracts/strategies/frax/VaultV2.sol";
 import {FraxStrategy} from "contracts/strategies/frax/FraxStrategy.sol";
 import {PoolRegistry} from "contracts/strategies/frax/PoolRegistry.sol";
 import {Booster} from "contracts/strategies/frax/Booster.sol";
+import {ILiquidityGaugeStratFrax} from "contracts/interfaces/ILiquidityGaugeStratFrax.sol";
 
 interface FraxGauge {
     struct LockedStake {
@@ -113,6 +114,7 @@ contract FraxVaultV2Test is BaseTest {
         VaultV2 vault = VaultV2(vaultAddress);
         IERC20(SDT_FRAXBP_CURVE_LP_TOKEN).approve(vaultAddress, amount);
         vault.stakeLockedCurveLp(amount, 94608000);
+        address rewardsContract = vault.rewards();
         uint256 veFXSMultiplier = FraxGauge(SDT_FRAXBP_GAUGE).veFXSMultiplier(
             vaultAddress
         );
@@ -120,6 +122,10 @@ contract FraxVaultV2Test is BaseTest {
             .lockedStakesOf(vaultAddress)[0];
 
         uint256 boost = (lockedStake.lock_multiplier + veFXSMultiplier);
+        uint256 rewardsContractStaked = ILiquidityGaugeStratFrax(
+            rewardsContract
+        ).balanceOf(address(this));
+        assertEq(rewardsContractStaked, amount);
         assertEq(boost, 4e18); // Max boost is 4x
     }
 
