@@ -46,9 +46,17 @@ contract FraxVaultV2Test is BaseTest {
         0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27;
     address public constant FRAX_LOCKER =
         0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f;
+    address public constant OHM_FRAXBP_GAUGE =
+        0xc96e1a26264D965078bd01eaceB129A65C09FFE7;
+    address public constant OHM_FRAXBP_CONVEX_STAKING_TOKEN =
+        0x81b0dCDa53482A2EA9eb496342dC787643323e95;
+    address public constant OHM_FRAXBP_CURVE_LP_TOKEN =
+        0x5271045F7B73c17825A7A7aee6917eE46b0B7520;
 
     address public constant FXS = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
     address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
+    uint256 public sdtFraxBPPid;
+    uint256 public ohmFraxBPPid;
     VaultV2 vaultImpl;
     FraxStrategy strategy;
     PoolRegistry registry;
@@ -67,16 +75,32 @@ contract FraxVaultV2Test is BaseTest {
             SDT_FRAXBP_GAUGE,
             SDT_FRAXBP_CONVEX_STAKING_TOKEN
         );
+        uint256 poolLength = registry.poolLength();
+        sdtFraxBPPid = poolLength - 1;
         vm.prank(FRAX_GOVERNANCE);
         FraxGauge(SDT_FRAXBP_GAUGE).toggleValidVeFXSProxy(address(FRAX_LOCKER));
+        vm.prank(STAKEDAO_DEPLOYER);
+        booster.addPool(
+            address(vaultImpl),
+            OHM_FRAXBP_GAUGE,
+            OHM_FRAXBP_CONVEX_STAKING_TOKEN
+        );
+        poolLength = registry.poolLength();
+        ohmFraxBPPid = poolLength - 1;
+        vm.prank(FRAX_GOVERNANCE);
+        FraxGauge(OHM_FRAXBP_GAUGE).toggleValidVeFXSProxy(address(FRAX_LOCKER));
     }
 
     function testCreateVault() public {
-        uint256 poolLength = registry.poolLength();
-        uint256 _pid = poolLength - 1;
-        address vaultAddressBefore = registry.vaultMap(_pid, address(this));
-        booster.createVault(_pid);
-        address vaultAddressAfter = registry.vaultMap(_pid, address(this));
+        address vaultAddressBefore = registry.vaultMap(
+            sdtFraxBPPid,
+            address(this)
+        );
+        booster.createVault(sdtFraxBPPid);
+        address vaultAddressAfter = registry.vaultMap(
+            sdtFraxBPPid,
+            address(this)
+        );
         assertTrue(vaultAddressBefore == address(0));
         assertTrue(vaultAddressAfter != address(0));
     }
@@ -84,10 +108,8 @@ contract FraxVaultV2Test is BaseTest {
     function testDepositVault() public {
         uint256 amount = 10000e18;
         deal(SDT_FRAXBP_CURVE_LP_TOKEN, address(this), amount);
-        uint256 poolLength = registry.poolLength();
-        uint256 _pid = poolLength - 1;
-        booster.createVault(_pid);
-        address vaultAddress = registry.vaultMap(_pid, address(this));
+        booster.createVault(sdtFraxBPPid);
+        address vaultAddress = registry.vaultMap(sdtFraxBPPid, address(this));
         VaultV2 vault = VaultV2(vaultAddress);
         IERC20(SDT_FRAXBP_CURVE_LP_TOKEN).approve(vaultAddress, amount);
         vault.stakeLockedCurveLp(amount, 94608000);
@@ -104,10 +126,8 @@ contract FraxVaultV2Test is BaseTest {
     function testGetRewards() public {
         uint256 amount = 10000e18;
         deal(SDT_FRAXBP_CURVE_LP_TOKEN, address(this), amount);
-        uint256 poolLength = registry.poolLength();
-        uint256 _pid = poolLength - 1;
-        booster.createVault(_pid);
-        address vaultAddress = registry.vaultMap(_pid, address(this));
+        booster.createVault(sdtFraxBPPid);
+        address vaultAddress = registry.vaultMap(sdtFraxBPPid, address(this));
         VaultV2 vault = VaultV2(vaultAddress);
         IERC20(SDT_FRAXBP_CURVE_LP_TOKEN).approve(vaultAddress, amount);
         vault.stakeLockedCurveLp(amount, 94608000);
@@ -121,5 +141,36 @@ contract FraxVaultV2Test is BaseTest {
         assertEq(fxsBalanceBefore, 0);
         assertGt(crvBalanceAfter, 0);
         assertGt(fxsBalanceAfter, 0);
+    }
+
+    function testCreateOhmFraxBpVault() public {
+        address vaultAddressBefore = registry.vaultMap(
+            ohmFraxBPPid,
+            address(this)
+        );
+        booster.createVault(ohmFraxBPPid);
+        address vaultAddressAfter = registry.vaultMap(
+            ohmFraxBPPid,
+            address(this)
+        );
+        assertTrue(vaultAddressBefore == address(0));
+        assertTrue(vaultAddressAfter != address(0));
+    }
+
+    function testOhmFraxBpVault() public {
+        uint256 amount = 100000e18;
+        deal(OHM_FRAXBP_CURVE_LP_TOKEN, address(this), amount);
+        booster.createVault(ohmFraxBPPid);
+        address vaultAddress = registry.vaultMap(ohmFraxBPPid, address(this));
+        VaultV2 vault = VaultV2(vaultAddress);
+        IERC20(OHM_FRAXBP_CURVE_LP_TOKEN).approve(vaultAddress, amount);
+        vault.stakeLockedCurveLp(amount, 94608000);
+        uint256 veFXSMultiplier = FraxGauge(OHM_FRAXBP_GAUGE).veFXSMultiplier(
+            vaultAddress
+        );
+        FraxGauge.LockedStake memory lockedStake = FraxGauge(OHM_FRAXBP_GAUGE)
+            .lockedStakesOf(vaultAddress)[0];
+        uint256 boost = (lockedStake.lock_multiplier + veFXSMultiplier);
+        assertEq(boost, 4e18); // Max boost is 4x
     }
 }

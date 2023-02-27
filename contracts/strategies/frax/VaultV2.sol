@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "../../interfaces/ILiquidityGaugeStratFrax.sol";
 import "../../interfaces/IPoolRegistry.sol";
 
+//// Forked from Convex protocol and modified for StakeDAO Frax strategies
+
 interface ICurveConvex {
     function earmarkRewards(uint256 _pid) external returns (bool);
 
