@@ -16,6 +16,7 @@ import {ILiquidityGauge} from "contracts/interfaces/ILiquidityGauge.sol";
 import {FpisAccumulator} from "contracts/accumulators/FpisAccumulator.sol";
 import {TransparentUpgradeableProxy} from "contracts/external/TransparentUpgradeableProxy.sol";
 import {SmartWalletWhitelist} from "contracts/dao/SmartWalletWhitelist.sol";
+import {VeSDTFeeFpisProxy} from "contracts/accumulators/VeSDTFeeFpisProxy.sol";
 
 contract FpisIntegrationTest is Test {
     ////////////////////////////////////////////////////////////////
@@ -35,6 +36,10 @@ contract FpisIntegrationTest is Test {
     ILiquidityGauge internal liquidityGauge;
     FpisAccumulator internal fpisAccumulator;
     SmartWalletWhitelist internal sww;
+    VeSDTFeeFpisProxy internal veSdtFeeProxy;
+
+    address public daoRecipient = makeAddr("dao");
+    address public bribeRecipient = makeAddr("bribe");
 
     // Helper
     uint256 internal constant amount = 100e18;
@@ -77,8 +82,20 @@ contract FpisIntegrationTest is Test {
         sdFPIS.setOperator(address(depositor));
         fpisLocker.setFpisDepositor(address(depositor));
 
+        // Deploy veSdtFeeProxy
+        address[] memory fraxSwapPath = new address[](2);
+        fraxSwapPath[0] = Constants.FPIS;
+        fraxSwapPath[1] = Constants.FRAX;
+        veSdtFeeProxy = new VeSDTFeeFpisProxy(fraxSwapPath);
+
         // Deploy Accumulator Contract
-        fpisAccumulator = new FpisAccumulator(address(Constants.FPIS), address(liquidityGauge));
+        fpisAccumulator = new FpisAccumulator(
+            address(Constants.FPIS), 
+            address(liquidityGauge),
+            daoRecipient,
+            bribeRecipient,
+            address(veSdtFeeProxy)
+            );
         fpisAccumulator.setLocker(address(fpisLocker));
         fpisLocker.setAccumulator(address(fpisAccumulator));
 
@@ -145,14 +162,42 @@ contract FpisIntegrationTest is Test {
     }
 
     function testAccumulatorRewards() public {
-        // Fill the Reward Pool with FPIS.
-        deal(address(FPIS), address(yieldDistributor), amount);
+        vm.warp(block.timestamp + 2 * Constants.DAY);
 
-        vm.warp(block.timestamp + 2 * Constants.WEEK);
-        //.checkpoint_token();
+        // Check Dao recipient
+        assertEq(FPIS.balanceOf(daoRecipient), 0);
 
+        // Check Bribe recipient23
+        assertEq(FPIS.balanceOf(bribeRecipient), 0);
+
+        // Check VeSdtFeeProxy
+        assertEq(FPIS.balanceOf(address(veSdtFeeProxy)), 0);
+
+        // Check lgv4
         assertEq(FPIS.balanceOf(address(liquidityGauge)), 0);
+
         fpisAccumulator.claimAndNotifyAll();
+
+        assertGt(FPIS.balanceOf(daoRecipient), 0);
+
+        assertGt(FPIS.balanceOf(bribeRecipient), 0);
+
+        assertGt(FPIS.balanceOf(address(veSdtFeeProxy)), 0);
+
         assertGt(FPIS.balanceOf(address(liquidityGauge)), 0);
+    }
+
+    function testVeSdtFeeProxy() public {
+        deal(address(FPIS), address(veSdtFeeProxy), 100e18);
+
+        // Check FeeD
+        uint256 feeDBalanceBefore = IERC20(Constants.SDFRAX3CRV).balanceOf(Constants.FEE_D_SD);
+
+        veSdtFeeProxy.sendRewards();
+
+        uint256 feeDBalanceAfter = IERC20(Constants.SDFRAX3CRV).balanceOf(Constants.FEE_D_SD);
+
+        assertEq(FPIS.balanceOf(address(veSdtFeeProxy)), 0);
+        assertGt(feeDBalanceAfter, feeDBalanceBefore);
     }
 }

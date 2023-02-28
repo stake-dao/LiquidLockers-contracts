@@ -48,12 +48,12 @@ contract VeSDTFeeFpisProxy is Ownable {
     /// @dev slippageCRV = 100 for 1% max slippage
     /// @param _amount amount to swap
     function _swapOnFraxSwap(uint256 _amount) internal returns (uint256) {
-        uint256[] memory amounts = IFraxSwapRouter(FRAXSWAP_ROUTER_V2).getAmountsOut(_amount, fpisToFraxPath);
+        //uint256[] memory amounts = IFraxSwapRouter(FRAXSWAP_ROUTER_V2).getAmountsOut(_amount, fpisToFraxPath);
 
-        uint256 minAmount = (amounts[fpisToFraxPath.length - 1] * (10_000 - maxSlippage)) / (10_000);
+        //uint256 minAmount = (amounts[fpisToFraxPath.length - 1] * (10_000 - maxSlippage)) / (10_000);
 
         uint256[] memory outputs = IFraxSwapRouter(FRAXSWAP_ROUTER_V2).swapExactTokensForTokens(
-            _amount, minAmount, fpisToFraxPath, address(this), block.timestamp + 1800
+            _amount, 0, fpisToFraxPath, address(this), block.timestamp + 1800
         );
 
         return outputs[1];
