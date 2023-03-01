@@ -96,4 +96,12 @@ contract FpisLockerTest is Test {
         assertEq(balanceBefore, 0);
         assertGt(balanceAfterClaim, balanceBefore);
     }
+
+    function testStakerSetProxy() public {
+        // test the correctness of the function signature
+        vm.recordLogs();
+        fpisLocker.stakerSetProxy(Constants.ZERO_ADDRESS);
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        assertEq(entries[0].topics[0], keccak256("StakerProxySet(address)"));
+    }
 }

@@ -29,6 +29,7 @@ contract FpisLocker {
     event FpisDepositorChanged(address indexed newFxsDepositor);
     event AccumulatorChanged(address indexed newAccumulator);
     event YieldDistributorChanged(address indexed newYieldDistributor);
+    event StakerSetProxy(address proxy);
 
     /* ========== CONSTRUCTOR ========== */
     constructor(address _accumulator) {
@@ -124,6 +125,13 @@ contract FpisLocker {
     function setAccumulator(address _accumulator) external onlyGovernance {
         accumulator = _accumulator;
         emit AccumulatorChanged(_accumulator);
+    }
+
+    /// @notice Set the veFPIS proxy to do activities on its behalf 
+    /// @param _proxy frax proxy address 
+    function stakerSetProxy(address _proxy) external onlyGovernance {
+        IVeFPIS(veFPIS).stakerSetProxy(_proxy);
+        emit StakerSetProxy(_proxy);
     }
 
     /// @notice execute a function

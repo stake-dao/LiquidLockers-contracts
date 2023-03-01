@@ -20,4 +20,6 @@ interface IVeFPIS {
     function withdraw() external;
 
     function smart_wallet_checker() external returns(address);
+
+    function stakerSetProxy(address _proxy) external;
 }
