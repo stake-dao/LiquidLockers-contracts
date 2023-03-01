@@ -15,11 +15,11 @@ import {FpisAccumulator} from "contracts/accumulators/FpisAccumulator.sol";
 import {FpisLocker} from "contracts/lockers/FpisLocker.sol";
 import {VeSDTFeeFpisProxy} from "contracts/accumulators/VeSDTFeeFpisProxy.sol";
 
-contract DeployFpisLL is Script, Test {
+contract DeployFpisLLPart2 is Script, Test {
     sdToken public sdFPIS;
     FpisAccumulator internal fpisAccumulator;
     DepositorV2 internal depositor;
-    FpisLocker internal fpisLocker;
+    FpisLocker internal fpisLocker; // hardcode the address after running part1
     VeSDTFeeFpisProxy internal veSdtFeeProxy;
 
     ILiquidityGauge public liquidityGauge;
@@ -66,11 +66,6 @@ contract DeployFpisLL is Script, Test {
             bribeRecipient,
             address(veSdtFeeProxy)
         );
-
-        // Deploy and Intialize the FpisLocker contract
-        bytes32 lockerSalt = bytes32(uint256(uint160(0xc2544A32872A91F4A553b404C6950e89De901fdb)) << 96); // FPIS address
-        fpisLocker =
-        new FpisLocker{salt: lockerSalt}(address(fpisAccumulator));
 
         // Deploy Depositor Contract
         depositor = new DepositorV2(address(FPIS), address(fpisLocker), address(sdFPIS), 4 * Constants.YEAR);
