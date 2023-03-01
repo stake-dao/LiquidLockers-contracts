@@ -16,6 +16,7 @@ contract FpisLocker {
     address public governance;
     address public fpisDepositor;
     address public accumulator;
+    address public voter;
 
     address public constant fpis = address(0xc2544A32872A91F4A553b404C6950e89De901fdb);
     address public constant veFPIS = address(0x574C154C83432B0A45BA3ad2429C3fA242eD7359);
@@ -30,6 +31,7 @@ contract FpisLocker {
     event AccumulatorChanged(address indexed newAccumulator);
     event YieldDistributorChanged(address indexed newYieldDistributor);
     event StakerSetProxy(address proxy);
+    event VoterChanged(address voter);
 
     /* ========== CONSTRUCTOR ========== */
     constructor(address _accumulator) {
@@ -51,6 +53,11 @@ contract FpisLocker {
 
     modifier onlyGovernanceOrDepositor() {
         require(msg.sender == governance || msg.sender == fpisDepositor, "!(gov||fpisDepositor)");
+        _;
+    }
+
+    modifier onlyGovernanceOrVoter() {
+        require(msg.sender == governance || msg.sender == voter, "!(gov|voter)");
         _;
     }
 
@@ -127,6 +134,13 @@ contract FpisLocker {
         emit AccumulatorChanged(_accumulator);
     }
 
+    /// @notice Set the voter
+    /// @param _voter voter address
+    function setVoter(address _voter) external onlyGovernance {
+        voter = _voter;
+        emit VoterChanged(_voter);
+    }
+
     /// @notice Set the veFPIS proxy to do activities on its behalf 
     /// @param _proxy frax proxy address 
     function stakerSetProxy(address _proxy) external onlyGovernance {
@@ -140,7 +154,7 @@ contract FpisLocker {
     /// @param data Call function data
     function execute(address to, uint256 value, bytes calldata data)
         external
-        onlyGovernance
+        onlyGovernanceOrVoter
         returns (bool, bytes memory)
     {
         (bool success, bytes memory result) = to.call{value: value}(data);
