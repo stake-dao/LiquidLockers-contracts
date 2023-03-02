@@ -74,7 +74,7 @@ contract FpisIntegrationTest is Test {
         );
 
         // Deploy and Intialize the FpisLocker contract
-        fpisLocker = new FpisLocker(address(this));
+        fpisLocker = new FpisLocker(address(this), address(this));
 
         // Deploy Depositor Contract
         depositor = new DepositorV2(Constants.FPIS, address(fpisLocker), address(sdFPIS), 4 * Constants.YEAR);

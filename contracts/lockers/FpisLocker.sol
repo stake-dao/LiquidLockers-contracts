@@ -34,8 +34,8 @@ contract FpisLocker {
     event VoterChanged(address voter);
 
     /* ========== CONSTRUCTOR ========== */
-    constructor(address _accumulator) {
-        governance = msg.sender;
+    constructor(address _governance, address _accumulator) {
+        governance = _governance;
         accumulator = _accumulator;
         IERC20(fpis).approve(veFPIS, type(uint256).max);
     }

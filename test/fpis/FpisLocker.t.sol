@@ -34,7 +34,7 @@ contract FpisLockerTest is Test {
         sww = new SmartWalletWhitelist(address(this));
 
         // Deploy and Intialize the FpisLocker contract
-        fpisLocker = new FpisLocker(address(this));
+        fpisLocker = new FpisLocker(address(this), address(this));
 
         // Mint FPIS to the YearnLocker contract
         deal(address(FPIS), address(fpisLocker), 100e18);
