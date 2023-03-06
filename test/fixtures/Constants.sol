@@ -139,4 +139,11 @@ library Constants {
     /// --- CURVE LL
     ///////////////////////////////////////////////////////////////
     address public constant CURVE_STRATEGY = 0x20F1d4Fed24073a9b9d388AfA2735Ac91f079ED6;
+
+    ////////////////////////////////////////////////////////////////
+    /// --- FPI (FRAX PROTOCOL)
+    ///////////////////////////////////////////////////////////////
+    address public constant FPIS = 0xc2544A32872A91F4A553b404C6950e89De901fdb;
+    address public constant VE_FPIS = 0x574C154C83432B0A45BA3ad2429C3fA242eD7359;
+    address public constant FPIS_YIELD_DISTRIBUTOR = 0xE6D31C144BA99Af564bE7E81261f7bD951b802F6;
 }
