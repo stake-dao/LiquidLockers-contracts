@@ -4,6 +4,7 @@ pragma solidity 0.8.7;
 import "forge-std/Test.sol";
 import "forge-std/Script.sol";
 
+import {AddressBook} from "addressBook/AddressBook.sol";
 import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
 import {sdToken} from "contracts/tokens/sdToken.sol";
 import {DepositorV2} from "contracts/depositors/DepositorV2.sol";

@@ -166,7 +166,7 @@ contract FeeDistributorTest is BaseTest {
         feeDistributor = IFeeDistributor(
             deployCode(
                 "artifacts/vyper-contracts/FeeDistributor.vy/FeeDistributor.json",
-                abi.encode(address(veSDT), block.timestamp, reward, LOCAL_DEPLOYER, Constants.STAKE_DAO_MULTISIG)
+                abi.encode(address(veSDT), block.timestamp, reward, LOCAL_DEPLOYER, AddressBook.STAKE_DAO_MULTISIG)
             )
         );
     }

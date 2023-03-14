@@ -4,7 +4,7 @@ pragma solidity 0.8.7;
 import "forge-std/Test.sol";
 import "forge-std/Script.sol";
 
-import {AddressBook} from "@addressbook/AddressBook.sol";
+import {AddressBook} from "addressBook/AddressBook.sol";
 
 import {VeSDTFeeAngleProxyV2} from "contracts/accumulators/VeSDTFeeAngleProxyV2.sol";
 

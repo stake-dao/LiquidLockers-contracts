@@ -87,7 +87,7 @@ contract BalancerTest is BaseTest {
         gaugeController = IGaugeController(
             deployCode(
                 "artifacts/vyper-contracts/GaugeController.vy/GaugeController.json",
-                abi.encode(Constants.SDT, Constants.VE_SDT, LOCAL_DEPLOYER)
+                abi.encode(AddressBook.SDT, AddressBook.VE_SDT, LOCAL_DEPLOYER)
             )
         );
 
