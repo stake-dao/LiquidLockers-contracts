@@ -118,7 +118,7 @@ contract FraxTest is BaseTest {
             address(sdtDistributor)
         );
         liquidityGaugeImpl =
-            ILiquidityGauge(deployCode("artifacts/contracts/staking/LiquidityGaugeV4.vy/LiquidityGaugeV4.json"));
+            ILiquidityGauge(deployCode("artifacts/vyper-contracts/LiquidityGaugeV4.vy/LiquidityGaugeV4.json"));
         proxy = new TransparentUpgradeableProxy(address(liquidityGaugeImpl), address(proxyAdmin), lgData);
         liquidityGauge = ILiquidityGauge(address(proxy));
         ////////////////////////////////////////////////////////////////

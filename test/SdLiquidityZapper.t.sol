@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
 import {SdLiquidityZapper} from "contracts/zappers/SdLiquidityZapper.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
 
 contract SdLiquidityZapperTest is Test {
     SdLiquidityZapper sdLiquidityZapper;

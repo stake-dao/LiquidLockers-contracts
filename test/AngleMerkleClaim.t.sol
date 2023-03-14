@@ -7,7 +7,7 @@ import "forge-std/Vm.sol";
 import {AngleVoter} from "contracts/dao/voters/AngleVoter.sol";
 import {AngleVoterV2} from "contracts/dao/voters/AngleVoterV2.sol";
 import {AngleStrategy} from "contracts/strategies/angle/AngleStrategy.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-contracts/token/ERC20/IERC20.sol";
 
 interface ILGV4 {
     struct Reward {

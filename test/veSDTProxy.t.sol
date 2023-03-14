@@ -53,8 +53,8 @@ contract VeSDTProxyTest is BaseTest {
             "Vote-escrowed SDT",
             "veSDT"
         );
-        veSDTImpl = IVeSDT(deployCode("artifacts/contracts/dao/veSDT.vy/veSDT.json"));
-        veSDTImplNew = IVeSDT(deployCode("artifacts/contracts/dao/veSDT.vy/veSDT.json"));
+        veSDTImpl = IVeSDT(deployCode("artifacts/vyper-contracts/veSDT.vy/veSDT.json"));
+        veSDTImplNew = IVeSDT(deployCode("artifacts/vyper-contracts/veSDT.vy/veSDT.json"));
         proxy = new TransparentUpgradeableProxy(address(veSDTImpl), address(proxyAdmin), veSDTData);
         veSDT = IVeSDT(address(proxy));
         vm.stopPrank();

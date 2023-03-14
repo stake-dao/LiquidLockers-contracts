@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.7;
 
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import "openzeppelin-contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**
  * @dev This contract implements a proxy that is upgradeable by an admin. It is fully forked from OpenZeppelin

@@ -10,7 +10,7 @@ import {AddressBook} from "@addressbook/AddressBook.sol";
 import {YearnLocker} from "contracts/lockers/YearnLocker.sol";
 import {IVeYFI} from "contracts/interfaces/IVeYFI.sol";
 import {IRewardPool} from "contracts/interfaces/IRewardPool.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
 
 contract YearnLockerTest is Test {
     ////////////////////////////////////////////////////////////////

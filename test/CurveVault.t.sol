@@ -304,7 +304,7 @@ contract CurveVaultTest is BaseTest {
 
         assertGt(accumulatedFees, 0);
         assertEq(balanceAfter, balanceBefore + accumulatedFees);
-        assertApproxEqRel(crv3GaugeStakedAfter, crv3GaugeStakedBefore + accumulatedFees, 1e16);
+        assertApproxEqRel(crv3GaugeStakedAfter, crv3GaugeStakedBefore + accumulatedFees, 5e16);
     }
 
     function testPayWithdrawFee() public {

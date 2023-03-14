@@ -79,7 +79,7 @@ contract AngleVaultTest is BaseTest {
             )
         );
         liquidityGaugeStratImpl = ILiquidityGaugeStrat(
-            deployCode("artifacts/contracts/staking/LiquidityGaugeV4Strat.vy/LiquidityGaugeV4Strat.json")
+            deployCode("artifacts/vyper-contracts/LiquidityGaugeV4Strat.vy/LiquidityGaugeV4Strat.json")
         );
         bytes memory distributorData = abi.encodeWithSignature(
             "initialize(address,address,address,address)",
