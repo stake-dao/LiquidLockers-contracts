@@ -15,7 +15,7 @@ contract VeSDTTest is BaseTest {
     address internal constant LOCAL_DEPLOYER = address(0xDE);
     address internal constant ALICE = address(0xAA);
     address internal constant BOB = address(0xB0B);
-    address internal token = Constants.SDT;
+    address internal token = AddressBook.SDT;
 
     uint256 internal constant INIITIAL_AMOUNT_TO_LOCK = 1_000e18;
     uint256 internal constant MAX_DURATION = 60 * 60 * 24 * 365 * 4;
@@ -78,7 +78,7 @@ contract VeSDTTest is BaseTest {
         uint256 balanceLockerBefore = IERC20(token).balanceOf(address(veSDT));
         uint256 balanceUserBefore = IERC20(token).balanceOf(ALICE);
         vm.prank(ALICE);
-        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + Constants.WEEK);
+        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + 1 weeks);
         uint256 balanceLockerAfter = IERC20(token).balanceOf(address(veSDT));
         uint256 balanceUserAfter = IERC20(token).balanceOf(ALICE);
 
@@ -88,7 +88,7 @@ contract VeSDTTest is BaseTest {
 
     function test02LockSDTOnBehalf() public {
         vm.prank(ALICE);
-        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK / 2, block.timestamp + Constants.WEEK);
+        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK / 2, block.timestamp + 1 weeks);
 
         uint256 balanceLockerBefore = IERC20(token).balanceOf(address(veSDT));
         uint256 balanceUserBefore = IERC20(token).balanceOf(ALICE);
@@ -106,7 +106,7 @@ contract VeSDTTest is BaseTest {
 
     function test03LockSDTOnBehalfAndSupplySDT() public {
         vm.prank(ALICE);
-        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK / 2, block.timestamp + Constants.WEEK);
+        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK / 2, block.timestamp + 1 weeks);
 
         uint256 balanceLockerBefore = IERC20(token).balanceOf(address(veSDT));
         uint256 balanceUserBefore = IERC20(token).balanceOf(ALICE);
@@ -124,7 +124,7 @@ contract VeSDTTest is BaseTest {
 
     function test04LockMoreWithSameDuration() public {
         vm.prank(ALICE);
-        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK / 2, block.timestamp + Constants.WEEK);
+        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK / 2, block.timestamp + 1 weeks);
 
         uint256 balanceUserBefore = IERC20(token).balanceOf(ALICE);
         uint256 balanceLockerBefore = balanceUserBefore = IERC20(token).balanceOf(address(veSDT));
@@ -154,7 +154,7 @@ contract VeSDTTest is BaseTest {
         uint256 balanceUserBefore = IERC20(token).balanceOf(ALICE);
         vm.expectRevert(bytes("Voting lock can be 4 years max"));
         vm.prank(ALICE);
-        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + MAX_DURATION + Constants.WEEK);
+        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + MAX_DURATION + 1 weeks);
         uint256 balanceLockerAfter = IERC20(token).balanceOf(address(veSDT));
         uint256 balanceUserAfter = IERC20(token).balanceOf(ALICE);
 
@@ -163,18 +163,20 @@ contract VeSDTTest is BaseTest {
     }
 
     function test07IncreaseLockDuration() public {
-        uint256 balanceUserBefore = IERC20(token).balanceOf(ALICE);
         vm.prank(ALICE);
-        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + Constants.WEEK);
-        uint256 balanceUserAfter = IERC20(token).balanceOf(ALICE);
+        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + 1 weeks);
 
+        IVeSDT.LockedBalance memory lockedBefore = veSDT.locked(ALICE);
         vm.prank(ALICE);
-        veSDT.increase_unlock_time(block.timestamp + Constants.WEEK * 2);
+        veSDT.increase_unlock_time(block.timestamp + 2 weeks);
+        IVeSDT.LockedBalance memory lockedAfter = veSDT.locked(ALICE);
+
+        assertGt(lockedAfter.end, lockedBefore.end);
     }
 
     function test08GetLockedAmount() public {
         vm.prank(ALICE);
-        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + Constants.WEEK);
+        veSDT.create_lock(INIITIAL_AMOUNT_TO_LOCK, block.timestamp + 1 weeks);
         IVeSDT.LockedBalance memory locked = veSDT.locked(ALICE);
 
         assertEq(locked.amount, int256(INIITIAL_AMOUNT_TO_LOCK), "ERROR_080");

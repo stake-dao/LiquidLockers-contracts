@@ -49,8 +49,8 @@ contract AngleVaultTest is BaseTest {
     ILiquidityGaugeStrat public liquidityGaugeStratImpl;
 
     IERC20 public guni = IERC20(GUNI_AGEUR_WETH_LP);
-    IERC20 public sandaieur = IERC20(Constants.SAN_DAI_EUR);
-    IERC20 public sanusdceur = IERC20(Constants.SAN_USDC_EUR);
+    IERC20 public sandaieur = IERC20(AddressBook.SAN_DAI_EUR);
+    IERC20 public sanusdceur = IERC20(AddressBook.SAN_USDC_EUR);
 
     IMasterchef public masterChef = IMasterchef(0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c);
     ILiquidityGauge public gaugeSdAngle = ILiquidityGauge(0xE55843a90672f7d8218285e51EE8fF8E233F35d5);
@@ -64,9 +64,9 @@ contract AngleVaultTest is BaseTest {
         vm.selectFork(forkId);
 
         address[] memory path = new address[](3);
-        path[0] = Constants.ANGLE;
-        path[1] = Constants.WETH;
-        path[2] = Constants.FRAX;
+        path[0] = AddressBook.ANGLE;
+        path[1] = AddressBook.WETH;
+        path[2] = AddressBook.FRAX;
 
         vm.startPrank(LOCAL_DEPLOYER);
         feeProxy = new veSDTFeeAngleProxy(path);
@@ -138,9 +138,9 @@ contract AngleVaultTest is BaseTest {
             "initialize(address,address,address,address,address,address,address,string)",
             address(vaultGUNI),
             LOCAL_DEPLOYER,
-            Constants.SDT,
-            Constants.VE_SDT,
-            Constants.VE_SDT_BOOST_PROXY, // to mock
+            AddressBook.SDT,
+            AddressBook.VE_SDT,
+            AddressBook.VE_SDT_BOOST_PROXY, // to mock
             address(strategy),
             address(vaultGUNI),
             "agEur/ETH"
@@ -156,14 +156,14 @@ contract AngleVaultTest is BaseTest {
         vm.prank(locker.governance());
         locker.setGovernance(address(strategy));
 
-        vm.prank(IVeToken(Constants.VE_SDT).admin());
-        ISmartWalletChecker(Constants.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
+        vm.prank(IVeToken(AddressBook.VE_SDT).admin());
+        ISmartWalletChecker(AddressBook.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
 
-        deal(Constants.SAN_USDC_EUR, LOCAL_DEPLOYER, AMOUNT * 100);
-        deal(Constants.SAN_DAI_EUR, LOCAL_DEPLOYER, AMOUNT * 100);
-        deal(Constants.SDT, LOCAL_DEPLOYER, AMOUNT * 100);
+        deal(AddressBook.SAN_USDC_EUR, LOCAL_DEPLOYER, AMOUNT * 100);
+        deal(AddressBook.SAN_DAI_EUR, LOCAL_DEPLOYER, AMOUNT * 100);
+        deal(AddressBook.SDT, LOCAL_DEPLOYER, AMOUNT * 100);
         deal(GUNI_AGEUR_WETH_LP, LOCAL_DEPLOYER, AMOUNT * 100);
-        lockSDTCustom(LOCAL_DEPLOYER, Constants.SDT, Constants.VE_SDT, AMOUNT, block.timestamp + (Constants.YEAR * 4));
+        lockSDTCustom(LOCAL_DEPLOYER, AddressBook.SDT, AddressBook.VE_SDT, AMOUNT, block.timestamp + (4 * 365 days));
 
         vm.startPrank(LOCAL_DEPLOYER);
         sanusdceur.approve(address(vaultUSDC), type(uint256).max);
@@ -235,8 +235,8 @@ contract AngleVaultTest is BaseTest {
         vaultUSDC.deposit(LOCAL_DEPLOYER, AMOUNT, true);
         timeJump(30 days);
 
-        uint256 claimable = liquidityGaugeAngleUSDC.claimable_reward(address(locker), Constants.ANGLE);
-        uint256 balanceBeforeAccumulator = IERC20(Constants.ANGLE).balanceOf(address(accumulator));
+        uint256 claimable = liquidityGaugeAngleUSDC.claimable_reward(address(locker), AddressBook.ANGLE);
+        uint256 balanceBeforeAccumulator = IERC20(AddressBook.ANGLE).balanceOf(address(accumulator));
 
         vm.recordLogs();
         strategy.claim(address(sanusdceur));
@@ -245,11 +245,12 @@ contract AngleVaultTest is BaseTest {
 
         assertGt(claimed, 0);
         assertEq(claimable, claimed);
-        assertGt(liquidityGaugeUSDC.reward_data(Constants.ANGLE).rate, 0);
-        assertGt(liquidityGaugeUSDC.reward_data(Constants.SDT).rate, 0);
+        assertGt(liquidityGaugeUSDC.reward_data(AddressBook.ANGLE).rate, 0);
+        assertGt(liquidityGaugeUSDC.reward_data(AddressBook.SDT).rate, 0);
         assertEq(gaugeController.gauge_relative_weight(address(liquidityGaugeUSDC)), 1e18);
         assertEq(
-            IERC20(Constants.ANGLE).balanceOf(address(accumulator)) - balanceBeforeAccumulator, (claimed * 800) / 10_000
+            IERC20(AddressBook.ANGLE).balanceOf(address(accumulator)) - balanceBeforeAccumulator,
+            (claimed * 800) / 10_000
         );
     }
 
@@ -263,30 +264,30 @@ contract AngleVaultTest is BaseTest {
     }
 
     function test11UseFeeDistributor() public {
-        deal(Constants.ANGLE, address(feeProxy), 10_000e18);
-        uint256 balanceBeforeClaimer = IERC20(Constants.FRAX).balanceOf(LOCAL_DEPLOYER);
-        uint256 balanceBeforeFeeDist = IERC20(Constants.SDFRAX3CRV).balanceOf(Constants.FEE_D_SD);
+        deal(AddressBook.ANGLE, address(feeProxy), 10_000e18);
+        uint256 balanceBeforeClaimer = IERC20(AddressBook.FRAX).balanceOf(LOCAL_DEPLOYER);
+        uint256 balanceBeforeFeeDist = IERC20(AddressBook.SDFRAX3CRV).balanceOf(AddressBook.FEE_D_SD);
         vm.prank(LOCAL_DEPLOYER);
         feeProxy.sendRewards();
-        uint256 balanceAfterClaimer = IERC20(Constants.FRAX).balanceOf(LOCAL_DEPLOYER);
-        uint256 balanceAfterFeeDist = IERC20(Constants.SDFRAX3CRV).balanceOf(Constants.FEE_D_SD);
+        uint256 balanceAfterClaimer = IERC20(AddressBook.FRAX).balanceOf(LOCAL_DEPLOYER);
+        uint256 balanceAfterFeeDist = IERC20(AddressBook.SDFRAX3CRV).balanceOf(AddressBook.FEE_D_SD);
 
         assertGt(balanceAfterClaimer, balanceBeforeClaimer);
         assertGt(balanceAfterFeeDist, balanceBeforeFeeDist);
     }
 
     function test12AccumulateAngleRewardToSdAngle() public {
-        uint256 balanceBeforeAngleGauge = IERC20(Constants.ANGLE).balanceOf(address(gaugeSdAngle));
+        uint256 balanceBeforeAngleGauge = IERC20(AddressBook.ANGLE).balanceOf(address(gaugeSdAngle));
 
         vm.prank(gaugeSdAngle.admin());
-        gaugeSdAngle.set_reward_distributor(Constants.ANGLE, address(accumulator));
+        gaugeSdAngle.set_reward_distributor(AddressBook.ANGLE, address(accumulator));
 
-        deal(Constants.ANGLE, address(accumulator), AMOUNT);
+        deal(AddressBook.ANGLE, address(accumulator), AMOUNT);
         vm.startPrank(accumulator.governance());
         accumulator.setGauge(address(gaugeSdAngle));
-        accumulator.notifyAllExtraReward(Constants.ANGLE);
-        uint256 balanceAfterAngleGauge = IERC20(Constants.ANGLE).balanceOf(address(gaugeSdAngle));
-        uint256 balanceAfterAccumulato = IERC20(Constants.ANGLE).balanceOf(address(accumulator));
+        accumulator.notifyAllExtraReward(AddressBook.ANGLE);
+        uint256 balanceAfterAngleGauge = IERC20(AddressBook.ANGLE).balanceOf(address(gaugeSdAngle));
+        uint256 balanceAfterAccumulato = IERC20(AddressBook.ANGLE).balanceOf(address(accumulator));
 
         assertGt(balanceAfterAngleGauge, balanceBeforeAngleGauge);
         assertEq(balanceAfterAccumulato, 0);
@@ -305,7 +306,7 @@ contract AngleVaultTest is BaseTest {
         gaugeController.add_gauge(address(liquidityGaugeDAI), 0, 0);
         distributor.approveGauge(address(liquidityGaugeDAI));
         vm.stopPrank();
-        assertEq(address(vaultDAI.token()), Constants.SAN_DAI_EUR);
+        assertEq(address(vaultDAI.token()), AddressBook.SAN_DAI_EUR);
     }
 
     function test14DepositToNewVault() public {
@@ -336,7 +337,7 @@ contract AngleVaultTest is BaseTest {
         vm.stopPrank();
         timeJump(8 days);
         vm.prank(0x4f91F01cE8ec07c9B1f6a82c18811848254917Ab); // Angle depositor
-        liquidityGaugeAngleDAI.deposit_reward_token(Constants.ANGLE, AMOUNT);
+        liquidityGaugeAngleDAI.deposit_reward_token(AddressBook.ANGLE, AMOUNT);
         vm.prank(LOCAL_DEPLOYER);
         strategy.claim(address(sandaieur));
 
@@ -346,14 +347,14 @@ contract AngleVaultTest is BaseTest {
             strategy.claim(address(sandaieur));
             if (i % 7 == 0) {
                 vm.prank(0x4f91F01cE8ec07c9B1f6a82c18811848254917Ab); // Angle depositor
-                liquidityGaugeAngleDAI.deposit_reward_token(Constants.ANGLE, AMOUNT);
+                liquidityGaugeAngleDAI.deposit_reward_token(AddressBook.ANGLE, AMOUNT);
                 vm.prank(0x4f91F01cE8ec07c9B1f6a82c18811848254917Ab); // Angle depositor
-                liquidityGaugeAngleUSDC.deposit_reward_token(Constants.ANGLE, AMOUNT);
+                liquidityGaugeAngleUSDC.deposit_reward_token(AddressBook.ANGLE, AMOUNT);
             }
         }
         vm.prank(LOCAL_DEPLOYER);
         strategy.claim(address(sanusdceur));
-        assertEq(IERC20(Constants.SDT).balanceOf(address(distributor)), 0);
+        assertEq(IERC20(AddressBook.SDT).balanceOf(address(distributor)), 0);
     }
 
     function test17StakeGUNIToken() public {

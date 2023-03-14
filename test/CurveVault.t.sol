@@ -39,10 +39,10 @@ contract CurveVaultTest is BaseTest {
     CurveVault public vaultSDTETH;
     SdtDistributorV2 public distributor;
 
-    IERC20 public crv3 = IERC20(Constants.CRV3);
-    IERC20 public crv = IERC20(Constants.CRV);
-    IERC20 public sdt = IERC20(Constants.SDT);
-    IERC20 public sdfrax3crv = IERC20(Constants.SDFRAX3CRV);
+    IERC20 public crv3 = IERC20(AddressBook.CRV3);
+    IERC20 public crv = IERC20(AddressBook.CRV);
+    IERC20 public sdt = IERC20(AddressBook.SDT);
+    IERC20 public sdfrax3crv = IERC20(AddressBook.SDFRAX3CRV);
     IGaugeController public gc;
     ILiquidityGauge public lg3CRV; // This one is from curve
     ILiquidityGauge public lgSDTETH; // This one is from curve
@@ -54,10 +54,10 @@ contract CurveVaultTest is BaseTest {
         vm.selectFork(forkId);
 
         address[] memory path = new address[](4);
-        path[0] = Constants.CRV;
-        path[1] = Constants.WETH;
-        path[2] = Constants.SUSHI;
-        path[3] = Constants.FRAX;
+        path[0] = AddressBook.CRV;
+        path[1] = AddressBook.WETH;
+        path[2] = AddressBook.SUSHI;
+        path[3] = AddressBook.FRAX;
 
         accumulator = CurveAccumulator(ACCUMULATOR);
         gc = IGaugeController(GAUGE_CONTROLLER);
@@ -71,9 +71,9 @@ contract CurveVaultTest is BaseTest {
     LOCAL_DEPLOYER,
     accumulator,
     address(feeProxy),
-    Constants.SDT_DISTRIBUTOR_STRAT
+    AddressBook.SDT_DISTRIBUTOR_STRAT
     );
-        factory = new CurveVaultFactory(LGV4_STRAT_IMPL, address(strategy), Constants.SDT_DISTRIBUTOR_STRAT);
+        factory = new CurveVaultFactory(LGV4_STRAT_IMPL, address(strategy), AddressBook.SDT_DISTRIBUTOR_STRAT);
         vm.stopPrank();
 
         vm.prank(ILocker(CRV_LOCKER).governance());
@@ -84,24 +84,24 @@ contract CurveVaultTest is BaseTest {
         // Deploy vault for gauge : 3CRV
         strategy.setVaultGaugeFactory(address(factory));
         vm.recordLogs();
-        factory.cloneAndInit(Constants.CRV_GAUGE_3CRV);
+        factory.cloneAndInit(AddressBook.CRV_GAUGE_3CRV);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         bytes memory eventData1 = logs[0].data;
         bytes memory eventData3 = logs[2].data;
         vault3CRV = CurveVault(bytesToAddressCustom(eventData1, 32));
         gauge3CRV = ILiquidityGaugeStrat(bytesToAddressCustom(eventData3, 32));
-        lg3CRV = ILiquidityGauge(Constants.CRV_GAUGE_3CRV);
+        lg3CRV = ILiquidityGauge(AddressBook.CRV_GAUGE_3CRV);
 
         // Deploy vault for gauge : SDT/ETH;
         strategy.setVaultGaugeFactory(address(factory));
         vm.recordLogs();
-        factory.cloneAndInit(Constants.CRV_GAUGE_SDT_ETH);
+        factory.cloneAndInit(AddressBook.CRV_GAUGE_SDT_ETH);
         logs = vm.getRecordedLogs();
         eventData1 = logs[0].data;
         eventData3 = logs[2].data;
         vaultSDTETH = CurveVault(bytesToAddressCustom(eventData1, 32));
         gaugeSDTETH = ILiquidityGaugeStrat(bytesToAddressCustom(eventData3, 32));
-        lgSDTETH = ILiquidityGauge(Constants.CRV_GAUGE_SDT_ETH);
+        lgSDTETH = ILiquidityGauge(AddressBook.CRV_GAUGE_SDT_ETH);
         vm.stopPrank();
 
         vm.prank(gc.admin());
@@ -113,21 +113,21 @@ contract CurveVaultTest is BaseTest {
         gc.add_gauge(address(gaugeSDTETH), 0, 0);
         vm.stopPrank();
 
-        deal(Constants.SDT, ALICE, AMOUNT);
-        deal(Constants.SDT, LOCAL_DEPLOYER, AMOUNT);
-        deal(Constants.CRV3, ALICE, AMOUNT * 10);
-        deal(Constants.CRV3, BOB, AMOUNT);
-        deal(Constants.EUR3, ALICE, AMOUNT);
-        deal(Constants.STECRV, ALICE, AMOUNT);
-        deal(Constants.CRV3, Constants.CURVE_FEE_DISTRIBUTOR, AMOUNT);
+        deal(AddressBook.SDT, ALICE, AMOUNT);
+        deal(AddressBook.SDT, LOCAL_DEPLOYER, AMOUNT);
+        deal(AddressBook.CRV3, ALICE, AMOUNT * 10);
+        deal(AddressBook.CRV3, BOB, AMOUNT);
+        deal(AddressBook.EUR3, ALICE, AMOUNT);
+        deal(AddressBook.STECRV, ALICE, AMOUNT);
+        deal(AddressBook.CRV3, AddressBook.CURVE_FEE_DISTRIBUTOR, AMOUNT);
         deal(address(crv), ALICE, AMOUNT);
 
-        vm.prank(IVeToken(Constants.VE_SDT).admin());
-        ISmartWalletChecker(Constants.SDT_SMART_WALLET_CHECKER).approveWallet(ALICE);
-        lockSDTCustom(ALICE, Constants.SDT, Constants.VE_SDT, AMOUNT, block.timestamp + Constants.YEAR);
-        vm.prank(IVeToken(Constants.VE_SDT).admin());
-        ISmartWalletChecker(Constants.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
-        lockSDTCustom(LOCAL_DEPLOYER, Constants.SDT, Constants.VE_SDT, AMOUNT, block.timestamp + (4 * Constants.YEAR));
+        vm.prank(IVeToken(AddressBook.VE_SDT).admin());
+        ISmartWalletChecker(AddressBook.SDT_SMART_WALLET_CHECKER).approveWallet(ALICE);
+        lockSDTCustom(ALICE, AddressBook.SDT, AddressBook.VE_SDT, AMOUNT, block.timestamp + 365 days);
+        vm.prank(IVeToken(AddressBook.VE_SDT).admin());
+        ISmartWalletChecker(AddressBook.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
+        lockSDTCustom(LOCAL_DEPLOYER, AddressBook.SDT, AddressBook.VE_SDT, AMOUNT, block.timestamp + (4 * 365 days));
     }
 
     function testVaultAndLGSettings() public {
@@ -135,13 +135,13 @@ contract CurveVaultTest is BaseTest {
         assertEq(gauge3CRV.symbol(), "sd3Crv-gauge");
         assertEq(vault3CRV.name(), "sd3Crv Vault");
         assertEq(vault3CRV.symbol(), "sd3Crv-vault");
-        assertEq(address(vault3CRV.token()), Constants.CRV3);
+        assertEq(address(vault3CRV.token()), AddressBook.CRV3);
         assertEq(address(vault3CRV.curveStrategy()), address(strategy));
         assertEq(gaugeSDTETH.name(), "Stake DAO SDTETH-f Gauge");
         assertEq(gaugeSDTETH.symbol(), "sdSDTETH-f-gauge");
         assertEq(vaultSDTETH.name(), "sdSDTETH-f Vault");
         assertEq(vaultSDTETH.symbol(), "sdSDTETH-f-vault");
-        assertEq(address(vaultSDTETH.token()), Constants.CRV_POOL_SDT_ETH);
+        assertEq(address(vaultSDTETH.token()), AddressBook.CRV_POOL_SDT_ETH);
         assertEq(address(vaultSDTETH.curveStrategy()), address(strategy));
     }
 
@@ -285,7 +285,7 @@ contract CurveVaultTest is BaseTest {
 
     function testAddGaugeRevert() public {
         vm.expectRevert();
-        strategy.setGauge(Constants.CRV3, Constants.CRV_GAUGE_3CRV);
+        strategy.setGauge(AddressBook.CRV3, AddressBook.CRV_GAUGE_3CRV);
     }
 
     function testCallEarn() public {
@@ -331,14 +331,14 @@ contract CurveVaultTest is BaseTest {
     }
 
     function testSwapCRVAndTransferToFeeDistributor() public {
-        deal(Constants.CRV, address(feeProxy), 10000e18);
-        uint256 balanceBeforeSDFRAX3CRV = sdfrax3crv.balanceOf(Constants.FEE_D_SD);
+        deal(AddressBook.CRV, address(feeProxy), 10000e18);
+        uint256 balanceBeforeSDFRAX3CRV = sdfrax3crv.balanceOf(AddressBook.FEE_D_SD);
         uint256 balanceBeforeCRV = crv.balanceOf(address(feeProxy));
         assertEq(balanceBeforeCRV, 10000e18);
 
         feeProxy.sendRewards();
 
-        uint256 balanceAfterSDFRAX3CRV = sdfrax3crv.balanceOf(Constants.FEE_D_SD);
+        uint256 balanceAfterSDFRAX3CRV = sdfrax3crv.balanceOf(AddressBook.FEE_D_SD);
         uint256 balanceAfterCRV = crv.balanceOf(address(feeProxy));
 
         assertEq(balanceAfterCRV, 0);
@@ -351,7 +351,7 @@ contract CurveVaultTest is BaseTest {
         uint256 balanceBefore = crv.balanceOf(SD_CRV_GAUGE);
 
         vm.prank(accumulator.governance());
-        accumulator.notifyAllExtraReward(Constants.CRV);
+        accumulator.notifyAllExtraReward(AddressBook.CRV);
 
         uint256 balanceAfter = crv.balanceOf(SD_CRV_GAUGE);
         assertGt(balanceAfter, balanceBefore);
@@ -361,7 +361,7 @@ contract CurveVaultTest is BaseTest {
     function testCreatNewVaultAndGauge() public {
         vm.startPrank(LOCAL_DEPLOYER);
         vm.recordLogs();
-        factory.cloneAndInit(Constants.CRV_GAUGE_EUR3);
+        factory.cloneAndInit(AddressBook.CRV_GAUGE_EUR3);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         bytes memory eventData1 = logs[0].data;
         bytes memory eventData3 = logs[2].data;
@@ -370,7 +370,7 @@ contract CurveVaultTest is BaseTest {
         address tokenOfVault = address(vault3EUR.token());
         gc.add_gauge(address(gauge3EUR), 0, 0);
 
-        assertEq(tokenOfVault, address(Constants.EUR3));
+        assertEq(tokenOfVault, address(AddressBook.EUR3));
     }
 
     function testSetBackLockersGov() public {

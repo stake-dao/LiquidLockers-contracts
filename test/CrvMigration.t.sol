@@ -64,9 +64,9 @@ contract CrvMigrationTest is BaseTest {
     address internal constant BOB = address(0xB0B);
     address internal constant CRV_STRATEGY_PROXY = 0xF34Ae3C7515511E29d8Afe321E67Bdf97a274f1A;
     address internal constant CRV_STRATEGY = 0x20F1d4Fed24073a9b9d388AfA2735Ac91f079ED6;
-    address internal token = Constants.CRV;
-    address internal vesdcrv = Constants.VESDCRV;
-    address internal rewards = Constants.CRV3;
+    address internal token = AddressBook.CRV;
+    address internal vesdcrv = AddressBook.VESDCRV;
+    address internal rewards = AddressBook.CRV3;
 
     uint256 internal constant INITIAL_AMOUNT_TO_LOCK = 1_000e18;
 
@@ -123,7 +123,7 @@ contract CrvMigrationTest is BaseTest {
         _sdCRV = new sdCRV("Stake DAO CRV", "sdCRV");
 
         // Deploy crv depositor
-        depositor = new CrvDepositor(Constants.CRV, Constants.OLD_CRV_LOCKER, address(_sdCRV));
+        depositor = new CrvDepositor(AddressBook.CRV, AddressBook.OLD_CRV_LOCKER, address(_sdCRV));
 
         // Deploy Gauge Controller
         gaugeController = IGaugeController(
@@ -150,9 +150,9 @@ contract CrvMigrationTest is BaseTest {
             "initialize(address,address,address,address,address,address)",
             address(address(_sdCRV)),
             LOCAL_DEPLOYER,
-            Constants.SDT,
-            Constants.VE_SDT,
-            Constants.VE_SDT_BOOST_PROXY,
+            AddressBook.SDT,
+            AddressBook.VE_SDT,
+            AddressBook.VE_SDT_BOOST_PROXY,
             address(sdtDistributor)
         );
         liquidityGaugeImpl =
@@ -166,15 +166,15 @@ contract CrvMigrationTest is BaseTest {
         ////////////////////////////////////////////////////////////////
         /// --- START SETTERS
         ///////////////////////////////////////////////////////////////
-        vm.prank(ICurveYCRVVoter(Constants.OLD_CRV_LOCKER).governance());
-        ICurveYCRVVoter(Constants.OLD_CRV_LOCKER).setStrategy(address(depositor));
+        vm.prank(ICurveYCRVVoter(AddressBook.OLD_CRV_LOCKER).governance());
+        ICurveYCRVVoter(AddressBook.OLD_CRV_LOCKER).setStrategy(address(depositor));
 
         vm.startPrank(LOCAL_DEPLOYER);
         IVeSdCRV(vesdcrv).setProxy(address(0));
         IVeSdCRV(vesdcrv).setFeeDistribution(address(0));
         depositor.setGauge(address(liquidityGauge));
         _sdCRV.setOperator(address(depositor));
-        accumulator.setLocker(Constants.OLD_CRV_LOCKER);
+        accumulator.setLocker(AddressBook.OLD_CRV_LOCKER);
         accumulator.setGauge(address(liquidityGauge));
         liquidityGauge.add_reward(rewards, address(accumulator));
         vm.stopPrank();
@@ -254,11 +254,11 @@ contract CrvMigrationTest is BaseTest {
     }
 
     function test08Claim3CRVFromStrategyProxyToAccumulator() public {
-        uint256 last_token_amount = ICurveDistributor(Constants.CURVE_FEE_DISTRIBUTOR).token_last_balance();
-        deal(rewards, Constants.CURVE_FEE_DISTRIBUTOR, last_token_amount + INITIAL_AMOUNT_TO_LOCK);
-        vm.prank(ICurveYCRVVoter(Constants.OLD_CRV_LOCKER).governance());
-        ICurveYCRVVoter(Constants.OLD_CRV_LOCKER).setStrategy(CRV_STRATEGY_PROXY);
-        timeJump(Constants.DAY * 8);
+        uint256 last_token_amount = ICurveDistributor(AddressBook.CURVE_FEE_DISTRIBUTOR).token_last_balance();
+        deal(rewards, AddressBook.CURVE_FEE_DISTRIBUTOR, last_token_amount + INITIAL_AMOUNT_TO_LOCK);
+        vm.prank(ICurveYCRVVoter(AddressBook.OLD_CRV_LOCKER).governance());
+        ICurveYCRVVoter(AddressBook.OLD_CRV_LOCKER).setStrategy(CRV_STRATEGY_PROXY);
+        timeJump(8 days);
 
         uint256 balanceRewardAccumulatorBefore = IERC20(rewards).balanceOf(address(accumulator));
         vm.prank(ICRVStrategyProxy(CRV_STRATEGY_PROXY).governance());
@@ -271,7 +271,7 @@ contract CrvMigrationTest is BaseTest {
     }
 
     function test09Notify3CRVToLGV4() public {
-        deal(rewards, Constants.OLD_CRV_LOCKER, 1e18);
+        deal(rewards, AddressBook.OLD_CRV_LOCKER, 1e18);
 
         vm.prank(ICRVStrategyProxy(CRV_STRATEGY).governance());
         ICRVStrategyProxy(CRV_STRATEGY).setAccumulator(address(accumulator));
@@ -283,7 +283,7 @@ contract CrvMigrationTest is BaseTest {
 
     function test10Claim3CRVFromLGV4() public {
         // Notify rewards to LGV4
-        deal(rewards, Constants.OLD_CRV_LOCKER, 1e18);
+        deal(rewards, AddressBook.OLD_CRV_LOCKER, 1e18);
         vm.prank(ICRVStrategyProxy(CRV_STRATEGY).governance());
         ICRVStrategyProxy(CRV_STRATEGY).setAccumulator(address(accumulator));
         accumulator.notifyAll();
@@ -294,7 +294,7 @@ contract CrvMigrationTest is BaseTest {
         IERC20(token).approve(address(depositor), INITIAL_AMOUNT_TO_LOCK);
         uint256 balanceSdCRVBefore = IERC20(rewards).balanceOf(ALICE);
         depositor.deposit(INITIAL_AMOUNT_TO_LOCK, true, true, ALICE);
-        timeJump(Constants.DAY * 10);
+        timeJump(10 days);
         liquidityGauge.claim_rewards(ALICE);
         uint256 balanceSdCRVAfter = IERC20(rewards).balanceOf(ALICE);
 

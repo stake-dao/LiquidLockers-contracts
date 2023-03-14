@@ -26,9 +26,9 @@ import "contracts/interfaces/IMasterchef.sol";
 contract BlackpoolTest is BaseTest {
     address internal constant LOCAL_DEPLOYER = address(0xDE);
     address internal constant ALICE = address(0xAA);
-    address internal token = Constants.BPT;
-    address internal veToken = Constants.VEBPT;
-    address internal feeDistributor = Constants.BPT_FEE_DISTRIBUTOR;
+    address internal token = AddressBook.BPT;
+    address internal veToken = AddressBook.VEBPT;
+    address internal feeDistributor = AddressBook.BPT_FEE_DISTRIBUTOR;
     address[] internal rewardsToken;
 
     uint256 internal constant INITIAL_AMOUNT_TO_LOCK = 10e18;
@@ -59,7 +59,7 @@ contract BlackpoolTest is BaseTest {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
         vm.selectFork(forkId);
 
-        rewardsToken.push(Constants.WETH);
+        rewardsToken.push(AddressBook.WETH);
         rewardsAmount.push(1e18);
 
         vm.startPrank(LOCAL_DEPLOYER);
@@ -89,7 +89,7 @@ contract BlackpoolTest is BaseTest {
         );
 
         // Deploy SDT Distributor
-        veSDT = IVeToken(Constants.VE_SDT);
+        veSDT = IVeToken(AddressBook.VE_SDT);
         bytes memory sdtDistributorData = abi.encodeWithSignature(
             "initialize(address,address,address,address)",
             address(gaugeController),
@@ -102,7 +102,7 @@ contract BlackpoolTest is BaseTest {
         sdtDistributor = SdtDistributorV2(address(proxy));
 
         // Masterchef
-        masterchef = IMasterchef(Constants.MASTERCHEF);
+        masterchef = IMasterchef(AddressBook.MASTERCHEF);
         masterChefToken = MasterchefMasterToken(address(sdtDistributor.masterchefToken()));
 
         // Deploy Liquidity Gauge V4
@@ -110,9 +110,9 @@ contract BlackpoolTest is BaseTest {
             "initialize(address,address,address,address,address,address)",
             address(_sdToken),
             LOCAL_DEPLOYER,
-            Constants.SDT,
-            Constants.VE_SDT,
-            Constants.VE_SDT_BOOST_PROXY, // to mock
+            AddressBook.SDT,
+            AddressBook.VE_SDT,
+            AddressBook.VE_SDT_BOOST_PROXY, // to mock
             address(sdtDistributor)
         );
         liquidityGaugeImpl =
@@ -128,12 +128,12 @@ contract BlackpoolTest is BaseTest {
         ////////////////////////////////////////////////////////////////
         /// --- SETTERS
         ///////////////////////////////////////////////////////////////
-        vm.prank(IVeToken(Constants.VE_SDT).admin());
-        ISmartWalletChecker(Constants.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
+        vm.prank(IVeToken(AddressBook.VE_SDT).admin());
+        ISmartWalletChecker(AddressBook.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
         // White list locker
         //address BPT_DAO = IVeToken(veToken).admin();
         vm.prank(IVeToken(veToken).admin());
-        ISmartWalletChecker(Constants.BPT_SMART_WALLET_CHECKER).approveWallet(address(locker));
+        ISmartWalletChecker(AddressBook.BPT_SMART_WALLET_CHECKER).approveWallet(address(locker));
 
         // Add masterchef token to masterchef
         vm.prank(masterchef.owner());
@@ -207,7 +207,7 @@ contract BlackpoolTest is BaseTest {
         address rewardsReceiver = address(this);
         listCallData[0] = abi.encodeWithSignature("claimRewards(address,address)", rewardsToken[0], rewardsReceiver);
         simulateRewards(rewardsToken, rewardsAmount, feeDistributor);
-        timeJump(2 * Constants.WEEK);
+        timeJump(2 weeks);
         claimReward(LOCAL_DEPLOYER, address(locker), rewardsToken, rewardsReceiver, listCallData);
     }
 
@@ -724,7 +724,7 @@ contract BlackpoolTest is BaseTest {
         address rewardsReceiver = address(liquidityGauge);
         listCallData[0] = abi.encodeWithSignature("claimAndNotify(uint256)", rewardsAmount[0] / (10 ** 8));
         simulateRewards(rewardsToken, rewardsAmount, feeDistributor);
-        timeJump(2 * Constants.WEEK);
+        timeJump(2 weeks);
         claimRewardAndNotify(
             LOCAL_DEPLOYER, address(accumulator), rewardsToken, rewardsReceiver, address(liquidityGauge), listCallData
         );
@@ -736,7 +736,7 @@ contract BlackpoolTest is BaseTest {
         address rewardsReceiver = address(liquidityGauge);
         listCallData[0] = abi.encodeWithSignature("claimAndNotifyAll()");
         simulateRewards(rewardsToken, rewardsAmount, feeDistributor);
-        timeJump(2 * Constants.WEEK);
+        timeJump(2 weeks);
         claimRewardAndNotify(
             LOCAL_DEPLOYER, address(accumulator), rewardsToken, rewardsReceiver, address(liquidityGauge), listCallData
         );

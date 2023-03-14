@@ -24,21 +24,21 @@ contract BalancerFeeProxyTest is BaseTest {
     }
 
     function testZapp() public {
-        deal(address(Constants.BAL), address(veSDTFeeProxy), AMOUNT);
+        deal(address(AddressBook.BAL), address(veSDTFeeProxy), AMOUNT);
 
         uint256 claimerFee = veSDTFeeProxy.claimerFee();
         uint256 baseFee = veSDTFeeProxy.BASE_FEE();
-        uint256 balanceClaimerBefore = IERC20(Constants.BAL).balanceOf(ALICE);
-        uint256 balanceFeeDistBefore = IERC20(Constants.SDFRAX3CRV).balanceOf(Constants.FEE_D_SD);
+        uint256 balanceClaimerBefore = IERC20(AddressBook.BAL).balanceOf(ALICE);
+        uint256 balanceFeeDistBefore = IERC20(AddressBook.SDFRAX3CRV).balanceOf(AddressBook.FEE_D_SD);
 
         vm.prank(ALICE);
         veSDTFeeProxy.sendRewards();
 
-        uint256 balanceClaimerAfter = IERC20(Constants.BAL).balanceOf(ALICE);
-        uint256 balanceFeeDistAfter = IERC20(Constants.SDFRAX3CRV).balanceOf(Constants.FEE_D_SD);
+        uint256 balanceClaimerAfter = IERC20(AddressBook.BAL).balanceOf(ALICE);
+        uint256 balanceFeeDistAfter = IERC20(AddressBook.SDFRAX3CRV).balanceOf(AddressBook.FEE_D_SD);
 
         assertEq(balanceClaimerAfter - balanceClaimerBefore, AMOUNT * claimerFee / baseFee, "ERROR_01");
         assertGt(balanceFeeDistAfter - balanceFeeDistBefore, 350e18, "ERROR_02");
-        assertEq(IERC20(Constants.BAL).balanceOf(address(veSDTFeeProxy)), 0, "ERROR_03");
+        assertEq(IERC20(AddressBook.BAL).balanceOf(address(veSDTFeeProxy)), 0, "ERROR_03");
     }
 }

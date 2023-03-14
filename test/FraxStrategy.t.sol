@@ -31,9 +31,15 @@ interface IFraxGauge {
 
     function veFXSMultiplier(address _user) external view returns (uint256);
 
-    function lockedStakesOfLength(address _user) external view returns (uint256);
+    function lockedStakesOfLength(address _user)
+        external
+        view
+        returns (uint256);
 
-    function lockedStakesOf(address account) external view returns (LockedStake[] memory);
+    function lockedStakesOf(address account)
+        external
+        view
+        returns (LockedStake[] memory);
 
     function sync() external;
 }
@@ -42,8 +48,10 @@ contract FraxStrategyTest is BaseTest {
     address public constant BOB = address(0xB0B);
     address public constant ALICE = address(0xAA);
     address public constant LOCAL_DEPLOYER = address(0xDE);
-    address public constant FXS_TEMPLE_GAUGE = 0x10460d02226d6ef7B2419aE150E6377BdbB7Ef16;
-    address public constant FRAX_GAUGE_REWARDS_DISTRIBUTOR = 0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34;
+    address public constant FXS_TEMPLE_GAUGE =
+        0x10460d02226d6ef7B2419aE150E6377BdbB7Ef16;
+    address public constant FRAX_GAUGE_REWARDS_DISTRIBUTOR =
+        0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34;
 
     uint256 public constant AMOUNT = 1_000e18;
     uint256 public constant LOCK_DURATION = 365 days;
@@ -59,22 +67,28 @@ contract FraxStrategyTest is BaseTest {
     SdtDistributorV2 public distributorImpl;
     TransparentUpgradeableProxy public proxy;
 
-    FxsLocker public locker = FxsLocker(0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f);
-    FeeRegistry public feeRegistry = FeeRegistry(0x0f1dc3Bd5fE8a3034d6Df0A411Efc7916830d19c);
-    FxsAccumulator public accumulator = FxsAccumulator(0xF980B8A714Ce0cCB049f2890494b068CeC715c3f);
+    FxsLocker public locker =
+        FxsLocker(0xCd3a267DE09196C48bbB1d9e842D7D7645cE448f);
+    FeeRegistry public feeRegistry =
+        FeeRegistry(0x0f1dc3Bd5fE8a3034d6Df0A411Efc7916830d19c);
+    FxsAccumulator public accumulator =
+        FxsAccumulator(0xF980B8A714Ce0cCB049f2890494b068CeC715c3f);
 
     IGaugeController public gaugeController;
     ILiquidityGaugeStratFrax public lgImpl;
     ILiquidityGaugeStratFrax public lgFake;
     ILiquidityGaugeStratFrax public lgFxsTemple;
 
-    IERC20 public fxs = IERC20(Constants.FXS);
-    IERC20 public sdt = IERC20(Constants.SDT);
-    IERC20 public frax = IERC20(Constants.FRAX);
-    IERC20 public temple = IERC20(Constants.TEMPLE);
-    IERC20 public fxsTemple = IERC20(0x6021444f1706f15465bEe85463BCc7d7cC17Fc03);
-    IMasterchef public masterChef = IMasterchef(0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c);
-    IFraxGauge public fxsTempleFraxGauge = IFraxGauge(0x10460d02226d6ef7B2419aE150E6377BdbB7Ef16);
+    IERC20 public fxs = IERC20(AddressBook.FXS);
+    IERC20 public sdt = IERC20(AddressBook.SDT);
+    IERC20 public frax = IERC20(AddressBook.FRAX);
+    IERC20 public temple = IERC20(AddressBook.TEMPLE);
+    IERC20 public fxsTemple =
+        IERC20(0x6021444f1706f15465bEe85463BCc7d7cC17Fc03);
+    IMasterchef public masterChef =
+        IMasterchef(0xfEA5E213bbD81A8a94D0E1eDB09dBD7CEab61e1c);
+    IFraxGauge public fxsTempleFraxGauge =
+        IFraxGauge(0x10460d02226d6ef7B2419aE150E6377BdbB7Ef16);
 
     function setUp() public {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 16290429);
@@ -101,7 +115,11 @@ contract FraxStrategyTest is BaseTest {
         );
         proxyAdmin = new ProxyAdmin();
         distributorImpl = new SdtDistributorV2();
-        proxy = new TransparentUpgradeableProxy(address(distributorImpl), address(proxyAdmin), distributorData);
+        proxy = new TransparentUpgradeableProxy(
+            address(distributorImpl),
+            address(proxyAdmin),
+            distributorData
+        );
         distributor = SdtDistributorV2(address(proxy));
 
         poolRegistry = new PoolRegistry();
@@ -114,14 +132,18 @@ contract FraxStrategyTest is BaseTest {
         vaultImpl = new VaultV1();
         feeProxy = new VeSDTFeeFraxProxy(path);
         strategy = new FraxStrategy(
-    ILocker(address(locker)),
-    LOCAL_DEPLOYER,
-    address(accumulator),
-    address(feeProxy),
-    address(distributor),
-    LOCAL_DEPLOYER
-    );
-        booster = new Booster(address(locker), address(poolRegistry), address(strategy));
+            ILocker(address(locker)),
+            LOCAL_DEPLOYER,
+            address(accumulator),
+            address(feeProxy),
+            address(distributor),
+            LOCAL_DEPLOYER
+        );
+        booster = new Booster(
+            address(locker),
+            address(poolRegistry),
+            address(strategy)
+        );
         vm.stopPrank();
 
         // Call setters
@@ -174,9 +196,19 @@ contract FraxStrategyTest is BaseTest {
     function testPoolRegistry04CreateNewPool() public {
         testPoolRegistry03SetDistributor();
         vm.prank(LOCAL_DEPLOYER);
-        booster.addPool(address(vaultImpl), address(fxsTempleFraxGauge), address(fxsTemple));
+        booster.addPool(
+            address(vaultImpl),
+            address(fxsTempleFraxGauge),
+            address(fxsTemple)
+        );
 
-        (address impl, address staking, address token, address reward, uint8 active) = poolRegistry.poolInfo(0);
+        (
+            address impl,
+            address staking,
+            address token,
+            address reward,
+            uint8 active
+        ) = poolRegistry.poolInfo(0);
         lgFxsTemple = ILiquidityGaugeStratFrax(reward);
 
         assertEq(poolRegistry.poolLength(), 1);
@@ -210,7 +242,8 @@ contract FraxStrategyTest is BaseTest {
         booster.createNewPoolRewards(0);
         vm.stopPrank();
 
-        (address impl, address staking, address token,,) = poolRegistry.poolInfo(0);
+        (address impl, address staking, address token, , ) = poolRegistry
+            .poolInfo(0);
 
         assertEq(poolRegistry.poolLength(), 1);
         assertEq(impl, address(vaultImpl));
@@ -220,11 +253,11 @@ contract FraxStrategyTest is BaseTest {
 
     function testPoolRegistry07KillPool() public {
         testPoolRegistry06CreateNewPoolRewardForExistingPool();
-        (,,,, uint8 active) = poolRegistry.poolInfo(0);
+        (, , , , uint8 active) = poolRegistry.poolInfo(0);
         assertEq(active, 1);
         vm.prank(LOCAL_DEPLOYER);
         booster.deactivatePool(0);
-        (,,,, active) = poolRegistry.poolInfo(0);
+        (, , , , active) = poolRegistry.poolInfo(0);
         assertEq(active, 0);
     }
 
@@ -243,7 +276,10 @@ contract FraxStrategyTest is BaseTest {
         distributor.distribute(address(lgFxsTemple));
 
         assertGt(gaugeController.get_gauge_weight(address(lgFxsTemple)), 0);
-        assertGt(gaugeController.gauge_relative_weight(address(lgFxsTemple)), 0);
+        assertGt(
+            gaugeController.gauge_relative_weight(address(lgFxsTemple)),
+            0
+        );
         assertGt(sdt.balanceOf(address(lgFxsTemple)), balanceBefore);
     }
 
@@ -253,17 +289,29 @@ contract FraxStrategyTest is BaseTest {
         vm.expectRevert(bytes("!auth"));
         booster.setPoolRewardImplementation(ALICE);
         vm.expectRevert(bytes("!auth"));
-        booster.addPool(address(vault), address(fxsTempleFraxGauge), address(fxsTemple));
+        booster.addPool(
+            address(vault),
+            address(fxsTempleFraxGauge),
+            address(fxsTemple)
+        );
 
         testPoolRegistry04CreateNewPool();
 
         vm.startPrank(LOCAL_DEPLOYER);
         vm.expectRevert(bytes("!imp"));
-        booster.addPool(address(0), address(fxsTempleFraxGauge), address(fxsTemple));
+        booster.addPool(
+            address(0),
+            address(fxsTempleFraxGauge),
+            address(fxsTemple)
+        );
         vm.expectRevert(bytes("!stkAdd"));
         booster.addPool(address(vaultImpl), address(0), address(fxsTemple));
         vm.expectRevert(bytes("!stkTok"));
-        booster.addPool(address(vaultImpl), address(fxsTempleFraxGauge), address(0));
+        booster.addPool(
+            address(vaultImpl),
+            address(fxsTempleFraxGauge),
+            address(0)
+        );
         vm.stopPrank();
 
         vm.startPrank(ALICE);
@@ -284,16 +332,28 @@ contract FraxStrategyTest is BaseTest {
         assertEq(lgFxsTemple.balanceOf(ALICE), AMOUNT);
         assertEq(lgFxsTemple.totalSupply(), AMOUNT);
         assertEq(fxsTempleFraxGauge.lockedStakesOfLength(address(vault)), 1);
-        assertEq(fxsTempleFraxGauge.lockedStakesOf(address(vault))[0].liquidity, AMOUNT);
-        assertTrue(fxsTempleFraxGauge.lockedStakesOf(address(vault))[0].kek_id != bytes32(0));
+        assertEq(
+            fxsTempleFraxGauge.lockedStakesOf(address(vault))[0].liquidity,
+            AMOUNT
+        );
+        assertTrue(
+            fxsTempleFraxGauge.lockedStakesOf(address(vault))[0].kek_id !=
+                bytes32(0)
+        );
     }
 
     function testVault02AddLiquidity() public {
         testVault01StakeLP();
         vm.startPrank(ALICE);
-        vault.lockAdditional(fxsTempleFraxGauge.lockedStakesOf(address(vault))[0].kek_id, AMOUNT);
+        vault.lockAdditional(
+            fxsTempleFraxGauge.lockedStakesOf(address(vault))[0].kek_id,
+            AMOUNT
+        );
         vm.stopPrank();
-        assertEq(fxsTempleFraxGauge.lockedStakesOf(address(vault))[0].liquidity, AMOUNT * 2);
+        assertEq(
+            fxsTempleFraxGauge.lockedStakesOf(address(vault))[0].liquidity,
+            AMOUNT * 2
+        );
         assertEq(lgFxsTemple.balanceOf(ALICE), AMOUNT * 2);
         assertEq(lgFxsTemple.totalSupply(), AMOUNT * 2);
     }
@@ -346,7 +406,10 @@ contract FraxStrategyTest is BaseTest {
         fxsTempleFraxGauge.sync();
 
         vm.startPrank(ALICE);
-        vault.withdrawLocked(fxsTempleFraxGauge.lockedStakesOf(address(vault))[0].kek_id, true);
+        vault.withdrawLocked(
+            fxsTempleFraxGauge.lockedStakesOf(address(vault))[0].kek_id,
+            true
+        );
         vm.stopPrank();
 
         assertGt(temple.balanceOf(ALICE), 0);
@@ -369,7 +432,8 @@ contract FraxStrategyTest is BaseTest {
         vm.expectRevert("Stake not found");
         vault.lockAdditional(bytes32("0x0123"), AMOUNT);
 
-        bytes32 kekId = fxsTempleFraxGauge.lockedStakesOf(address(vault))[0].kek_id;
+        bytes32 kekId = fxsTempleFraxGauge
+        .lockedStakesOf(address(vault))[0].kek_id;
         vm.expectRevert("Stake is still locked!");
         vault.withdrawLocked(kekId, false);
         vm.expectRevert("!only personal vault");
@@ -428,11 +492,16 @@ contract FraxStrategyTest is BaseTest {
 
         assertEq(fxs.balanceOf(address(feeProxy)), 0);
         assertGt(frax.balanceOf(BOB), 0);
-        assertGt(IERC20(Constants.SDFRAX3CRV).balanceOf(feeProxy.FEE_DISTRIBUTOR()), 0);
+        assertGt(
+            IERC20(AddressBook.SDFRAX3CRV).balanceOf(
+                feeProxy.FEE_DISTRIBUTOR()
+            ),
+            0
+        );
     }
 
     function transferFXS(address to, uint256 amount) internal {
-        vm.prank(Constants.FXS_WHALE);
+        vm.prank(AddressBook.FXS_WHALE);
         fxs.transfer(to, amount);
     }
 }

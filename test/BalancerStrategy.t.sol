@@ -19,7 +19,7 @@ contract BalancerStrategyTest is BaseTest {
     address public constant STRATEGY = 0x873b031Ea6E4236E44d933Aae5a66AF6d4DA419d;
     address public constant LOCAL_DEPLOYER = address(0xDE);
     address public constant ALICE = address(0xAA);
-    address public immutable LOCKER = Constants.BALANCER_LOCKER;
+    address public immutable LOCKER = AddressBook.BALANCER_LOCKER;
     address public balancerStrategyGov;
 
     uint256 public constant AMOUNT = 100e18;
@@ -113,21 +113,21 @@ contract BalancerStrategyTest is BaseTest {
 
         // simulate LDO rewards
         vm.prank(0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c); // Lido treasury
-        IERC20(Constants.LDO).transfer(address(strategy), AMOUNT);
+        IERC20(AddressBook.LDO).transfer(address(strategy), AMOUNT);
 
         // add LDO as reward token on the LGV4
         vm.prank(factory.GOVERNANCE());
-        gauge1.add_reward(Constants.LDO, address(strategy));
+        gauge1.add_reward(AddressBook.LDO, address(strategy));
 
         timeJump(6 days);
 
-        uint256 balanceBeforeGaugeBAL = IERC20(Constants.BAL).balanceOf(address(gauge1));
-        uint256 balanceBeforeGaugeSDT = IERC20(Constants.SDT).balanceOf(address(gauge1));
-        uint256 balanceBeforeGaugeLDO = IERC20(Constants.LDO).balanceOf(address(gauge1));
+        uint256 balanceBeforeGaugeBAL = IERC20(AddressBook.BAL).balanceOf(address(gauge1));
+        uint256 balanceBeforeGaugeSDT = IERC20(AddressBook.SDT).balanceOf(address(gauge1));
+        uint256 balanceBeforeGaugeLDO = IERC20(AddressBook.LDO).balanceOf(address(gauge1));
         strategy.claim(WSTETH_ETH_BPT);
-        uint256 balanceAfterGaugeBAL = IERC20(Constants.BAL).balanceOf(address(gauge1));
-        uint256 balanceAfterGaugeSDT = IERC20(Constants.SDT).balanceOf(address(gauge1));
-        uint256 balanceAfterGaugeLDO = IERC20(Constants.LDO).balanceOf(address(gauge1));
+        uint256 balanceAfterGaugeBAL = IERC20(AddressBook.BAL).balanceOf(address(gauge1));
+        uint256 balanceAfterGaugeSDT = IERC20(AddressBook.SDT).balanceOf(address(gauge1));
+        uint256 balanceAfterGaugeLDO = IERC20(AddressBook.LDO).balanceOf(address(gauge1));
 
         assertGt(balanceAfterGaugeBAL, balanceBeforeGaugeBAL, "ERROR_020");
         assertGt(balanceAfterGaugeLDO, balanceBeforeGaugeLDO, "ERROR_021");
