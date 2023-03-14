@@ -85,8 +85,8 @@ contract ApwineTest is BaseTest {
         // Deploy Gauge Controller
         gaugeController = IGaugeController(
             deployCode(
-                "artifacts/contracts/dao/GaugeController.vy/GaugeController.json",
-                abi.encode(AddressBook.SDT, AddressBook.VE_SDT, LOCAL_DEPLOYER)
+                "artifacts/vyper-contracts/GaugeController.vy/GaugeController.json",
+                abi.encode(Constants.SDT, Constants.VE_SDT, LOCAL_DEPLOYER)
             )
         );
 

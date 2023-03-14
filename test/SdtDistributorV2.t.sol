@@ -96,8 +96,8 @@ contract SdtDistributorTest is BaseTest {
         // Deploy Gauge Controller
         gaugeController = IGaugeController(
             deployCode(
-                "artifacts/contracts/dao/GaugeController.vy/GaugeController.json",
-                abi.encode(AddressBook.SDT, address(veSDT), LOCAL_DEPLOYER)
+                "artifacts/vyper-contracts/GaugeController.vy/GaugeController.json",
+                abi.encode(Constants.SDT, address(veSDT), LOCAL_DEPLOYER)
             )
         );
 

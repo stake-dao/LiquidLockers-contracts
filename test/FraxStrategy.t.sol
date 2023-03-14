@@ -102,8 +102,8 @@ contract FraxStrategyTest is BaseTest {
         // deploy all needed contracts
         gaugeController = IGaugeController(
             deployCode(
-                "artifacts/contracts/dao/GaugeController.vy/GaugeController.json",
-                abi.encode(AddressBook.SDT, AddressBook.VE_SDT, LOCAL_DEPLOYER)
+                "artifacts/vyper-contracts/GaugeController.vy/GaugeController.json",
+                abi.encode(Constants.SDT, Constants.VE_SDT, LOCAL_DEPLOYER)
             )
         );
         bytes memory distributorData = abi.encodeWithSignature(
@@ -124,14 +124,10 @@ contract FraxStrategyTest is BaseTest {
 
         poolRegistry = new PoolRegistry();
         lgImpl = ILiquidityGaugeStratFrax(
-            deployCode(
-                "artifacts/contracts/staking/LiquidityGaugeV4StratFrax.vy/LiquidityGaugeV4StratFrax.json"
-            )
+            deployCode("artifacts/vyper-contracts/LiquidityGaugeV4StratFrax.vy/LiquidityGaugeV4StratFrax.json")
         );
         lgFake = ILiquidityGaugeStratFrax(
-            deployCode(
-                "artifacts/contracts/staking/LiquidityGaugeV4StratFrax.vy/LiquidityGaugeV4StratFrax.json"
-            )
+            deployCode("artifacts/vyper-contracts/LiquidityGaugeV4StratFrax.vy/LiquidityGaugeV4StratFrax.json")
         );
         vaultImpl = new VaultV1();
         feeProxy = new VeSDTFeeFraxProxy(path);
