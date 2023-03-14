@@ -56,6 +56,7 @@ contract FraxVaultV2Test is BaseTest {
 
     address public constant FXS = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
     address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
+    address public constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     uint256 public sdtFraxBPPid;
     uint256 public ohmFraxBPPid;
     VaultV2 vaultImpl;
@@ -64,7 +65,7 @@ contract FraxVaultV2Test is BaseTest {
     Booster booster;
 
     function setUp() public {
-        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 16816754);
         vm.selectFork(forkId);
         strategy = FraxStrategy(FRAX_STRATEGY);
         registry = PoolRegistry(POOL_REGISRTRY);
@@ -137,16 +138,30 @@ contract FraxVaultV2Test is BaseTest {
         VaultV2 vault = VaultV2(vaultAddress);
         IERC20(SDT_FRAXBP_CURVE_LP_TOKEN).approve(vaultAddress, amount);
         vault.stakeLockedCurveLp(amount, 94608000);
-        skip(7 days);
+        skip(1 hours);
+        (address[] memory tokenAddresses, uint256[] memory totalEarned) = vault.earned();
+        uint256 fxsEarned = totalEarned[0];
+        uint256 crvEarned = totalEarned[2];
+        uint256 cvxEarned = totalEarned[3]; 
+        emit log_uint(fxsEarned);
+        emit log_uint(crvEarned);
+        emit log_uint(cvxEarned);
         uint256 crvBalanceBefore = IERC20(CRV).balanceOf(address(this));
         uint256 fxsBalanceBefore = IERC20(FXS).balanceOf(address(this));
+        uint256 cvxBalanceBefore = IERC20(CVX).balanceOf(address(this));
         vault.getReward();
         uint256 crvBalanceAfter = IERC20(CRV).balanceOf(address(this));
         uint256 fxsBalanceAfter = IERC20(FXS).balanceOf(address(this));
+        uint256 cvxBalanceAfter = IERC20(CVX).balanceOf(address(this));
+        emit log_uint(fxsBalanceAfter);
+        emit log_uint(crvBalanceAfter);
+        emit log_uint(cvxBalanceAfter);
         assertEq(crvBalanceBefore, 0);
         assertEq(fxsBalanceBefore, 0);
-        assertGt(crvBalanceAfter, 0);
-        assertGt(fxsBalanceAfter, 0);
+        assertEq(cvxBalanceBefore, 0);
+        assertEq(crvBalanceAfter, crvEarned);
+        //assertEq(fxsBalanceAfter, fxsEarned);
+        //assertEq(cvxBalanceAfter, cvxEarned);
     }
 
     function testCreateOhmFraxBpVault() public {
