@@ -26,9 +26,14 @@ interface FraxGauge {
         returns (LockedStake[] memory);
 
     function veFXSMultiplier(address _user) external view returns (uint256);
+
+    function updateRewardAndBalance(address _user, bool _sync) external;
 }
 
 contract FraxVaultV2Test is BaseTest {
+    address public constant MS = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063;
+    address public constant ACC = 0xF980B8A714Ce0cCB049f2890494b068CeC715c3f;
+    address public constant VE_SDT_FEE_PROXY = 0x86Ebcd1bC876782670FE0B9ea23d8504569B9ffc;
     address public constant FRAX_STRATEGY =
         0xf285Dec3217E779353350443fC276c07D05917c3;
     address public constant POOL_REGISRTRY =
@@ -138,30 +143,34 @@ contract FraxVaultV2Test is BaseTest {
         VaultV2 vault = VaultV2(vaultAddress);
         IERC20(SDT_FRAXBP_CURVE_LP_TOKEN).approve(vaultAddress, amount);
         vault.stakeLockedCurveLp(amount, 94608000);
-        skip(1 hours);
+        skip(1 days);
+        // update balance to include boost on fxs reward 
+        FraxGauge(SDT_FRAXBP_GAUGE).updateRewardAndBalance(address(vault), false);
         (address[] memory tokenAddresses, uint256[] memory totalEarned) = vault.earned();
         uint256 fxsEarned = totalEarned[0];
         uint256 crvEarned = totalEarned[2];
         uint256 cvxEarned = totalEarned[3]; 
         emit log_uint(fxsEarned);
-        emit log_uint(crvEarned);
-        emit log_uint(cvxEarned);
-        uint256 crvBalanceBefore = IERC20(CRV).balanceOf(address(this));
-        uint256 fxsBalanceBefore = IERC20(FXS).balanceOf(address(this));
-        uint256 cvxBalanceBefore = IERC20(CVX).balanceOf(address(this));
+        assertEq(IERC20(CRV).balanceOf(address(this)), 0);
+        assertEq(IERC20(FXS).balanceOf(address(this)), 0);
+        assertEq(IERC20(CVX).balanceOf(address(this)), 0);
+        uint256 msPartBefore = IERC20(FXS).balanceOf(MS);
+        uint256 accPartBefore = IERC20(FXS).balanceOf(ACC);
+        uint256 veSdtFeeProxyPartBefore = IERC20(FXS).balanceOf(VE_SDT_FEE_PROXY);
         vault.getReward();
         uint256 crvBalanceAfter = IERC20(CRV).balanceOf(address(this));
         uint256 fxsBalanceAfter = IERC20(FXS).balanceOf(address(this));
         uint256 cvxBalanceAfter = IERC20(CVX).balanceOf(address(this));
-        emit log_uint(fxsBalanceAfter);
-        emit log_uint(crvBalanceAfter);
+        uint256 msPart = IERC20(FXS).balanceOf(MS) - msPartBefore;
+        uint256 accPart = IERC20(FXS).balanceOf(ACC) - accPartBefore;
+        uint256 veSdtFeeProxyPart = IERC20(FXS).balanceOf(VE_SDT_FEE_PROXY) - veSdtFeeProxyPartBefore;
+        
+        emit log_uint(fxsBalanceAfter + msPart + accPart + veSdtFeeProxyPart);
+        emit log_uint(cvxEarned);
         emit log_uint(cvxBalanceAfter);
-        assertEq(crvBalanceBefore, 0);
-        assertEq(fxsBalanceBefore, 0);
-        assertEq(cvxBalanceBefore, 0);
+        
         assertEq(crvBalanceAfter, crvEarned);
-        //assertEq(fxsBalanceAfter, fxsEarned);
-        //assertEq(cvxBalanceAfter, cvxEarned);
+        assertGt(fxsBalanceAfter + msPart + accPart + veSdtFeeProxyPart, fxsEarned);
     }
 
     function testCreateOhmFraxBpVault() public {
