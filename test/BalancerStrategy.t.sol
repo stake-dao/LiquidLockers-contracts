@@ -19,7 +19,7 @@ contract BalancerStrategyTest is BaseTest {
     address public constant STRATEGY = 0x873b031Ea6E4236E44d933Aae5a66AF6d4DA419d;
     address public constant LOCAL_DEPLOYER = address(0xDE);
     address public constant ALICE = address(0xAA);
-    address public immutable LOCKER = AddressBook.BALANCER_LOCKER;
+    address public immutable LOCKER = AddressBook.BAL_LOCKER;
     address public balancerStrategyGov;
 
     uint256 public constant AMOUNT = 100e18;

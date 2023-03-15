@@ -56,9 +56,9 @@ contract BalancerVaultTest is BaseTest {
         vm.startPrank(LOCAL_DEPLOYER);
         proxyAdmin = new ProxyAdmin();
         helper = IBalancerHelper(AddressBook.BALANCER_HELPER);
-        accumulator = BalancerAccumulator(IBaseLocker(AddressBook.BALANCER_LOCKER).accumulator());
+        accumulator = BalancerAccumulator(IBaseLocker(AddressBook.BAL_LOCKER).accumulator());
         strategy = new BalancerStrategy(
-    ILocker(AddressBook.BALANCER_LOCKER),
+    ILocker(AddressBook.BAL_LOCKER),
     LOCAL_DEPLOYER,
     LOCAL_DEPLOYER,
     accumulator,
