@@ -5,7 +5,7 @@ import "forge-std/Vm.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import {AddressBook} from "@addressbook/AddressBook.sol";
+import {AddressBook} from "addressBook/AddressBook.sol";
 
 import {sdToken} from "contracts/tokens/sdToken.sol";
 import {YearnLocker} from "contracts/lockers/YearnLocker.sol";
