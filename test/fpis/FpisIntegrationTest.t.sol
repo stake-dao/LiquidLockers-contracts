@@ -5,10 +5,10 @@ import "forge-std/Vm.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import {sdToken} from "contracts/tokens/sdToken.sol";
+import {sdFPIS} from "contracts/tokens/sdFPIS.sol";
 import {FpisLocker} from "contracts/lockers/FpisLocker.sol";
 import {IVeFPIS} from "contracts/interfaces/IVeFPIS.sol";
-import {DepositorV2} from "contracts/depositors/DepositorV2.sol";
+import {DepositorV3} from "contracts/depositors/DepositorV3.sol";
 import {Constants} from "test/fixtures/Constants.sol";
 import {IYieldDistributor} from "contracts/interfaces/IYieldDistributor.sol";
 import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
@@ -30,9 +30,9 @@ contract FpisIntegrationTest is Test {
     // Liquid Lockers Contracts
     IERC20 internal FPIS = IERC20(Constants.FPIS);
     IVeFPIS internal veFPIS = IVeFPIS(Constants.VE_FPIS);
-    sdToken internal sdFPIS;
+    sdFPIS internal sdFpis;
 
-    DepositorV2 internal depositor;
+    DepositorV3 internal depositor;
     ILiquidityGauge internal liquidityGauge;
     FpisAccumulator internal fpisAccumulator;
     SmartWalletWhitelist internal sww;
@@ -50,7 +50,7 @@ contract FpisIntegrationTest is Test {
 
         sww = new SmartWalletWhitelist(address(this));
 
-        sdFPIS = new sdToken("Stake DAO FPIS", "sdFPIS");
+        sdFpis = new sdFPIS(address(this), address(this));
 
         address liquidityGaugeImpl = deployCode("artifacts/vyper-contracts/LiquidityGaugeV4.vy/LiquidityGaugeV4.json");
 
@@ -62,7 +62,7 @@ contract FpisIntegrationTest is Test {
                 Constants.PROXY_ADMIN,
                 abi.encodeWithSignature(
                 "initialize(address,address,address,address,address,address)",
-                address(sdFPIS),
+                address(sdFpis),
                 address(this),
                 Constants.SDT,
                 Constants.VE_SDT,
@@ -77,9 +77,9 @@ contract FpisIntegrationTest is Test {
         fpisLocker = new FpisLocker(address(this), address(this));
 
         // Deploy Depositor Contract
-        depositor = new DepositorV2(Constants.FPIS, address(fpisLocker), address(sdFPIS), 4 * Constants.YEAR);
+        depositor = new DepositorV3(Constants.FPIS, address(fpisLocker), address(sdFpis), 4 * Constants.YEAR);
         depositor.setGauge(address(liquidityGauge));
-        sdFPIS.setOperator(address(depositor));
+        sdFpis.setMinterOperator(address(depositor));
         fpisLocker.setFpisDepositor(address(depositor));
 
         // Deploy veSdtFeeProxy
@@ -127,7 +127,7 @@ contract FpisIntegrationTest is Test {
         FPIS.approve(address(depositor), amount);
         depositor.deposit(amount, true, false, address(this));
 
-        assertEq(sdFPIS.balanceOf(address(this)), amount);
+        assertEq(sdFpis.balanceOf(address(this)), amount);
         assertEq(liquidityGauge.balanceOf(address(this)), 0);
     }
 

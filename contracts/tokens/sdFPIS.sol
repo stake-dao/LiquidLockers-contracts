@@ -6,7 +6,7 @@ import "openzeppelin-contracts/token/ERC20/ERC20.sol";
 /// @title sdFPIS
 /// @author StakeDAO
 /// @notice A token that represents the Token deposited by a user into the Depositor
-/// @dev Minting & Burning was modified to be used by the operators ennabled
+/// @dev Minting & Burning was modified to be used by the minter/burner enabled
 contract sdFPIS is ERC20 {
     address public minter;
     address public burner;
