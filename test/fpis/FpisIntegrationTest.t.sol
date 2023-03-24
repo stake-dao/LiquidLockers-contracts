@@ -5,6 +5,7 @@ import "forge-std/Vm.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
+import {AddressBook} from "addressBook/AddressBook.sol";
 import {sdFPIS} from "contracts/tokens/sdFPIS.sol";
 import {FpisLocker} from "contracts/lockers/FpisLocker.sol";
 import {IVeFPIS} from "contracts/interfaces/IVeFPIS.sol";
@@ -59,15 +60,15 @@ contract FpisIntegrationTest is Test {
             address(
                 new TransparentUpgradeableProxy(
                 liquidityGaugeImpl,
-                Constants.PROXY_ADMIN,
+                AddressBook.PROXY_ADMIN,
                 abi.encodeWithSignature(
                 "initialize(address,address,address,address,address,address)",
                 address(sdFpis),
                 address(this),
-                Constants.SDT,
-                Constants.VE_SDT,
-                Constants.VE_SDT_BOOST_PROXY,
-                Constants.SDT_DISTRIBUTOR
+                AddressBook.SDT,
+                AddressBook.VE_SDT,
+                AddressBook.VE_SDT_BOOST_PROXY,
+                AddressBook.SDT_DISTRIBUTOR
                 )
                 )
             )
@@ -85,7 +86,7 @@ contract FpisIntegrationTest is Test {
         // Deploy veSdtFeeProxy
         address[] memory fraxSwapPath = new address[](2);
         fraxSwapPath[0] = Constants.FPIS;
-        fraxSwapPath[1] = Constants.FRAX;
+        fraxSwapPath[1] = AddressBook.FRAX;
         veSdtFeeProxy = new VeSDTFeeFpisProxy(fraxSwapPath);
 
         // Deploy Accumulator Contract
