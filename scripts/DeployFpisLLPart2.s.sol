@@ -5,9 +5,9 @@ import "forge-std/Test.sol";
 import "forge-std/Script.sol";
 
 import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
-import {sdToken} from "contracts/tokens/sdToken.sol";
+import {sdFPIS} from "contracts/tokens/sdFPIS.sol";
 import {Constants} from "test/fixtures/Constants.sol";
-import {DepositorV2} from "contracts/depositors/DepositorV2.sol";
+import {DepositorV3} from "contracts/depositors/DepositorV3.sol";
 import {ILiquidityGauge} from "contracts/interfaces/ILiquidityGauge.sol";
 import {IVeFPIS} from "contracts/interfaces/IVeFPIS.sol";
 import {TransparentUpgradeableProxy} from "contracts/external/TransparentUpgradeableProxy.sol";
@@ -16,9 +16,9 @@ import {FpisLocker} from "contracts/lockers/FpisLocker.sol";
 import {VeSDTFeeFpisProxy} from "contracts/accumulators/VeSDTFeeFpisProxy.sol";
 
 contract DeployFpisLLPart2 is Script, Test {
-    sdToken public sdFPIS;
+    sdFPIS public sdFpis;
     FpisAccumulator internal fpisAccumulator;
-    DepositorV2 internal depositor;
+    DepositorV3 internal depositor;
     FpisLocker internal fpisLocker = FpisLocker(0x1ce5181124c33Abc281BF0F07eF4fB8573556aA5);
     VeSDTFeeFpisProxy internal veSdtFeeProxy;
 
@@ -29,10 +29,12 @@ contract DeployFpisLLPart2 is Script, Test {
 
     IERC20 internal FPIS = IERC20(Constants.FPIS);
 
+    address newDeployer = Constants.SDTNEWDEPLOYER;
+
     function run() public {
-        vm.startBroadcast(Constants.SDTNEWDEPLOYER);
+        vm.startBroadcast(newDeployer);
         // deploy sdFPIS
-        sdFPIS = new sdToken("Stake DAO FPIS", "sdFPIS");
+        sdFpis = new sdFPIS(newDeployer, newDeployer);
 
         // Deploy LiquidityGauge
         liquidityGauge = ILiquidityGauge(
@@ -42,8 +44,8 @@ contract DeployFpisLLPart2 is Script, Test {
                 Constants.PROXY_ADMIN,
                 abi.encodeWithSignature(
                 "initialize(address,address,address,address,address,address)",
-                address(sdFPIS),
-                Constants.SDTNEWDEPLOYER,
+                address(sdFpis),
+                newDeployer,
                 Constants.SDT,
                 Constants.VE_SDT,
                 Constants.VE_SDT_BOOST_PROXY,
@@ -68,7 +70,7 @@ contract DeployFpisLLPart2 is Script, Test {
         );
 
         // Deploy Depositor Contract
-        depositor = new DepositorV2(address(FPIS), address(fpisLocker), address(sdFPIS), 4 * Constants.YEAR);
+        depositor = new DepositorV3(address(FPIS), address(fpisLocker), address(sdFpis), 4 * Constants.YEAR);
 
         // Setters
         // Accumulator
@@ -89,9 +91,9 @@ contract DeployFpisLLPart2 is Script, Test {
         fpisLocker.createLock(amountToLock, block.timestamp + (4 * Constants.YEAR));
 
         // mint 1 sdFPIS
-        sdFPIS.mint(Constants.SDTNEWDEPLOYER, amountToLock);
+        sdFpis.mint(newDeployer, amountToLock);
         // sdFPIS
-        sdFPIS.setOperator(address(depositor));
+        sdFpis.setMinterOperator(address(depositor));
 
         vm.stopBroadcast();
     }
