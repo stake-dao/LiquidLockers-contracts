@@ -19,7 +19,7 @@ contract DeployFpisLLPart2 is Script, Test {
     sdToken public sdFPIS;
     FpisAccumulator internal fpisAccumulator;
     DepositorV2 internal depositor;
-    FpisLocker internal fpisLocker; // hardcode the address after running part1
+    FpisLocker internal fpisLocker = FpisLocker(0x1ce5181124c33Abc281BF0F07eF4fB8573556aA5);
     VeSDTFeeFpisProxy internal veSdtFeeProxy;
 
     ILiquidityGauge public liquidityGauge;
