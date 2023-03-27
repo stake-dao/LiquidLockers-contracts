@@ -106,7 +106,7 @@ contract FpisIntegrationTest is Test {
         // Add Reward to LGV4
         liquidityGauge.add_reward(address(FPIS), address(fpisAccumulator));
 
-        // Mint FPIS to the adresss(this)
+        // Mint FPIS to the locker
         deal(address(FPIS), address(fpisLocker), amount);
 
         // set smart_wallet_checker as sww
@@ -182,13 +182,33 @@ contract FpisIntegrationTest is Test {
 
         fpisAccumulator.claimAndNotifyAll();
 
-        assertGt(FPIS.balanceOf(daoRecipient), 0);
+        assertEq(FPIS.balanceOf(address(fpisAccumulator)), 0);
 
-        assertGt(FPIS.balanceOf(bribeRecipient), 0);
+        uint256 daoPart = FPIS.balanceOf(daoRecipient);
+        uint256 bribePart = FPIS.balanceOf(bribeRecipient);
+        uint256 gaugePart = FPIS.balanceOf(address(liquidityGauge));
+        uint256 veSdtFeePart = FPIS.balanceOf(address(veSdtFeeProxy));
+        emit log_uint(gaugePart);
 
-        assertGt(FPIS.balanceOf(address(veSdtFeeProxy)), 0);
+        assertEq((daoPart + bribePart + gaugePart + veSdtFeePart) * fpisAccumulator.daoFee() / 10_000, daoPart);
+        assertEq((daoPart + bribePart + gaugePart + veSdtFeePart) * fpisAccumulator.bribeFee() / 10_000, bribePart);
+        assertEq((daoPart + bribePart + gaugePart + veSdtFeePart) * fpisAccumulator.veSdtFeeProxyFee() / 10_000, veSdtFeePart);
 
         assertGt(FPIS.balanceOf(address(liquidityGauge)), 0);
+    }
+
+    function testAccumulatorRewardsWithClaimerFees() public {
+        vm.warp(block.timestamp + 2 * DAY);
+
+        fpisAccumulator.setClaimerFee(1000); // 10%
+
+        uint256 claimerBalanceBefore = FPIS.balanceOf(address(this));
+
+        fpisAccumulator.claimAndNotifyAll();
+
+        uint256 claimerBalanceEarned = FPIS.balanceOf(address(this)) - claimerBalanceBefore;
+
+        assertEq((claimerBalanceEarned + FPIS.balanceOf(address(liquidityGauge))) * fpisAccumulator.claimerFee() / 10_000, claimerBalanceEarned);
     }
 
     function testVeSdtFeeProxy() public {
