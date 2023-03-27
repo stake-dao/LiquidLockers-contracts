@@ -26,7 +26,7 @@ contract sdFPIS is ERC20 {
     /// @notice Set a burner operator (only the actual burner can call it) 
     /// @param _burner new burner operator address
     function setBurnerOperator(address _burner) external {
-        require(msg.sender == _burner, "!burner");
+        require(msg.sender == burner, "!burner");
         burner = _burner;
     }
 
