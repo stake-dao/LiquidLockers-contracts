@@ -36,8 +36,7 @@ contract FpisAccumulator is BaseAccumulator {
         bribeRecipient = _bribeRecipient;
         veSdtFeeProxy = _veSdtFeeProxy;
         daoFee = 500; // 5%
-        bribeFee = 500;
-        veSdtFeeProxyFee = 500;
+        bribeFee = 1000; // 10% 
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -92,6 +91,7 @@ contract FpisAccumulator is BaseAccumulator {
     /// @param _daoRecipient recipient address
     function setDaoRecipient(address _daoRecipient) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
+        if (_daoRecipient == address(0)) revert ZERO_ADDRESS();
         emit DaoRecipientSet(daoRecipient, _daoRecipient);
         daoRecipient = _daoRecipient;
     }
@@ -100,6 +100,7 @@ contract FpisAccumulator is BaseAccumulator {
     /// @param _bribeRecipient recipient address
     function setBribeRecipient(address _bribeRecipient) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
+        if (_bribeRecipient == address(0)) revert ZERO_ADDRESS();
         emit BribeRecipientSet(bribeRecipient, _bribeRecipient);
         bribeRecipient = _bribeRecipient;
     }
@@ -108,6 +109,7 @@ contract FpisAccumulator is BaseAccumulator {
     /// @param _veSdtFeeProxy proxy address
     function setVeSdtFeeProxy(address _veSdtFeeProxy) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
+        if (_veSdtFeeProxy == address(0)) revert ZERO_ADDRESS();
         emit VeSdtFeeProxySet(veSdtFeeProxy, _veSdtFeeProxy);
         veSdtFeeProxy = _veSdtFeeProxy;
     }

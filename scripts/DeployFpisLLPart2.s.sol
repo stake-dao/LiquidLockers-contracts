@@ -4,10 +4,10 @@ pragma solidity 0.8.7;
 import "forge-std/Test.sol";
 import "forge-std/Script.sol";
 
+import {AddressBook} from "addressBook/AddressBook.sol";
 import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
-import {sdToken} from "contracts/tokens/sdToken.sol";
-import {Constants} from "test/fixtures/Constants.sol";
-import {DepositorV2} from "contracts/depositors/DepositorV2.sol";
+import {sdFPIS} from "contracts/tokens/sdFPIS.sol";
+import {DepositorV3} from "contracts/depositors/DepositorV3.sol";
 import {ILiquidityGauge} from "contracts/interfaces/ILiquidityGauge.sol";
 import {IVeFPIS} from "contracts/interfaces/IVeFPIS.sol";
 import {TransparentUpgradeableProxy} from "contracts/external/TransparentUpgradeableProxy.sol";
@@ -16,46 +16,50 @@ import {FpisLocker} from "contracts/lockers/FpisLocker.sol";
 import {VeSDTFeeFpisProxy} from "contracts/accumulators/VeSDTFeeFpisProxy.sol";
 
 contract DeployFpisLLPart2 is Script, Test {
-    sdToken public sdFPIS;
+    sdFPIS public sdFpis;
     FpisAccumulator internal fpisAccumulator;
-    DepositorV2 internal depositor;
-    FpisLocker internal fpisLocker; // hardcode the address after running part1
+    DepositorV3 internal depositor;
+    FpisLocker internal fpisLocker = FpisLocker(0x1ce5181124c33Abc281BF0F07eF4fB8573556aA5);
     VeSDTFeeFpisProxy internal veSdtFeeProxy;
 
     ILiquidityGauge public liquidityGauge;
     address public lgv4Impl = 0x93c951D3281Cc79e9FE1B1C87e50693D202F4C17; // sdAngle impl
-    address public daoRecipient = Constants.STDDEPLOYER;
-    address public bribeRecipient = Constants.STDDEPLOYER;
+    
 
-    IERC20 internal FPIS = IERC20(Constants.FPIS);
+    IERC20 internal FPIS = IERC20(AddressBook.FPIS);
+
+    address newDeployer = AddressBook.SDTNEWDEPLOYER;
+    address public msDao = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063;
+    address public daoRecipient = msDao;
+    address public bribeRecipient = msDao;
 
     function run() public {
-        vm.startBroadcast(Constants.SDTNEWDEPLOYER);
+        vm.startBroadcast(newDeployer);
         // deploy sdFPIS
-        sdFPIS = new sdToken("Stake DAO FPIS", "sdFPIS");
+        sdFpis = new sdFPIS(newDeployer, newDeployer);
 
         // Deploy LiquidityGauge
         liquidityGauge = ILiquidityGauge(
             address(
                 new TransparentUpgradeableProxy(
                 lgv4Impl,
-                Constants.PROXY_ADMIN,
+                AddressBook.PROXY_ADMIN,
                 abi.encodeWithSignature(
                 "initialize(address,address,address,address,address,address)",
-                address(sdFPIS),
-                Constants.SDTNEWDEPLOYER,
-                Constants.SDT,
-                Constants.VE_SDT,
-                Constants.VE_SDT_BOOST_PROXY,
-                Constants.SDT_DISTRIBUTOR
+                address(sdFpis),
+                newDeployer,
+                AddressBook.SDT,
+                AddressBook.VE_SDT,
+                AddressBook.VE_SDT_BOOST_PROXY,
+                AddressBook.SDT_DISTRIBUTOR
                 )
                 )
             )
         );
 
         address[] memory fraxSwapPath = new address[](2);
-        fraxSwapPath[0] = Constants.FPIS;
-        fraxSwapPath[1] = Constants.FRAX;
+        fraxSwapPath[0] = address(FPIS);
+        fraxSwapPath[1] = AddressBook.FRAX;
         veSdtFeeProxy = new VeSDTFeeFpisProxy(fraxSwapPath);
 
         // Deploy Accumulator Contract
@@ -68,7 +72,7 @@ contract DeployFpisLLPart2 is Script, Test {
         );
 
         // Deploy Depositor Contract
-        depositor = new DepositorV2(address(FPIS), address(fpisLocker), address(sdFPIS), 4 * Constants.YEAR);
+        depositor = new DepositorV3(address(FPIS), address(fpisLocker), address(sdFpis), 4 * AddressBook.YEAR);
 
         // Setters
         // Accumulator
@@ -86,12 +90,12 @@ contract DeployFpisLLPart2 is Script, Test {
         // Custom part to create the lock and mint sdFPIS manually
         uint256 amountToLock = 1e18;
         IERC20(FPIS).transfer(address(fpisLocker), amountToLock);
-        fpisLocker.createLock(amountToLock, block.timestamp + (4 * Constants.YEAR));
+        fpisLocker.createLock(amountToLock, block.timestamp + (4 * AddressBook.YEAR));
 
         // mint 1 sdFPIS
-        sdFPIS.mint(Constants.SDTNEWDEPLOYER, amountToLock);
+        sdFpis.mint(newDeployer, amountToLock);
         // sdFPIS
-        sdFPIS.setOperator(address(depositor));
+        sdFpis.setMinterOperator(address(depositor));
 
         vm.stopBroadcast();
     }

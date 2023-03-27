@@ -5,11 +5,12 @@ import "forge-std/Test.sol";
 import "forge-std/Script.sol";
 
 import {Constants} from "test/fixtures/Constants.sol";
+import {AddressBook} from "addressBook/AddressBook.sol";
 import {FpisLocker} from "contracts/lockers/FpisLocker.sol";
 
 contract DeployFpisLLPart1 is Script, Test {
     FpisLocker internal fpisLocker;
-    address deployer = Constants.SDTNEWDEPLOYER;
+    address deployer = AddressBook.SDTNEWDEPLOYER;
     function run() public {
         vm.startBroadcast(deployer);
         
