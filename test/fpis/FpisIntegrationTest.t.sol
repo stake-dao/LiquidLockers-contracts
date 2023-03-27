@@ -10,7 +10,6 @@ import {sdFPIS} from "contracts/tokens/sdFPIS.sol";
 import {FpisLocker} from "contracts/lockers/FpisLocker.sol";
 import {IVeFPIS} from "contracts/interfaces/IVeFPIS.sol";
 import {DepositorV3} from "contracts/depositors/DepositorV3.sol";
-import {Constants} from "test/fixtures/Constants.sol";
 import {IYieldDistributor} from "contracts/interfaces/IYieldDistributor.sol";
 import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
 import {ILiquidityGauge} from "contracts/interfaces/ILiquidityGauge.sol";
@@ -25,12 +24,12 @@ contract FpisIntegrationTest is Test {
     ///////////////////////////////////////////////////////////////
 
     // External Contracts
-    IYieldDistributor internal yieldDistributor = IYieldDistributor(Constants.FPIS_YIELD_DISTRIBUTOR);
+    IYieldDistributor internal yieldDistributor = IYieldDistributor(AddressBook.FPIS_YIELD_DISTRIBUTOR);
     FpisLocker internal fpisLocker;
 
     // Liquid Lockers Contracts
-    IERC20 internal FPIS = IERC20(Constants.FPIS);
-    IVeFPIS internal veFPIS = IVeFPIS(Constants.VE_FPIS);
+    IERC20 internal FPIS = IERC20(AddressBook.FPIS);
+    IVeFPIS internal veFPIS = IVeFPIS(AddressBook.VE_FPIS);
     sdFPIS internal sdFpis;
 
     DepositorV3 internal depositor;
@@ -44,6 +43,10 @@ contract FpisIntegrationTest is Test {
 
     // Helper
     uint256 internal constant amount = 100e18;
+
+    uint256 public DAY = AddressBook.DAY;
+    uint256 public WEEK = AddressBook.WEEK;
+    uint256 public YEAR = AddressBook.YEAR;
 
     function setUp() public virtual {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
@@ -78,20 +81,20 @@ contract FpisIntegrationTest is Test {
         fpisLocker = new FpisLocker(address(this), address(this));
 
         // Deploy Depositor Contract
-        depositor = new DepositorV3(Constants.FPIS, address(fpisLocker), address(sdFpis), 4 * Constants.YEAR);
+        depositor = new DepositorV3(address(FPIS), address(fpisLocker), address(sdFpis), 4 * YEAR);
         depositor.setGauge(address(liquidityGauge));
         sdFpis.setMinterOperator(address(depositor));
         fpisLocker.setFpisDepositor(address(depositor));
 
         // Deploy veSdtFeeProxy
         address[] memory fraxSwapPath = new address[](2);
-        fraxSwapPath[0] = Constants.FPIS;
+        fraxSwapPath[0] = address(FPIS);
         fraxSwapPath[1] = AddressBook.FRAX;
         veSdtFeeProxy = new VeSDTFeeFpisProxy(fraxSwapPath);
 
         // Deploy Accumulator Contract
         fpisAccumulator = new FpisAccumulator(
-            address(Constants.FPIS), 
+            address(FPIS), 
             address(liquidityGauge),
             daoRecipient,
             bribeRecipient,
@@ -112,7 +115,7 @@ contract FpisIntegrationTest is Test {
         // whitelist fpis locker contract to lock fpis 
         sww.approveWallet(address(fpisLocker)); 
 
-        fpisLocker.createLock(amount, block.timestamp + 4 * Constants.YEAR);
+        fpisLocker.createLock(amount, block.timestamp + 4 * YEAR);
 
         // Mint FPIS to the adresss(this)
         deal(address(FPIS), address(this), amount);
@@ -148,8 +151,8 @@ contract FpisIntegrationTest is Test {
         assertEq(liquidityGauge.balanceOf(address(this)), amount);
         uint256 oldEnd = veFPIS.locked(address(fpisLocker)).end;
         // Increase Time
-        vm.warp(block.timestamp + 2 * Constants.WEEK);
-        uint256 newExpectedEnd = (block.timestamp + 4 * Constants.YEAR) / Constants.WEEK * Constants.WEEK;
+        vm.warp(block.timestamp + 2 * WEEK);
+        uint256 newExpectedEnd = (block.timestamp + 4 * YEAR) / WEEK * WEEK;
 
         deal(address(FPIS), address(this), amount);
         FPIS.approve(address(depositor), amount);
@@ -163,7 +166,7 @@ contract FpisIntegrationTest is Test {
     }
 
     function testAccumulatorRewards() public {
-        vm.warp(block.timestamp + 2 * Constants.DAY);
+        vm.warp(block.timestamp + 2 * DAY);
 
         // Check Dao recipient
         assertEq(FPIS.balanceOf(daoRecipient), 0);
@@ -192,11 +195,11 @@ contract FpisIntegrationTest is Test {
         deal(address(FPIS), address(veSdtFeeProxy), 100e18);
 
         // Check FeeD
-        uint256 feeDBalanceBefore = IERC20(Constants.SDFRAX3CRV).balanceOf(Constants.FEE_D_SD);
+        uint256 feeDBalanceBefore = IERC20(AddressBook.SDFRAX3CRV).balanceOf(AddressBook.FEE_D_SD);
 
         veSdtFeeProxy.sendRewards();
 
-        uint256 feeDBalanceAfter = IERC20(Constants.SDFRAX3CRV).balanceOf(Constants.FEE_D_SD);
+        uint256 feeDBalanceAfter = IERC20(AddressBook.SDFRAX3CRV).balanceOf(AddressBook.FEE_D_SD);
 
         assertEq(FPIS.balanceOf(address(veSdtFeeProxy)), 0);
         assertGt(feeDBalanceAfter, feeDBalanceBefore);

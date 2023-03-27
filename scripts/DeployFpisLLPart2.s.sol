@@ -7,7 +7,6 @@ import "forge-std/Script.sol";
 import {AddressBook} from "addressBook/AddressBook.sol";
 import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
 import {sdFPIS} from "contracts/tokens/sdFPIS.sol";
-import {Constants} from "test/fixtures/Constants.sol";
 import {DepositorV3} from "contracts/depositors/DepositorV3.sol";
 import {ILiquidityGauge} from "contracts/interfaces/ILiquidityGauge.sol";
 import {IVeFPIS} from "contracts/interfaces/IVeFPIS.sol";
@@ -27,7 +26,7 @@ contract DeployFpisLLPart2 is Script, Test {
     address public lgv4Impl = 0x93c951D3281Cc79e9FE1B1C87e50693D202F4C17; // sdAngle impl
     
 
-    IERC20 internal FPIS = IERC20(Constants.FPIS);
+    IERC20 internal FPIS = IERC20(AddressBook.FPIS);
 
     address newDeployer = AddressBook.SDTNEWDEPLOYER;
     address public msDao = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063;
@@ -59,7 +58,7 @@ contract DeployFpisLLPart2 is Script, Test {
         );
 
         address[] memory fraxSwapPath = new address[](2);
-        fraxSwapPath[0] = Constants.FPIS;
+        fraxSwapPath[0] = address(FPIS);
         fraxSwapPath[1] = AddressBook.FRAX;
         veSdtFeeProxy = new VeSDTFeeFpisProxy(fraxSwapPath);
 
@@ -73,7 +72,7 @@ contract DeployFpisLLPart2 is Script, Test {
         );
 
         // Deploy Depositor Contract
-        depositor = new DepositorV3(address(FPIS), address(fpisLocker), address(sdFpis), 4 * Constants.YEAR);
+        depositor = new DepositorV3(address(FPIS), address(fpisLocker), address(sdFpis), 4 * AddressBook.YEAR);
 
         // Setters
         // Accumulator
@@ -91,7 +90,7 @@ contract DeployFpisLLPart2 is Script, Test {
         // Custom part to create the lock and mint sdFPIS manually
         uint256 amountToLock = 1e18;
         IERC20(FPIS).transfer(address(fpisLocker), amountToLock);
-        fpisLocker.createLock(amountToLock, block.timestamp + (4 * Constants.YEAR));
+        fpisLocker.createLock(amountToLock, block.timestamp + (4 * AddressBook.YEAR));
 
         // mint 1 sdFPIS
         sdFpis.mint(newDeployer, amountToLock);

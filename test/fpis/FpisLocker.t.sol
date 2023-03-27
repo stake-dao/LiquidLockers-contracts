@@ -5,9 +5,9 @@ import "forge-std/Vm.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
+import {AddressBook} from "addressBook/AddressBook.sol";
 import {FpisLocker} from "contracts/lockers/FpisLocker.sol";
 import {IVeFPIS} from "contracts/interfaces/IVeFPIS.sol";
-import {Constants} from "test/fixtures/Constants.sol";
 import {IYieldDistributor} from "contracts/interfaces/IYieldDistributor.sol";
 import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
 import {SmartWalletWhitelist} from "contracts/dao/SmartWalletWhitelist.sol";
@@ -23,13 +23,17 @@ contract FpisLockerTest is Test {
     IYieldDistributor internal yieldDistributor;
     SmartWalletWhitelist internal sww;
 
+    uint256 public DAY = AddressBook.DAY;
+    uint256 public WEEK = AddressBook.WEEK;
+    uint256 public YEAR = AddressBook.YEAR;
+
     function setUp() public virtual {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
         vm.selectFork(forkId);
         
-        FPIS = IERC20(Constants.FPIS);
-        veFPIS = IVeFPIS(Constants.VE_FPIS);
-        yieldDistributor = IYieldDistributor(Constants.FPIS_YIELD_DISTRIBUTOR);
+        FPIS = IERC20(AddressBook.FPIS);
+        veFPIS = IVeFPIS(AddressBook.VE_FPIS);
+        yieldDistributor = IYieldDistributor(AddressBook.FPIS_YIELD_DISTRIBUTOR);
 
         sww = new SmartWalletWhitelist(address(this));
 
@@ -47,13 +51,13 @@ contract FpisLockerTest is Test {
     }
 
     function testCreateLock() public {
-        fpisLocker.createLock(100e18, block.timestamp + 4 * Constants.YEAR);
+        fpisLocker.createLock(100e18, block.timestamp + 4 * YEAR);
         // 4 years lock -> 4 times the amount locked like for FXS
         assertApproxEqRel(veFPIS.balanceOf(address(fpisLocker)), 400e18, 1e16); // 1% Margin of Error
     }
 
     function testIncreaseLockAmount() public {
-        fpisLocker.createLock(100e18, block.timestamp + Constants.YEAR);
+        fpisLocker.createLock(100e18, block.timestamp + YEAR);
 
         IVeFPIS.LockedBalance memory lockedBalance = veFPIS.locked(address(fpisLocker));
         assertEq(lockedBalance.amount, 100e18);
@@ -66,29 +70,29 @@ contract FpisLockerTest is Test {
     }
 
     function testIncreaseLockDuration() public {
-        uint256 initialUnlockTime = block.timestamp + Constants.YEAR;
-        uint256 newUnlockTime = block.timestamp + 2 * Constants.YEAR;
+        uint256 initialUnlockTime = block.timestamp + YEAR;
+        uint256 newUnlockTime = block.timestamp + 2 * YEAR;
 
         fpisLocker.createLock(100e18, initialUnlockTime);
         IVeFPIS.LockedBalance memory lockedBalance = veFPIS.locked(address(fpisLocker));
 
         // Assert that the Locked End Timestamp is equal to the initialUnlockTime rounded down to week.
-        assertEq(lockedBalance.end, (initialUnlockTime / Constants.WEEK) * Constants.WEEK);
+        assertEq(lockedBalance.end, (initialUnlockTime / WEEK) * WEEK);
 
         fpisLocker.increaseUnlockTime(newUnlockTime);
 
         lockedBalance = veFPIS.locked(address(fpisLocker));
 
         // Assert that the new Locked End Timestamp is equal to the newUnlockTime rounded down to week.
-        assertEq(lockedBalance.end, (newUnlockTime / Constants.WEEK) * Constants.WEEK);
+        assertEq(lockedBalance.end, (newUnlockTime / WEEK) * WEEK);
     }
 
     function testClaimRewards() public {
         uint256 balanceBefore = FPIS.balanceOf(address(this));
         deal(address(FPIS), address(fpisLocker), 200e18);
-        fpisLocker.createLock(200e18, block.timestamp + Constants.YEAR);
+        fpisLocker.createLock(200e18, block.timestamp + YEAR);
 
-        vm.warp(block.timestamp + 2 * Constants.DAY); //extend 2 days
+        vm.warp(block.timestamp + 2 * DAY); //extend 2 days
 
         fpisLocker.claimFPISRewards(address(this));
         uint256 balanceAfterClaim = FPIS.balanceOf(address(this));
@@ -100,7 +104,7 @@ contract FpisLockerTest is Test {
     function testStakerSetProxy() public {
         // test the correctness of the function signature
         vm.recordLogs();
-        fpisLocker.stakerSetProxy(Constants.ZERO_ADDRESS);
+        fpisLocker.stakerSetProxy(AddressBook.ZERO_ADDRESS);
         Vm.Log[] memory entries = vm.getRecordedLogs();
         assertEq(entries[0].topics[0], keccak256("StakerProxySet(address)"));
     }
