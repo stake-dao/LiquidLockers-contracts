@@ -3,7 +3,7 @@ pragma solidity 0.8.7;
 
 import "forge-std/Test.sol";
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
 import {IBoostDelegationV2} from "contracts/interfaces/IBoostDelegationV2.sol";
 import {IBoostDelegationProxy} from "contracts/interfaces/IBoostDelegationProxy.sol";
 
@@ -20,7 +20,7 @@ contract VeBoostDelegationTest is Test {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 16133200);
         vm.selectFork(forkId);
         boostDelegationV2 = IBoostDelegationV2(
-            deployCode("artifacts/contracts/staking/BoostDelegationV2.vy/BoostDelegationV2.json", abi.encode(VESDT))
+            deployCode("artifacts/vyper-contracts/BoostDelegationV2.vy/BoostDelegationV2.json", abi.encode(VESDT))
         );
         boostDelegationProxy = IBoostDelegationProxy(VE_BOOST_DELEGATION_PROXY);
         vm.prank(ADMIN);

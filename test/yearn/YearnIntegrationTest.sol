@@ -5,14 +5,14 @@ import "forge-std/Vm.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import {AddressBook} from "@addressbook/AddressBook.sol";
+import {AddressBook} from "addressBook/AddressBook.sol";
 
 import {sdToken} from "contracts/tokens/sdToken.sol";
 import {YearnLocker} from "contracts/lockers/YearnLocker.sol";
 import {IVeYFI} from "contracts/interfaces/IVeYFI.sol";
 import {DepositorV2} from "contracts/depositors/DepositorV2.sol";
 import {IRewardPool} from "contracts/interfaces/IRewardPool.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
 import {ILiquidityGauge} from "contracts/interfaces/ILiquidityGauge.sol";
 import {YearnAccumulator} from "contracts/accumulators/YearnAccumulator.sol";
 import {TransparentUpgradeableProxy} from "contracts/external/TransparentUpgradeableProxy.sol";
@@ -44,7 +44,7 @@ contract YearnIntegrationTest is Test {
 
         sdYFI = new sdToken("Stake DAO YFI", "sdYFI");
 
-        address liquidityGaugeImpl = deployCode("artifacts/contracts/staking/LiquidityGaugeV4.vy/LiquidityGaugeV4.json");
+        address liquidityGaugeImpl = deployCode("artifacts/vyper-contracts/LiquidityGaugeV4.vy/LiquidityGaugeV4.json");
 
         // Deploy LiquidityGauge
         liquidityGauge = ILiquidityGauge(

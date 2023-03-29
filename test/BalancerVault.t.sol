@@ -9,7 +9,7 @@ import "contracts/strategies/balancer/BalancerVault.sol";
 import "contracts/accumulators/BalancerAccumulator.sol";
 import "contracts/external/TransparentUpgradeableProxy.sol";
 import "contracts/external/ProxyAdmin.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "openzeppelin-contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 import "contracts/interfaces/ILiquidityGaugeStrat.sol";
 
@@ -56,9 +56,9 @@ contract BalancerVaultTest is BaseTest {
         vm.startPrank(LOCAL_DEPLOYER);
         proxyAdmin = new ProxyAdmin();
         helper = IBalancerHelper(AddressBook.BALANCER_HELPER);
-        accumulator = BalancerAccumulator(IBaseLocker(AddressBook.BALANCER_LOCKER).accumulator());
+        accumulator = BalancerAccumulator(IBaseLocker(AddressBook.BAL_LOCKER).accumulator());
         strategy = new BalancerStrategy(
-    ILocker(AddressBook.BALANCER_LOCKER),
+    ILocker(AddressBook.BAL_LOCKER),
     LOCAL_DEPLOYER,
     LOCAL_DEPLOYER,
     accumulator,
@@ -85,7 +85,7 @@ contract BalancerVaultTest is BaseTest {
             "gauge"
         );
         liquidityGaugeImpl = ILiquidityGaugeStrat(
-            deployCode("artifacts/contracts/staking/LiquidityGaugeV4Strat.vy/LiquidityGaugeV4Strat.json")
+            deployCode("artifacts/vyper-contracts/LiquidityGaugeV4Strat.vy/LiquidityGaugeV4Strat.json")
         );
         proxy = new TransparentUpgradeableProxy(address(liquidityGaugeImpl), address(proxyAdmin), lgData);
         liquidityGauge = ILiquidityGaugeStrat(address(proxy));

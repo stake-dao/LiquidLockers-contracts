@@ -4,11 +4,11 @@ pragma solidity 0.8.7;
 import "forge-std/Test.sol";
 import "forge-std/Vm.sol";
 
-import {AddressBook} from "@addressbook/AddressBook.sol";
+import {AddressBook} from "addressBook/AddressBook.sol";
 
 import {CurveStrategy} from "contracts/strategies/curve/CurveStrategy.sol";
 import {VeSDTFeeCurveProxyV2} from "contracts/accumulators/VeSDTFeeCurveProxyV2.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-contracts/token/ERC20/IERC20.sol";
 
 contract VeSDTFeeCurveProxyV2Test is Test {
     address public crv;

@@ -3,9 +3,8 @@ pragma solidity ^0.8.7;
 
 import "forge-std/Test.sol";
 
-import {AddressBook} from "@addressbook/AddressBook.sol";
-
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AddressBook} from "addressBook/AddressBook.sol";
+import "openzeppelin-contracts/token/ERC20/IERC20.sol";
 
 import "contracts/interfaces/IVeToken.sol";
 import "contracts/interfaces/ILiquidityGauge.sol";

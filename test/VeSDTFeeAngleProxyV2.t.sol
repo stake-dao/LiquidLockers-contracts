@@ -4,11 +4,11 @@ pragma solidity 0.8.7;
 import "forge-std/Test.sol";
 import "forge-std/Vm.sol";
 
-import {AddressBook} from "@addressbook/AddressBook.sol";
+import {AddressBook} from "addressBook/AddressBook.sol";
 
 import {AngleStrategy} from "contracts/strategies/angle/AngleStrategy.sol";
 import {VeSDTFeeAngleProxyV2} from "contracts/accumulators/VeSDTFeeAngleProxyV2.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-contracts/token/ERC20/IERC20.sol";
 
 contract VeSDTFeeAngleProxyV2Test is Test {
     address public angle;
@@ -25,7 +25,7 @@ contract VeSDTFeeAngleProxyV2Test is Test {
     address public bob = makeAddr("bob");
 
     function setUp() public {
-        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 16798050);
         vm.selectFork(forkId);
         angle = AddressBook.ANGLE;
         agEur = AddressBook.AG_EUR;

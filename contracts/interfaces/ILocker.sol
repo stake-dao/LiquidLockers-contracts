@@ -16,6 +16,8 @@ interface ILocker {
 
     function claimFXSRewards(address) external;
 
+    function claimFPISRewards(address) external;
+
     function execute(address, uint256, bytes calldata) external returns (bool, bytes memory);
 
     function setGovernance(address) external;

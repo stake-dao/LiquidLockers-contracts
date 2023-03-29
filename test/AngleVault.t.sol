@@ -60,7 +60,7 @@ contract AngleVaultTest is BaseTest {
     ILiquidityGauge public liquidityGaugeAngleUSDC = ILiquidityGauge(0x51fE22abAF4a26631b2913E417c0560D547797a7);
 
     function setUp() public {
-        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 16798050);
         vm.selectFork(forkId);
 
         address[] memory path = new address[](3);
@@ -74,12 +74,12 @@ contract AngleVaultTest is BaseTest {
         distributorImpl = new SdtDistributorV2();
         gaugeController = IGaugeController(
             deployCode(
-                "artifacts/contracts/dao/GaugeController.vy/GaugeController.json",
+                "artifacts/vyper-contracts/GaugeController.vy/GaugeController.json",
                 abi.encode(AddressBook.SDT, AddressBook.VE_SDT, LOCAL_DEPLOYER)
             )
         );
         liquidityGaugeStratImpl = ILiquidityGaugeStrat(
-            deployCode("artifacts/contracts/staking/LiquidityGaugeV4Strat.vy/LiquidityGaugeV4Strat.json")
+            deployCode("artifacts/vyper-contracts/LiquidityGaugeV4Strat.vy/LiquidityGaugeV4Strat.json")
         );
         bytes memory distributorData = abi.encodeWithSignature(
             "initialize(address,address,address,address)",
