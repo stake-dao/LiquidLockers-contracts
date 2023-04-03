@@ -54,6 +54,8 @@ test-boost-delegation:; @forge test --match-contract VeBoostDelegationTest
 test-fpis-locker:; @forge test --match-contract FpisLocker
 test-fpis-integration:; @forge test --match-contract FpisIntegrationTest
 
+# PENDLE #
+test-pendle-locker:; @forge test --match-contract PendleLockerTest 
 # OTHERS #
 test-all:; @forge test
 

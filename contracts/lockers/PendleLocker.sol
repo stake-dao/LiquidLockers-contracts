@@ -62,13 +62,24 @@ contract PendleLocker {
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
+    /// @notice Creates a lock by locking PENDLE token in the VEPENDLE contract for the specified time
+    /// @dev Can only be called by governance or proxy
+    /// @param _value The amount of token to be locked
+    /// @param _unlockTime The duration for which the token is to be locked
+    function createLock(
+        uint128 _value,
+        uint128 _unlockTime
+    ) external onlyGovernance {
+        IVePendle(VEPENDLE).increaseLockPosition(_value, _unlockTime);
+        emit LockCreated(msg.sender, _value, _unlockTime);
+    }
 
     /// @notice Increases the amount of PENDLE locked in VEPENDLE
     /// @dev The PENDLE needs to be transferred to this contract before calling
     /// @param _value The amount by which the lock amount is to be increased
     function increaseAmount(uint128 _value) external onlyGovernanceOrDepositor {
         (, uint128 expiry) = IVePendle(VEPENDLE).positionData(address(this));
-        IVePendle(VEPENDLE).increaseLockPosition(_value, expiry + 1);
+        IVePendle(VEPENDLE).increaseLockPosition(_value, expiry);
     }
 
     /// @notice Increases the duration for which PENDLE is locked in VEPENDLE for the user calling the function
