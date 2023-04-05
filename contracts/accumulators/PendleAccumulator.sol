@@ -147,4 +147,14 @@ contract PendleAccumulator is BaseAccumulator {
         emit VeSdtFeeProxyFeeSet(veSdtFeeProxyFee, _veSdtFeeProxyFee);
         veSdtFeeProxyFee = _veSdtFeeProxyFee;
     }
+
+    function setPools(address[] calldata _pools) external {
+        if (msg.sender != governance) revert NOT_ALLOWED();
+        pools = _pools;
+    }
+
+    function setTokens(address[] calldata _tokens) external {
+        if (msg.sender != governance) revert NOT_ALLOWED();
+        tokens = _tokens;
+    }
 }
