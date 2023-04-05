@@ -2,6 +2,7 @@
 pragma solidity 0.8.7;
 
 import "./BaseAccumulator.sol";
+import {PendleLocker} from "../lockers/PendleLocker.sol";
 
 /// @title A contract that accumulates PENDLE rewards and notifies them to the LGV4
 /// @author StakeDAO
@@ -16,6 +17,8 @@ contract PendleAccumulator is BaseAccumulator {
     uint256 public bribeFee;
     uint256 public daoFee;
     uint256 public veSdtFeeProxyFee;
+    address[] public tokens;
+    address[] public pools;
 
     event DaoRecipientSet(address _old, address _new);
     event BribeRecipientSet(address _old, address _new);
@@ -40,48 +43,46 @@ contract PendleAccumulator is BaseAccumulator {
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
-    /// @notice Claims rewards from the locker and notifies it to the LGV4
-    /// @param _amount amount to notify
-    function claimAndNotify(uint256 _amount) external {
-        if (locker == address(0)) revert ZERO_ADDRESS();
-        ILocker(locker).claimFPISRewards(address(this));
-        uint256 gaugeAmount = _chargeFee(_amount);
-        _notifyReward(tokenReward, gaugeAmount);
-        _distributeSDT();
-    }
-
     /// @notice Claims rewards from the locker and notify all to the LGV4
     function claimAndNotifyAll() external {
         if (locker == address(0)) revert ZERO_ADDRESS();
-        ILocker(locker).claimFPISRewards(address(this));
-        uint256 amount = IERC20(tokenReward).balanceOf(address(this));
-        uint256 gaugeAmount = _chargeFee(amount);
-        _notifyReward(tokenReward, gaugeAmount);
+        PendleLocker(locker).claimRewards(tokens, address(this), pools);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            uint256 tokenAmount = IERC20(tokens[i]).balanceOf(address(this));
+            if (tokenAmount > 0) {
+                uint256 gaugeAmount = _chargeFee(tokens[i], tokenAmount);
+                _notifyReward(tokens[i], gaugeAmount);
+            }
+        }
+
         _distributeSDT();
     }
 
     /// @notice Reserve fees for dao, bribe and veSdtFeeProxy
     /// @param _amount amount to charge fees
-    function _chargeFee(uint256 _amount) internal returns (uint256) {
+    function _chargeFee(
+        address _token,
+        uint256 _amount
+    ) internal returns (uint256) {
         uint256 gaugeAmount = _amount;
         // dao part
         if (daoFee > 0) {
             uint256 daoAmount = (_amount * daoFee) / 10_000;
-            IERC20(tokenReward).transfer(daoRecipient, daoAmount);
+            IERC20(_token).transfer(daoRecipient, daoAmount);
             gaugeAmount -= daoAmount;
         }
 
         // bribe part
         if (bribeFee > 0) {
             uint256 bribeAmount = (_amount * bribeFee) / 10_000;
-            IERC20(tokenReward).transfer(bribeRecipient, bribeAmount);
+            IERC20(_token).transfer(bribeRecipient, bribeAmount);
             gaugeAmount -= bribeAmount;
         }
 
         // veSDTFeeProxy part
         if (veSdtFeeProxyFee > 0) {
             uint veSdtFeeProxyAmount = (_amount * veSdtFeeProxyFee) / 10_000;
-            IERC20(tokenReward).transfer(veSdtFeeProxy, veSdtFeeProxyAmount);
+            IERC20(_token).transfer(veSdtFeeProxy, veSdtFeeProxyAmount);
             gaugeAmount -= veSdtFeeProxyAmount;
         }
         return gaugeAmount;
