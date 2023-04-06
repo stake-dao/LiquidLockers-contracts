@@ -25,7 +25,7 @@ contract VeSDTFeeAngleProxyV2Test is Test {
     address public bob = makeAddr("bob");
 
     function setUp() public {
-        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 16798050);
         vm.selectFork(forkId);
         angle = AddressBook.ANGLE;
         agEur = AddressBook.AG_EUR;
