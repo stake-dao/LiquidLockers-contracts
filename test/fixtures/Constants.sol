@@ -205,4 +205,5 @@ library Constants {
     address public constant PENDLE = 0x808507121B80c02388fAd14726482e061B8da827;
     address public constant VE_PENDLE =
         0x4f30A9D41B80ecC5B94306AB4364951AE3170210;
+    address public constant PENDLE_FEE_D = 0xd7b34a6fDCb2A7ceD2115FF7f5fdD72aa6aA4dE2;
 }

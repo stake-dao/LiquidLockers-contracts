@@ -28,7 +28,7 @@ contract PendleLockerTest is Test {
         PENDLE = IERC20(Constants.PENDLE);
         vePendle = IVePendle(Constants.VE_PENDLE);
 
-        // Deploy and Intialize the FpisLocker contract
+        // Deploy and Intialize the PendleLocker contract
         pendleLocker = new PendleLocker(address(this));
         // Deploy sdPendle
         sdPendle = new sdToken("sdPendle", "sdPendle");
