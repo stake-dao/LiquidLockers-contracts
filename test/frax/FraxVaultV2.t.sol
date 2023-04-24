@@ -2,7 +2,7 @@
 pragma solidity ^0.8.7;
 
 // Base Tests
-import "./baseTest/Base.t.sol";
+import "../baseTest/Base.t.sol";
 import {VaultV2} from "contracts/strategies/frax/VaultV2.sol";
 import {FraxStrategy} from "contracts/strategies/frax/FraxStrategy.sol";
 import {FeeRegistry} from "contracts/strategies/frax/FeeRegistry.sol";

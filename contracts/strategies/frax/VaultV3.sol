@@ -57,10 +57,6 @@ interface IConvexWrapperV2 {
 
     function earned(address _account)
         external
-        returns (EarnedData[] memory claimable);
-
-    function earnedView(address _account)
-        external
         view
         returns (EarnedData[] memory claimable);
 
@@ -645,7 +641,7 @@ contract VaultV3  is StakingProxyBase, ReentrancyGuard {
     //frax farm transfers first before updating farm state so will checkpoint during transfer
     function withdrawLocked(bytes32 _kek_id) external onlyOwner nonReentrant {
         //withdraw directly to owner(msg.sender)
-        IFraxFarmERC20(stakingAddress).withdrawLocked(_kek_id, msg.sender, true);
+        IFraxFarmERC20(stakingAddress).withdrawLocked(_kek_id, msg.sender, false);
 
         //checkpoint rewards
         _checkpointRewards();
@@ -659,7 +655,7 @@ contract VaultV3  is StakingProxyBase, ReentrancyGuard {
         nonReentrant
     {
         //withdraw
-        IFraxFarmERC20(stakingAddress).withdrawLocked(_kek_id, address(this), true);
+        IFraxFarmERC20(stakingAddress).withdrawLocked(_kek_id, address(this), false);
 
         //unwrap
         IConvexWrapperV2(stakingToken).withdrawAndUnwrap(
@@ -672,63 +668,6 @@ contract VaultV3  is StakingProxyBase, ReentrancyGuard {
 
         //checkpoint rewards
         _checkpointRewards();
-    }
-
-    //helper function to combine earned tokens on staking contract and any tokens that are on this vault
-    function earned()
-        external
-        view
-        override
-        returns (
-            address[] memory token_addresses,
-            uint256[] memory total_earned
-        )
-    {
-        //get list of reward tokens
-        address[] memory rewardTokens = IFraxFarmERC20(stakingAddress)
-            .getAllRewardTokens();
-        uint256[] memory stakedearned = IFraxFarmERC20(stakingAddress).earned(
-            address(this)
-        );
-        IConvexWrapperV2.EarnedData[] memory convexrewards = IConvexWrapperV2(
-            stakingToken
-        ).earnedView(address(this));
-
-        uint256 extraRewardsLength = ILiquidityGaugeStratFrax(rewards)
-            .reward_count();
-        token_addresses = new address[](
-            rewardTokens.length + extraRewardsLength + convexrewards.length
-        );
-        total_earned = new uint256[](
-            rewardTokens.length + extraRewardsLength + convexrewards.length
-        );
-
-        //add any tokens that happen to be already claimed but sitting on the vault
-        //(ex. withdraw claiming rewards)
-        for (uint256 i = 0; i < rewardTokens.length; i++) {
-            token_addresses[i] = rewardTokens[i];
-            total_earned[i] =
-                stakedearned[i] +
-                IERC20(rewardTokens[i]).balanceOf(address(this));
-        }
-
-        for (uint256 i = 0; i < extraRewardsLength; i++) {
-            address token = ILiquidityGaugeStratFrax(rewards).reward_tokens(i);
-            token_addresses[i + rewardTokens.length] = token;
-            total_earned[i + rewardTokens.length] = ILiquidityGaugeStratFrax(
-                rewards
-            ).claimable_reward(owner, token);
-        }
-
-        //add convex farm earned tokens
-        for (uint256 i = 0; i < convexrewards.length; i++) {
-            token_addresses[
-                i + rewardTokens.length + extraRewardsLength
-            ] = convexrewards[i].token;
-            total_earned[
-                i + rewardTokens.length + extraRewardsLength
-            ] = convexrewards[i].amount;
-        }
     }
 
     /*
