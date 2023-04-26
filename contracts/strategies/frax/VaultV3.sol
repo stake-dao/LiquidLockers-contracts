@@ -11,10 +11,6 @@ import "../../interfaces/IPoolRegistry.sol";
 //// Forked from Convex protocol and modified for StakeDAO Frax strategies
 //// Changelog from V2 -> differet FraxFarm.withdrawLocked() function signature in the new frax farm contract
 interface ICurveConvex {
-    function earmarkRewards(uint256 _pid) external returns (bool);
-
-    function earmarkFees() external returns (bool);
-
     function poolInfo(uint256 _pid)
         external
         returns (
@@ -28,18 +24,7 @@ interface ICurveConvex {
 }
 
 interface IConvexWrapperV2 {
-    struct EarnedData {
-        address token;
-        uint256 amount;
-    }
-
-    function collateralVault() external view returns (address vault);
-
     function convexPoolId() external view returns (uint256 _poolId);
-
-    function balanceOf(address _account) external view returns (uint256);
-
-    function totalBalanceOf(address _account) external view returns (uint256);
 
     function deposit(uint256 _amount, address _to) external;
 
@@ -49,32 +34,11 @@ interface IConvexWrapperV2 {
 
     function withdrawAndUnwrap(uint256 _amount) external;
 
-    function getReward(address _account) external;
-
     function getReward(address _account, address _forwardTo) external;
-
-    function rewardLength() external view returns (uint256);
-
-    function earned(address _account)
-        external
-        view
-        returns (EarnedData[] memory claimable);
-
-    function setVault(address _vault) external;
-
-    function user_checkpoint(address[2] calldata _accounts)
-        external
-        returns (bool);
 }
 
 interface IFraxFarmBase {
-    function totalLiquidityLocked() external view returns (uint256);
-
     function lockedLiquidityOf(address account) external view returns (uint256);
-
-    function toggleValidVeFXSProxy(address proxy_address) external;
-
-    function proxyToggleStaker(address staker_address) external;
 
     function stakerSetVeFXSProxy(address proxy_address) external;
 
@@ -192,16 +156,6 @@ contract StakingProxyBase {
         virtual
     {}
 
-    function earned()
-        external
-        view
-        virtual
-        returns (
-            address[] memory token_addresses,
-            uint256[] memory total_earned
-        )
-    {}
-
     //checkpoint and add/remove weight to convex rewards contract
     function _checkpointRewards() internal {
         //using liquidity shares from staking contract will handle rebasing tokens correctly
@@ -300,39 +254,6 @@ contract StakingProxyBase {
 }
 
 interface IFraxFarmERC20 {
-    struct LockedStake {
-        bytes32 kek_id;
-        uint256 start_timestamp;
-        uint256 liquidity;
-        uint256 ending_timestamp;
-        uint256 lock_multiplier; // 6 decimals of precision. 1x = 1000000
-    }
-
-    function owner() external view returns (address);
-
-    function stakingToken() external view returns (address);
-
-    function fraxPerLPToken() external view returns (uint256);
-
-    function calcCurCombinedWeight(address account)
-        external
-        view
-        returns (
-            uint256 old_combined_weight,
-            uint256 new_vefxs_multiplier,
-            uint256 new_combined_weight
-        );
-
-    function lockedStakesOf(address account)
-        external
-        view
-        returns (LockedStake[] memory);
-
-    function lockedStakesOfLength(address account)
-        external
-        view
-        returns (uint256);
-
     function lockAdditional(bytes32 kek_id, uint256 addl_liq) external;
 
     function lockLonger(bytes32 kek_id, uint256 new_ending_ts) external;
@@ -345,76 +266,15 @@ interface IFraxFarmERC20 {
         external
         returns (uint256);
 
-    function periodFinish() external view returns (uint256);
-
     function getAllRewardTokens() external view returns (address[] memory);
-
-    function earned(address account)
-        external
-        view
-        returns (uint256[] memory new_earned);
-
-    function totalLiquidityLocked() external view returns (uint256);
-
-    function lockedLiquidityOf(address account) external view returns (uint256);
-
-    function totalCombinedWeight() external view returns (uint256);
-
-    function combinedWeightOf(address account) external view returns (uint256);
-
-    function lockMultiplier(uint256 secs) external view returns (uint256);
-
-    function rewardRates(uint256 token_idx)
-        external
-        view
-        returns (uint256 rwd_rate);
-
-    function userStakedFrax(address account) external view returns (uint256);
-
-    function proxyStakedFrax(address proxy_address)
-        external
-        view
-        returns (uint256);
-
-    function maxLPForMaxBoost(address account) external view returns (uint256);
-
-    function minVeFXSForMaxBoost(address account)
-        external
-        view
-        returns (uint256);
-
-    function minVeFXSForMaxBoostProxy(address proxy_address)
-        external
-        view
-        returns (uint256);
-
-    function veFXSMultiplier(address account)
-        external
-        view
-        returns (uint256 vefxs_multiplier);
-
-    function toggleValidVeFXSProxy(address proxy_address) external;
-
-    function proxyToggleStaker(address staker_address) external;
-
-    function stakerSetVeFXSProxy(address proxy_address) external;
 
     function getReward(address destination_address)
         external
         returns (uint256[] memory);
 
-    function vefxs_max_multiplier() external view returns (uint256);
-
-    function vefxs_boost_scale_factor() external view returns (uint256);
-
-    function vefxs_per_frax_for_max_boost() external view returns (uint256);
-
-    function getProxyFor(address addr) external view returns (address);
-
-    function sync() external;
 }
 
-contract VaultV3  is StakingProxyBase, ReentrancyGuard {
+contract VaultV3 is StakingProxyBase, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     address public constant poolRegistry =
