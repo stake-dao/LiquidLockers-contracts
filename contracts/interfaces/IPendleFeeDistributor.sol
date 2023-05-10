@@ -1,82 +1,53 @@
 pragma solidity 0.8.7;
 
 interface IPendleFeeDistributor {
-    event AdminChanged(address previousAdmin, address newAdmin);
-    event BeaconUpgraded(address indexed beacon);
-    event ClaimReward(
-        address indexed pool,
-        address indexed user,
-        uint256 wTime,
-        uint256 amount
-    );
-    event Initialized(uint8 version);
-    event OwnershipTransferred(
-        address indexed previousOwner,
-        address indexed newOwner
-    );
-    event PoolAdded(address indexed pool, uint256 indexed startWeek);
-    event UpdateFee(
-        address indexed pool,
-        uint256 indexed wTime,
-        uint256 amount
-    );
-    event Upgraded(address indexed implementation);
+    // ========================= STRUCT =========================
+    struct UpdateProtocolStruct {
+        address user;
+        bytes32[] proof;
+        address[] pools;
+        uint256[] topUps;
+    }
 
-    function addPool(address pool, uint256 _startWeek) external;
+    // ========================= EVENTS =========================
+    /// @notice Emit when a new merkleRoot is set & the fee is funded by the governance
+    event SetMerkleRootAndFund(bytes32 indexed merkleRoot, uint256 amountFunded);
 
-    function allPools(uint256) external view returns (address);
+    /// @notice Emit when an user claims their fees
+    event Claimed(address indexed user, uint256 amountOut);
 
-    function claimOwnership() external;
+    /// @notice Emit when the Pendle team populates data for a protocol
+    event UpdateProtocolClaimable(address indexed user, uint256 sumTopUp);
 
-    function claimReward(
-        address user,
-        address[] memory pools
-    ) external returns (uint256[] memory amountRewardOut);
+    // ========================= FUNCTIONS =========================
+    /**
+     * @notice Submit total fee and proof to claim outstanding amount. Fee will be sent as raw ETH,
+     so receiver should be an EOA or have receive() function.
+     */
+    function claimRetail(
+        address receiver,
+        uint256 totalAccrued,
+        bytes32[] calldata proof
+    ) external returns (uint256 amountOut);
 
-    function fees(address, uint256) external view returns (uint256);
+    /**
+    * @notice Claim all outstanding fees for the specified pools. This function is intended for use
+    by protocols that have contacted the Pendle team. Note that the fee will be sent in raw ETH,
+    so the receiver should be an EOA or have a receive() function.
+    * @notice Protocols should not use claimRetail, as it can make getProtocolFeeData unreliable.
+     */
+    function claimProtocol(address receiver, address[] calldata pools)
+        external
+        returns (uint256 totalAmountOut, uint256[] memory amountsOut);
 
-    function fund(
-        address[] memory pools,
-        uint256[][] memory wTimes,
-        uint256[][] memory amounts,
-        uint256 totalAmountToFund
-    ) external;
+    ///@notice Returns the claimable fees per pool. This function is only available if the Pendle
+    ///team has specifically set up the data.
+    function getProtocolClaimables(address user, address[] calldata pools)
+        external
+        view
+        returns (uint256[] memory claimables);
 
-    function getAllActivePools() external view returns (address[] memory);
-
-    function getAllPools() external view returns (address[] memory);
-
-    function initialize() external;
-
-    function lastFundedWeek(address) external view returns (uint256);
-
-    function owner() external view returns (address);
-
-    function pendingOwner() external view returns (address);
-
-    function proxiableUUID() external view returns (bytes32);
-
-    function token() external view returns (address);
-
-    function transferOwnership(
-        address newOwner,
-        bool direct,
-        bool renounce
-    ) external;
-
-    function upgradeTo(address newImplementation) external;
-
-    function upgradeToAndCall(
-        address newImplementation,
-        bytes memory data
-    ) external payable;
-
-    function userInfo(
-        address,
-        address
-    ) external view returns (uint128 firstUnclaimedWeek, uint128 iter);
-
-    function vePendle() external view returns (address);
-
-    function votingController() external view returns (address);
+    ///@notice Returns the lifetime totalAccrued fees for protocols. This function is only available
+    ///if the Pendle team has specifically set up the data.
+    function getProtocolTotalAccrued(address user) external view returns (uint256);
 }

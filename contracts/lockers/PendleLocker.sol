@@ -93,17 +93,12 @@ contract PendleLocker {
     /// @notice Claim the token reward from the PENDLE fee Distributor passing the tokens as input parameter
     /// @param _recipient The address which will receive the claimed token reward
     function claimRewards(
-        address[] calldata _tokens,
         address _recipient,
         address[] calldata _pools
     ) external onlyGovernanceOrAcc {
-        uint256[] memory claimedAmounts = IPendleFeeDistributor(feeDistributor)
-            .claimReward(address(this), _pools);
-
-        for (uint256 i = 0; i < _tokens.length; i++) {
-            IERC20(_tokens[i]).safeTransfer(_recipient, claimedAmounts[i]);
-            emit TokenClaimed(_recipient, claimedAmounts[i]);
-        }
+        (uint256 totalAmount,) = IPendleFeeDistributor(feeDistributor)
+            .claimProtocol(_recipient, _pools);
+        emit TokenClaimed(_recipient, totalAmount);
     }
 
     /// @notice Withdraw the PENDLE from VEPENDLE
