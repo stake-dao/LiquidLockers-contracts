@@ -34,6 +34,8 @@ contract PendleAccumulator {
     address public sdtDistributor;
     uint256 public claimerFee;
     mapping (uint256 => uint256) rewards; // period -> reward amount
+    uint256 initialPeriod;
+    uint256 periodRewarded;
 
     event DaoRecipientSet(address _old, address _new);
     event BribeRecipientSet(address _old, address _new);
@@ -48,16 +50,13 @@ contract PendleAccumulator {
     event ERC20Rescued(address token, uint256 amount);
     event RewardNotified(address gauge, address tokenReward, uint256 amountNotified, uint256 claimerFee);
 
-
     /* ========== CONSTRUCTOR ========== */
     constructor(
-        address _locker,
         address _gauge,
         address _daoRecipient,
         address _bribeRecipient,
         address _veSdtFeeProxy
     ) {
-        locker = _locker;
         gauge = _gauge;
         daoRecipient = _daoRecipient;
         bribeRecipient = _bribeRecipient;
@@ -69,8 +68,7 @@ contract PendleAccumulator {
     /* ========== MUTATIVE FUNCTIONS ========== */
     /// @notice Claims rewards from the locker and notify all to the LGV4
     function claimAndNotifyAll() external {
-        //if (locker == address(0)) revert ZERO_ADDRESS();
-        //if (gauge == address(0)), revert GAUGE_NOT_SET();
+        if (locker == address(0)) revert ZERO_ADDRESS();
         // reward for 1 months
         address[] memory pools = new address[](1);
         pools[0] = vePendle;
@@ -78,14 +76,14 @@ contract PendleAccumulator {
         if (address(this).balance == 0) revert NO_REWARD();
         // Wrap Eth to WETH
         IWeth(WETH).deposit{value: address(this).balance}();
-        // split the reward in 4 weekly period
+        // split the reward in 4 weekly periods
         // charge fees once from the whole month reward
         uint256 gaugeAmount = _chargeFee(WETH, address(this).balance);
         uint256 weekAmount = gaugeAmount / 4;
-        uint256 currentPeriod = block.timestamp / 1 weeks * 1 weeks;
-        rewards[currentPeriod + 1 weeks] = weekAmount;
-        rewards[currentPeriod + (2 weeks)] = weekAmount;
-        rewards[currentPeriod + (3 weeks)] = weekAmount;
+        initialPeriod = block.timestamp;
+        rewards[initialPeriod + 1 weeks] = weekAmount;
+        rewards[initialPeriod + (2 weeks)] = weekAmount;
+        rewards[initialPeriod + (3 weeks)] = weekAmount;
         _notifyReward(WETH, weekAmount);
         _distributeSDT();
     }
@@ -110,11 +108,13 @@ contract PendleAccumulator {
 
     /// @notice Notify the reward already claimed for the current period
     function notifyReward() external {
-        uint256 currentPeriod = block.timestamp / 1 weeks * 1 weeks;
+        uint256 currentPeriod = initialPeriod + (periodRewarded * 1 weeks);
+        // check if the current reward period is finished
         if (rewards[currentPeriod] == 0) revert NO_REWARD();
         _notifyReward(WETH, rewards[currentPeriod]);
         _distributeSDT();
         rewards[currentPeriod] = 0;
+        periodRewarded++;
     }
 
     /// @notice Reserve fees for dao, bribe and veSdtFeeProxy
