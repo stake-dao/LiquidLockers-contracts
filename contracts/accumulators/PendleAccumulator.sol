@@ -57,6 +57,7 @@ contract PendleAccumulator {
         address _bribeRecipient,
         address _veSdtFeeProxy
     ) {
+        governance = msg.sender;
         gauge = _gauge;
         daoRecipient = _daoRecipient;
         bribeRecipient = _bribeRecipient;
@@ -274,7 +275,7 @@ contract PendleAccumulator {
     /// @param _locker locker address
     function setLocker(address _locker) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        if (_locker != address(0)) revert ZERO_ADDRESS();
+        if (_locker == address(0)) revert ZERO_ADDRESS();
         emit LockerSet(locker, _locker);
         locker = _locker;
     }

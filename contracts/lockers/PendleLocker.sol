@@ -20,7 +20,7 @@ contract PendleLocker {
     address public constant PENDLE = 0x808507121B80c02388fAd14726482e061B8da827;
     address public constant VEPENDLE =
         0x4f30A9D41B80ecC5B94306AB4364951AE3170210;
-    address public feeDistributor = 0xd7b34a6fDCb2A7ceD2115FF7f5fdD72aa6aA4dE2;
+    address public feeDistributor = 0x8C237520a8E14D658170A633D96F8e80764433b9;
 
     /* ========== EVENTS ========== */
     event LockCreated(address indexed user, uint256 value, uint256 duration);
@@ -33,8 +33,8 @@ contract PendleLocker {
     event FeeDistributorChanged(address indexed newFeeDistributor);
 
     /* ========== CONSTRUCTOR ========== */
-    constructor(address _accumulator) {
-        governance = msg.sender;
+    constructor(address _governance, address _accumulator) {
+        governance = _governance;
         accumulator = _accumulator;
         IERC20(PENDLE).approve(VEPENDLE, type(uint256).max);
     }

@@ -29,7 +29,7 @@ contract PendleLockerTest is Test {
         vePendle = IVePendle(Constants.VE_PENDLE);
 
         // Deploy and Intialize the PendleLocker contract
-        pendleLocker = new PendleLocker(address(this));
+        pendleLocker = new PendleLocker(address(this), address(this));
         // Deploy sdPendle
         sdPendle = new sdToken("sdPendle", "sdPendle");
 
@@ -123,5 +123,12 @@ contract PendleLockerTest is Test {
         uint128 expectedEnd = (uint128(block.timestamp + 104 * Constants.WEEK) /
             uint128(Constants.WEEK)) * uint128(Constants.WEEK);
         assertEq(end, expectedEnd);
+    }
+
+    function testClaimReward() public {
+        address[] memory pools = new address[](1);
+        pools[0] = address(vePendle);
+        // test the correctness of the call 
+        pendleLocker.claimRewards(address(this), pools);
     }
 }
