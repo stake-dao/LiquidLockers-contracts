@@ -50,7 +50,7 @@ contract BalancerVaultTest is BaseTest {
     TransparentUpgradeableProxy internal proxy;
 
     function setUp() public {
-        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 17006312);
         vm.selectFork(forkId);
 
         vm.startPrank(LOCAL_DEPLOYER);

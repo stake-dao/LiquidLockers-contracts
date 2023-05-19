@@ -2,7 +2,7 @@
 pragma solidity ^0.8.7;
 
 // Base Tests
-import "./baseTest/Base.t.sol";
+import "../baseTest/Base.t.sol";
 
 // Contract
 import "contracts/lockers/FxsLocker.sol";

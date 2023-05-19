@@ -40,7 +40,8 @@ test-curve-veSdtFeeProxy:; @forge test --match-contract VeSDTFeeCurveProxyV2
 test-frax-voter:; @forge test --match-contract FraxVoterTest 
 test-frax-locker:; @forge test --match-contract FraxTest
 test-frax-strategy:; @forge test --match-contract FraxStrategyTest
-test-frax-vaultv2:; @forge test  --match-contract FraxVaultV2Test -vvv
+test-frax-vaultv2:; @forge test  --match-contract FraxVaultV2Test
+test-frax-vaultv3:; @forge test --match-contract FraxVaultV3Test
 # STAKE DAO #
 test-veSDT:; @forge test --match-contract VeSDTTest 
 test-veSDTProxy:; @forge test --match-contract VeSDTProxyTest
@@ -54,6 +55,9 @@ test-boost-delegation:; @forge test --match-contract VeBoostDelegationTest
 test-fpis-locker:; @forge test --match-contract FpisLocker
 test-fpis-integration:; @forge test --match-contract FpisIntegrationTest
 
+# PENDLE #
+test-pendle-locker:; @forge test --match-contract PendleLockerTest
+test-pendle-integration:; @forge test --match-contract PendleIntegrationTest
 # OTHERS #
 test-all:; @forge test
 
