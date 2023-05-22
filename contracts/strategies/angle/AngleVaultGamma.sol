@@ -4,15 +4,7 @@ pragma solidity ^0.8.7;
 import "openzeppelin-contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../interfaces/ILiquidityGaugeStrat.sol";
-
-interface IMekle {
-    function claim(
-        address[] calldata users, 
-        address[] calldata tokens, 
-        uint256[] calldata amounts, 
-        bytes32[][] calldata proofs
-    ) external;
-}
+import "../../interfaces/IAngleMerkleDistributor.sol";
 
 contract AngleVaultGamma is ERC20 {
     using SafeERC20 for ERC20;
@@ -41,6 +33,9 @@ contract AngleVaultGamma is ERC20 {
         governance = _governance;
     }
 
+    /// @notice function to deposit LP into the vault
+    /// @param _staker user to deposit token for 
+    /// @param _amount amount to deposit
     function deposit(address _staker, uint256 _amount) external {
         if (address(liquidityGauge) == address(0)) revert GAUGE_NOT_SET();
         token.safeTransferFrom(msg.sender, address(this), _amount);
@@ -50,6 +45,8 @@ contract AngleVaultGamma is ERC20 {
         emit Deposit(_staker, _amount);
     }
 
+    /// @notice function to withdraw LP from the vault
+    /// @param _shares amount to withdraw
     function withdraw(uint256 _shares) public {
         uint256 userTotalShares = ILiquidityGaugeStrat(liquidityGauge).balanceOf(msg.sender);
         if (_shares > userTotalShares) revert NOT_ENOUGH_STAKED();
@@ -59,23 +56,34 @@ contract AngleVaultGamma is ERC20 {
         emit Withdraw(msg.sender, _shares);
     }
 
+    /// @notice function to set the governance
+    /// @param _governance governance address
     function setGovernance(address _governance) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
         governance = _governance;
     }
 
+    /// @notice function to set the liquidity gauge
+    /// @param _liquidityGauge gauge address 
     function setLiquidityGauge(address _liquidityGauge) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
         liquidityGauge = _liquidityGauge;
     }
 
+    /// @notice function to get the token decimal (same than the underlying token's decimal)
     function decimals() public view override returns (uint8) {
         return token.decimals();
     }
 
+    /// @notice function to get the total amount available
     function available() public view returns (uint256) {
         return token.balanceOf(address(this));
     }
 
-    // toggle the claimer
+    /// @notice function to set the operator that can claim reward on behalf of the vault
+    /// @param _operator operator address 
+    function toggleOperator(address _operator) external {
+        if (msg.sender != governance) revert NOT_ALLOWED();
+        IAngleMerkleDistributor(MERKLE_DISTRIBUTOR).toggleOperator(address(this), _operator);
+    }
 }
