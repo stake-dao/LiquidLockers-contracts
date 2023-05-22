@@ -79,7 +79,7 @@ contract PendleIntegrationTest is Test {
         pendleLocker = new PendleLocker(address(this), address(this));
 
         //Deploy Depositor Contract
-        depositor = new PendleDepositor(address(PENDLE), address(pendleLocker), address(sdPendle), 104 * WEEK);
+        depositor = new PendleDepositor(address(PENDLE), address(pendleLocker), address(sdPendle));
         depositor.setGauge(address(liquidityGauge));
         sdPendle.setOperator(address(depositor));
         pendleLocker.setPendleDepositor(address(depositor));

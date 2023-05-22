@@ -37,8 +37,7 @@ contract PendleLockerTest is Test {
         depositor = new PendleDepositor(
             address(PENDLE),
             address(pendleLocker),
-            address(sdPendle),
-            104 * Constants.WEEK
+            address(sdPendle)
         );
         sdPendle.setOperator(address(depositor));
 

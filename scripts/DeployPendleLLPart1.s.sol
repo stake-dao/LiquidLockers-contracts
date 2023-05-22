@@ -61,7 +61,7 @@ contract DeployPendleLLPart1 is Script, Test {
         new PendleLocker{salt: lockerSalt}(deployer, ms);
 
         // Deploy Depositor Contract
-        depositor = new PendleDepositor(address(PENDLE), address(pendleLocker), address(sdPENDLE), 104 * AddressBook.WEEK);
+        depositor = new PendleDepositor(address(PENDLE), address(pendleLocker), address(sdPENDLE));
 
         // Setters
         // Depositor
