@@ -77,3 +77,5 @@ deploy-angleVoterV3:; @forge script scripts/DeployAngleVoterV3.s.sol --rpc-url $
 deploy-YearnLL:; @forge script scripts/DeployYearnLL.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_KEY}
 deploy-FpisLL-part1:; @forge script scripts/DeployFpisLLPart1.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_KEY}
 deploy-FpisLL-part2:; @forge script scripts/DeployFpisLLPart2.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_KEY}
+deploy-PendleLL-part1:; @forge script scripts/DeployPendleLLPart1.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_KEY}
+deploy-PendleLL-part2:; @forge script scripts/DeployPendleLLPart2.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_KEY}

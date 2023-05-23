@@ -32,7 +32,7 @@ contract DeployPendleLLPart1 is Script, Test {
     IRewardPool public rewardPool = IRewardPool(0xd7b34a6fDCb2A7ceD2115FF7f5fdD72aa6aA4dE2);
 
     function run() public {
-        vm.startBroadcast();
+        vm.startBroadcast(deployer);
         // deploy sdPENDLE
         sdPENDLE = new sdToken("Stake DAO PENDLE", "sdPENDLE");
 
@@ -71,8 +71,8 @@ contract DeployPendleLLPart1 is Script, Test {
         pendleLocker.setPendleDepositor(address(depositor));
 
         // Custom part to create the lock and mint sdPENDLE manually
-        // 1 PENDLE
-        uint128 amountToLock = 1e18;
+        // 20 PENDLE
+        uint128 amountToLock = 20e18;
         IERC20(PENDLE).transfer(address(pendleLocker), amountToLock);
         uint128 lockTime = uint128(
             ((block.timestamp + 104 * AddressBook.WEEK) / AddressBook.WEEK) *
@@ -81,7 +81,7 @@ contract DeployPendleLLPart1 is Script, Test {
         pendleLocker.createLock(amountToLock, lockTime);
 
         // mint 1 sdPENDLE
-        sdPENDLE.mint(AddressBook.SDTNEWDEPLOYER, amountToLock);
+        sdPENDLE.mint(ms, amountToLock);
         // sdPENDLE
         sdPENDLE.setOperator(address(depositor));
 
