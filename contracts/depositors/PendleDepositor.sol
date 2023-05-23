@@ -17,8 +17,8 @@ contract PendleDepositor {
 
     /* ========== STATE VARIABLES ========== */
     address public token;
-    uint256 private immutable MAXTIME;
     uint256 private constant WEEK = 7 * 86_400;
+    uint256 private constant MAXTIME = 104 * WEEK;
 
     uint256 public lockIncentive = 10; //incentive to users who spend gas to lock token
     uint256 public constant FEE_DENOMINATOR = 10_000;
@@ -49,15 +49,13 @@ contract PendleDepositor {
     constructor(
         address _token,
         address _locker,
-        address _minter,
-        uint256 _maxTime
+        address _minter
     ) {
         governance = msg.sender;
         token = _token;
         locker = _locker;
         minter = _minter;
-        MAXTIME = _maxTime;
-        unlockTime = ((block.timestamp + _maxTime) / WEEK) * WEEK;
+        unlockTime = ((block.timestamp + MAXTIME) / WEEK) * WEEK;
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */

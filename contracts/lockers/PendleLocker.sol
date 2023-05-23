@@ -17,8 +17,8 @@ contract PendleLocker {
     address public pendleDepositor;
     address public accumulator;
 
-    address public constant PENDLE = 0x808507121B80c02388fAd14726482e061B8da827;
-    address public constant VEPENDLE =
+    address public constant TOKEN = 0x808507121B80c02388fAd14726482e061B8da827;
+    address public constant VOTING_ESCROW =
         0x4f30A9D41B80ecC5B94306AB4364951AE3170210;
     address public feeDistributor = 0x8C237520a8E14D658170A633D96F8e80764433b9;
 
@@ -36,7 +36,7 @@ contract PendleLocker {
     constructor(address _governance, address _accumulator) {
         governance = _governance;
         accumulator = _accumulator;
-        IERC20(PENDLE).approve(VEPENDLE, type(uint256).max);
+        IERC20(TOKEN).approve(VOTING_ESCROW, type(uint256).max);
     }
 
     /* ========== MODIFIERS ========== */
@@ -70,7 +70,7 @@ contract PendleLocker {
         uint128 _value,
         uint128 _unlockTime
     ) external onlyGovernance {
-        IVePendle(VEPENDLE).increaseLockPosition(_value, _unlockTime);
+        IVePendle(VOTING_ESCROW).increaseLockPosition(_value, _unlockTime);
         emit LockCreated(msg.sender, _value, _unlockTime);
     }
 
@@ -78,8 +78,8 @@ contract PendleLocker {
     /// @dev The PENDLE needs to be transferred to this contract before calling
     /// @param _value The amount by which the lock amount is to be increased
     function increaseAmount(uint128 _value) external onlyGovernanceOrDepositor {
-        (, uint128 expiry) = IVePendle(VEPENDLE).positionData(address(this));
-        IVePendle(VEPENDLE).increaseLockPosition(_value, expiry);
+        (, uint128 expiry) = IVePendle(VOTING_ESCROW).positionData(address(this));
+        IVePendle(VOTING_ESCROW).increaseLockPosition(_value, expiry);
     }
 
     /// @notice Increases the duration for which PENDLE is locked in VEPENDLE for the user calling the function
@@ -87,7 +87,7 @@ contract PendleLocker {
     function increaseUnlockTime(
         uint128 _unlockTime
     ) external onlyGovernanceOrDepositor {
-        IVePendle(VEPENDLE).increaseLockPosition(0, _unlockTime);
+        IVePendle(VOTING_ESCROW).increaseLockPosition(0, _unlockTime);
     }
 
     /// @notice Claim the token reward from the PENDLE fee Distributor passing the tokens as input parameter
@@ -105,10 +105,10 @@ contract PendleLocker {
     /// @dev call only after lock time expires
     /// @param _recipient The address which will receive the released PENDLE
     function release(address _recipient) external onlyGovernance {
-        IVePendle(VEPENDLE).withdraw();
-        uint256 balance = IERC20(PENDLE).balanceOf(address(this));
+        IVePendle(VOTING_ESCROW).withdraw();
+        uint256 balance = IERC20(TOKEN).balanceOf(address(this));
 
-        IERC20(PENDLE).safeTransfer(_recipient, balance);
+        IERC20(TOKEN).safeTransfer(_recipient, balance);
         emit Released(_recipient, balance);
     }
 
