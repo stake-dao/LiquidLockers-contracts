@@ -24,12 +24,12 @@ contract AngleVaultGamma is ERC20 {
     event Withdraw(address indexed _depositor, uint256 _amount);
 
     constructor(
-        ERC20 _token,
+        address _token,
         address _governance,
         string memory name_,
         string memory symbol_
     ) ERC20(name_, symbol_) {
-        token = _token;
+        token = ERC20(_token);
         governance = _governance;
     }
 
@@ -85,5 +85,18 @@ contract AngleVaultGamma is ERC20 {
     function toggleOperator(address _operator) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
         IAngleMerkleDistributor(MERKLE_DISTRIBUTOR).toggleOperator(address(this), _operator);
+    }
+
+    /// @notice function to whitelist (allow) the contract to set an operator
+    function toggleWhitelist() external {
+        if (msg.sender != governance) revert NOT_ALLOWED();
+        IAngleMerkleDistributor(MERKLE_DISTRIBUTOR).toggleWhitelist(address(this));
+    }
+
+    /// @notice function to give the approve to transfer ANGLE for a claimer
+    /// @param _claimer claimer address  
+    function approveClaimer(address _claimer) external {
+        if (msg.sender != governance) revert NOT_ALLOWED();
+        ERC20(ANGLE).approve(_claimer, type(uint256).max);
     }
 }

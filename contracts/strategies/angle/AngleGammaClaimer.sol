@@ -37,8 +37,16 @@ contract AngleGammaClaimer {
     event AccFeeSet(uint256 _oldF, uint256 _newF);
     event VeSdtFeeFeeSet(uint256 _oldF, uint256 _newF);
 
-    constructor(address _governance) {
+    constructor(
+        address _governance, 
+        address _daoRecipient, 
+        address _accRecipient, 
+        address _veSdtFeeRecipient
+    ) {
         governance = _governance;
+        daoRecipient = _daoRecipient;
+        accRecipient = _accRecipient;
+        veSdtFeeRecipient = _veSdtFeeRecipient;
     }
 
     /// @notice function to claim and notify the ANGLE reward via merkle
@@ -56,22 +64,35 @@ contract AngleGammaClaimer {
         tokens[0] = ANGLE;
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = _amount;
+        // ANGLE reward will be send to the vault
         IAngleMerkleDistributor(MERKLE_DISTRIBUTOR).claim(users, tokens, amounts, _proofs);
-        uint256 rewardToNotify = _chargeFees(ERC20(ANGLE).balanceOf(address(this)));
+        // transfer ANGLE from vault to here
+        uint256 reward = ERC20(ANGLE).balanceOf(_vault);
+        ERC20(ANGLE).transferFrom(_vault, address(this), reward);
+        uint256 rewardToNotify = _chargeFees(reward);
         address liquidityGauge = IGammaVault(_vault).liquidityGauge();
-        ERC20(address(this)).approve(liquidityGauge, rewardToNotify);
+        ERC20(ANGLE).approve(liquidityGauge, rewardToNotify);
         ILiquidityGaugeStrat(liquidityGauge).deposit_reward_token(ANGLE, rewardToNotify);
     }
 
     /// @notice internal function to calculate fees and sent them to recipients 
     /// @param _amount total amount to charge fees 
     function _chargeFees(uint256 _amount) internal returns (uint256 amountToNotify) {
-        uint256 daoPart = (_amount * daoFee / BASE_FEE);
-        ERC20(ANGLE).safeTransfer(daoRecipient, daoPart);
-        uint256 accPart = (_amount * accFee / BASE_FEE);
-        ERC20(ANGLE).safeTransfer(accRecipient, accPart);
-        uint256 veSdtFeePart = (_amount * veSdtFeeFee / BASE_FEE);
-        ERC20(ANGLE).safeTransfer(veSdtFeeRecipient, veSdtFeePart);
+        uint256 daoPart;
+        uint256 accPart;
+        uint256 veSdtFeePart;
+        if (daoFee > 0) {
+            daoPart = (_amount * daoFee / BASE_FEE);
+            ERC20(ANGLE).safeTransfer(daoRecipient, daoPart);
+        }
+        if (accFee > 0) {
+            accPart = (_amount * accFee / BASE_FEE);
+            ERC20(ANGLE).safeTransfer(accRecipient, accPart);
+        }
+        if (veSdtFeePart > 0) {
+            veSdtFeePart = (_amount * veSdtFeeFee / BASE_FEE);
+            ERC20(ANGLE).safeTransfer(veSdtFeeRecipient, veSdtFeePart);
+        } 
         amountToNotify = _amount - daoPart - accPart - veSdtFeePart;
         emit Earn(amountToNotify, daoPart, accPart, veSdtFeePart);
     }

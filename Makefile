@@ -16,6 +16,7 @@ test-angle-vault:; @forge test --match-contract AngleVaultTest
 test-angle-locker:; @forge test --match-contract AngleTest
 test-angle-merkleclaim:; @forge test --match-contract AngleMerkleClaimTest
 test-angle-veSdtFeeProxy:; @forge test --match-contract VeSDTFeeAngleProxyV2
+test-angle-vault-gamma:; @forge test --match-contract AngleVaultGammaTest
 
 # APWINE
 test-apwine:; @forge test --match-contract ApwineTest 

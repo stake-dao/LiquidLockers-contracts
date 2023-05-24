@@ -9,4 +9,5 @@ interface IAngleMerkleDistributor {
         bytes32[][] calldata proofs
     ) external;
     function toggleOperator(address user, address opperator) external;
+    function toggleWhitelist(address user) external;
 }
