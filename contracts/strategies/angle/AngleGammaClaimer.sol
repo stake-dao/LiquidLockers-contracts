@@ -31,7 +31,7 @@ contract AngleGammaClaimer {
     uint256 public veSdtFeeFee;
 
     // Whitelist of vaults enabled to claim for 
-    mapping(address => uint256) vaultsWl;
+    mapping(address => uint256) public vaultsWl;
 
     event Earn(uint256 _gaugeAmount, uint256 _daoPart, uint256 _accPart, uint256 _veSdtFeePart);
     event DaoRecipientSet(address _oldR, address _newR);
