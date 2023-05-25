@@ -103,7 +103,10 @@ contract AngleVaultGammaTest is BaseTest {
         agEurUsdcVault.toggleOperator(address(claimer));
         agEurEthVault.approveClaimer(address(claimer));
         agEurUsdcVault.approveClaimer(address(claimer));
-        
+
+        // Whitelist the user to claim for itself using the claimer 
+        claimer.toggleVault(CLAIMER_USER);
+
         vm.startPrank(CLAIMER_USER);
         // Angle merkle distributor 
         IAngleMerkleDistributor(MERKLE_DISTRIBUTOR).toggleWhitelist(CLAIMER_USER);

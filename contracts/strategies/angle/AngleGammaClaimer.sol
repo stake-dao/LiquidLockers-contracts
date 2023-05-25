@@ -15,6 +15,7 @@ contract AngleGammaClaimer {
 
     error NOT_ALLOWED();
     error FEE_TOO_HIGH();
+    error VAULT_NOT_ENABLED();
 
     address public governance;
     address public constant MERKLE_DISTRIBUTOR = 0x5a93D504604fB57E15b0d73733DDc86301Dde2f1; 
@@ -29,6 +30,9 @@ contract AngleGammaClaimer {
     address public veSdtFeeRecipient;
     uint256 public veSdtFeeFee;
 
+    // Whitelist of vaults enabled to claim for 
+    mapping(address => uint256) vaultsWl;
+
     event Earn(uint256 _gaugeAmount, uint256 _daoPart, uint256 _accPart, uint256 _veSdtFeePart);
     event DaoRecipientSet(address _oldR, address _newR);
     event AccRecipientSet(address _oldR, address _newR);
@@ -36,6 +40,7 @@ contract AngleGammaClaimer {
     event DaoFeeSet(uint256 _oldF, uint256 _newF);
     event AccFeeSet(uint256 _oldF, uint256 _newF);
     event VeSdtFeeFeeSet(uint256 _oldF, uint256 _newF);
+    event ToggleVault(address _vault, bool _status);
 
     constructor(
         address _governance, 
@@ -58,6 +63,7 @@ contract AngleGammaClaimer {
         address _vault, 
         uint256 _amount
     ) external {
+        if (vaultsWl[_vault] == 0) revert VAULT_NOT_ENABLED();
         address[] memory users = new address[](1);
         users[0] = _vault;
         address[] memory tokens = new address[](1);
@@ -66,13 +72,15 @@ contract AngleGammaClaimer {
         amounts[0] = _amount;
         // ANGLE reward will be send to the vault
         IAngleMerkleDistributor(MERKLE_DISTRIBUTOR).claim(users, tokens, amounts, _proofs);
-        // transfer ANGLE from vault to here
         uint256 reward = ERC20(ANGLE).balanceOf(_vault);
-        ERC20(ANGLE).transferFrom(_vault, address(this), reward);
-        uint256 rewardToNotify = _chargeFees(reward);
-        address liquidityGauge = IGammaVault(_vault).liquidityGauge();
-        ERC20(ANGLE).approve(liquidityGauge, rewardToNotify);
-        ILiquidityGaugeStrat(liquidityGauge).deposit_reward_token(ANGLE, rewardToNotify);
+        if (reward > 0) {
+            // transfer ANGLE from vault to here
+            ERC20(ANGLE).transferFrom(_vault, address(this), reward);
+            uint256 rewardToNotify = _chargeFees(reward);
+            address liquidityGauge = IGammaVault(_vault).liquidityGauge();
+            ERC20(ANGLE).approve(liquidityGauge, rewardToNotify);
+            ILiquidityGaugeStrat(liquidityGauge).deposit_reward_token(ANGLE, rewardToNotify);
+        }
     }
 
     /// @notice internal function to calculate fees and sent them to recipients 
@@ -95,6 +103,15 @@ contract AngleGammaClaimer {
         } 
         amountToNotify = _amount - daoPart - accPart - veSdtFeePart;
         emit Earn(amountToNotify, daoPart, accPart, veSdtFeePart);
+    }
+
+    /// @notice function to toggle a vault
+    /// @param _vault vault address
+    function toggleVault(address _vault) external {
+        if (msg.sender != governance) revert NOT_ALLOWED();
+        // enable or disable a vault
+        vaultsWl[_vault] = 1 - vaultsWl[_vault];
+        emit ToggleVault(_vault, vaultsWl[_vault] == 1);
     }
 
     /// @notice function to set the dao fee recipient
