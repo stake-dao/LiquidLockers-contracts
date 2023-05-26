@@ -8,6 +8,10 @@ import "../interfaces/ISdFraxVault.sol";
 import "../interfaces/ICurvePool.sol";
 import "../interfaces/IFraxSwapRouter.sol";
 
+interface IFraxLP {
+    function getAmountOut(uint256 amount, address tokenIn) external view returns(uint256);
+}
+
 contract VeSDTFeePendleProxy is Ownable {
     using SafeERC20 for IERC20;
 
@@ -20,22 +24,24 @@ contract VeSDTFeePendleProxy is Ownable {
     address public constant FRAX_3CRV = 0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B;
     address public constant SD_FRAX_3CRV = 0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7;
     address public constant FRAX_SWAP_ROUTER = 0xC14d550632db8592D1243Edc8B95b0Ad06703867;
+    address public constant WETH_FRAX_LP = 0x31351Bf3fba544863FBff44DDC27bA880916A199; 
 
     uint256 public constant BASE_FEE = 10_000;
     uint256 public claimerFee = 100;
-    address[] public wethToFraxPath;
+    address[] public wethToFraxPath = new address[](2);
 
-    constructor(address[] memory _wethToFraxPath) {
-        wethToFraxPath = _wethToFraxPath;
+    constructor() {
+        wethToFraxPath[0] = WETH;
+        wethToFraxPath[1] = FRAX;
         IERC20(WETH).safeApprove(FRAX_SWAP_ROUTER, type(uint256).max);
     }
 
     /// @notice function to send reward
-    function sendRewards() external {
+    function sendRewards(uint256 _amountOutMin) external {
         uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
         if (wethBalance != 0) {
             // swap WETH <-> FRAX on frax swap
-            _swapOnFrax(wethBalance);
+            _swapOnFrax(wethBalance, _amountOutMin);
             uint256 fraxBalance = IERC20(FRAX).balanceOf(address(this));
             uint256 claimerPart = (fraxBalance * claimerFee) / BASE_FEE;
             // send FRAX to the claimer
@@ -54,11 +60,11 @@ contract VeSDTFeePendleProxy is Ownable {
 
     /// @notice internal function to swap Weth to Frax on frax swap
     /// @param _amount amount to swap
-    function _swapOnFrax(uint256 _amount) internal {
+    function _swapOnFrax(uint256 _amount, uint256 _amountOutMin) internal {
         // swap weth to frax
         IFraxSwapRouter(FRAX_SWAP_ROUTER).swapExactTokensForTokens(
             _amount, 
-            0, 
+            _amountOutMin, 
             wethToFraxPath, 
             address(this), 
             block.timestamp + 1800
@@ -71,8 +77,8 @@ contract VeSDTFeePendleProxy is Ownable {
         if (wethBalance == 0) {
             return 0;
         }
-        uint256[] memory amounts = IFraxSwapRouter(FRAX_SWAP_ROUTER).getAmountsOut(wethBalance, wethToFraxPath);
-        return (amounts[wethToFraxPath.length - 1] * claimerFee) / BASE_FEE;
+        uint256 amount = IFraxLP(WETH_FRAX_LP).getAmountOut(wethBalance, WETH);
+        return amount * claimerFee / BASE_FEE;
     }
 
     /// @notice function to set a new claimer fee
@@ -80,14 +86,6 @@ contract VeSDTFeePendleProxy is Ownable {
     function setClaimerFee(uint256 _claimerFee) external onlyOwner {
         if (_claimerFee > BASE_FEE) revert FEE_TOO_HIGH();
         claimerFee = _claimerFee;
-    }
-
-    /// @notice function to set the fraxswap Weth <-> Frax swap path  (Weth <-> .. <-> Frax)
-    /// @param _path swap path
-    function setwethToFraxPath(address[] calldata _path) external onlyOwner {
-        if (_path[0] != WETH) revert WRONG_SWAP_PATH();
-        if (_path[_path.length - 1] != FRAX) revert WRONG_SWAP_PATH();
-        wethToFraxPath = _path;
     }
 
     /// @notice function to recover any ERC20 and send them to the owner

@@ -17,6 +17,11 @@ import {ILiquidityGauge} from "contracts/interfaces/ILiquidityGauge.sol";
 import {PendleAccumulator} from "contracts/accumulators/PendleAccumulator.sol";
 import {TransparentUpgradeableProxy} from "contracts/external/TransparentUpgradeableProxy.sol";
 import {VeSDTFeePendleProxy} from "contracts/accumulators/VeSDTFeePendleProxy.sol";
+import {IFraxSwapRouter} from "contracts/interfaces/IFraxSwapRouter.sol";
+
+interface IFraxLP {
+    function getAmountOut(uint256 amount, address tokenIn) external view returns(uint256);
+}
 
 contract PendleIntegrationTest is Test {
     ////////////////////////////////////////////////////////////////
@@ -51,6 +56,8 @@ contract PendleIntegrationTest is Test {
 
     address public WETH = AddressBook.WETH;
     address public FRAX = AddressBook.FRAX;
+    address public constant WETH_FRAX_LP = 0x31351Bf3fba544863FBff44DDC27bA880916A199; 
+
 
     function setUp() public virtual {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
@@ -97,10 +104,7 @@ contract PendleIntegrationTest is Test {
             );
 
         // Deploy veSdtFeePendleProxy
-        address[] memory wethToFraxPath = new address[](2);
-        wethToFraxPath[0] = WETH;
-        wethToFraxPath[1] = FRAX;
-        veSdtFeePendleProxy = new VeSDTFeePendleProxy(wethToFraxPath);
+        veSdtFeePendleProxy = new VeSDTFeePendleProxy();
 
         // Setters
         pendleAccumulator.setLocker(address(pendleLocker));
@@ -177,7 +181,12 @@ contract PendleIntegrationTest is Test {
     function testVeSDTFeePendleProxy() public {
         uint256 claimerFraxBalanceBefore = IERC20(FRAX).balanceOf(address(this));
         uint256 feeDBalanceBefore = IERC20(SD_FRAX_3CRV).balanceOf(AddressBook.FEE_D_SD);
-        veSdtFeePendleProxy.sendRewards();
+        // calculate min amount out directly on WETH/FRAX LP contract
+        uint256 amountOutMin = IFraxLP(WETH_FRAX_LP).getAmountOut(
+            IERC20(WETH).balanceOf(address(veSdtFeePendleProxy)),
+            WETH
+        );
+        veSdtFeePendleProxy.sendRewards(amountOutMin);
         uint256 claimerFraxBalanceAfter = IERC20(FRAX).balanceOf(address(this));
         uint256 feeDBalanceAfter = IERC20(SD_FRAX_3CRV).balanceOf(AddressBook.FEE_D_SD);
         assertGt(claimerFraxBalanceAfter, claimerFraxBalanceBefore);
@@ -189,19 +198,6 @@ contract PendleIntegrationTest is Test {
         assertEq(proxyWethBalance, 0);
         assertEq(proxyFraxBalance, 0);
         assertEq(proxySdFrax3CrvBalance, 0);
-    }
-
-    function testSetPath() public {
-        address[] memory wethToFraxPath = new address[](3);
-        wethToFraxPath[0] = WETH;
-        wethToFraxPath[1] = AddressBook.ANGLE;
-        wethToFraxPath[2] = FRAX;
-        veSdtFeePendleProxy.setwethToFraxPath(wethToFraxPath);
-        wethToFraxPath[0] = WETH;
-        wethToFraxPath[1] = AddressBook.ANGLE;
-        wethToFraxPath[2] = WETH;
-        vm.expectRevert(0x2cabd5a3); // WRONG_SWAP_PATH()
-        veSdtFeePendleProxy.setwethToFraxPath(wethToFraxPath);
     }
 
     // function testAccumulatorRewards() public {

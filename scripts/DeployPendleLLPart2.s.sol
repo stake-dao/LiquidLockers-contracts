@@ -22,10 +22,7 @@ contract DeployPendleLLPart2 is Script, Test {
         vm.startBroadcast();
 
         // Deploy veSDTFeePendleProxy contract
-        address[] memory wethToFraxPath = new address[](2);
-        wethToFraxPath[0] = AddressBook.WETH;
-        wethToFraxPath[1] = AddressBook.FRAX;
-        veSDTFeePendleProxy = new VeSDTFeePendleProxy(wethToFraxPath);
+        veSDTFeePendleProxy = new VeSDTFeePendleProxy();
 
         // Deploy Accumulator Contract
         pendleAccumulator = new PendleAccumulator(address(liquidityGauge), deployer, deployer, deployer);
