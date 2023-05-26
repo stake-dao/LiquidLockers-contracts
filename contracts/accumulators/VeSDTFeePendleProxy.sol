@@ -4,13 +4,15 @@ pragma solidity 0.8.7;
 import "openzeppelin-contracts/access/Ownable.sol";
 import "openzeppelin-contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol";
-import "../interfaces/IFeeDistributor.sol";
 import "../interfaces/ISdFraxVault.sol";
 import "../interfaces/ICurvePool.sol";
 import "../interfaces/IFraxSwapRouter.sol";
 
 contract VeSDTFeePendleProxy is Ownable {
     using SafeERC20 for IERC20;
+
+    error WRONG_SWAP_PATH();
+    error FEE_TOO_HIGH();
 
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant FEE_D = 0x29f3dd38dB24d3935CF1bf841e6b2B461A3E5D92;
@@ -36,12 +38,16 @@ contract VeSDTFeePendleProxy is Ownable {
             _swapOnFrax(wethBalance);
             uint256 fraxBalance = IERC20(FRAX).balanceOf(address(this));
             uint256 claimerPart = (fraxBalance * claimerFee) / BASE_FEE;
+            // send FRAX to the claimer
             IERC20(FRAX).transfer(msg.sender, claimerPart);
             IERC20(FRAX).approve(FRAX_3CRV, fraxBalance - claimerPart);
+            // provide liquidity on frax3crv pool on curve
             ICurvePool(FRAX_3CRV).add_liquidity([fraxBalance - claimerPart, 0], 0);
             uint256 frax3CrvBalance = IERC20(FRAX_3CRV).balanceOf(address(this));
             IERC20(FRAX_3CRV).approve(SD_FRAX_3CRV, fraxBalance - claimerPart);
+            // deposit curve LP on stake dao
             ISdFraxVault(SD_FRAX_3CRV).deposit(frax3CrvBalance);
+            // send all sdfrax3crv to the veSDT fee distributor 
             IERC20(SD_FRAX_3CRV).transfer(FEE_D, IERC20(SD_FRAX_3CRV).balanceOf(address(this)));
         }
     }
@@ -49,6 +55,7 @@ contract VeSDTFeePendleProxy is Ownable {
     /// @notice internal function to swap Weth to Frax on frax swap
     /// @param _amount amount to swap
     function _swapOnFrax(uint256 _amount) internal {
+        // swap weth to frax
         IFraxSwapRouter(FRAX_SWAP_ROUTER).swapExactTokensForTokens(
             _amount, 
             0, 
@@ -71,15 +78,15 @@ contract VeSDTFeePendleProxy is Ownable {
     /// @notice function to set a new claimer fee
     /// @param _claimerFee claimer fee
     function setClaimerFee(uint256 _claimerFee) external onlyOwner {
-        require(_claimerFee <= BASE_FEE, ">100%");
+        if (_claimerFee > BASE_FEE) revert FEE_TOO_HIGH();
         claimerFee = _claimerFee;
     }
 
     /// @notice function to set the fraxswap Weth <-> Frax swap path  (Weth <-> .. <-> Frax)
     /// @param _path swap path
     function setwethToFraxPath(address[] calldata _path) external onlyOwner {
-        require(_path[0] == WETH, "wrong initial pair");
-        require(_path[_path.length - 1] == FRAX, "wrong final pair");
+        if (_path[0] != WETH) revert WRONG_SWAP_PATH();
+        if (_path[_path.length - 1] != FRAX) revert WRONG_SWAP_PATH();
         wethToFraxPath = _path;
     }
 

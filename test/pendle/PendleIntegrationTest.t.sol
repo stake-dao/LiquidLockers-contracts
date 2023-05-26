@@ -98,8 +98,8 @@ contract PendleIntegrationTest is Test {
 
         // Deploy veSdtFeePendleProxy
         address[] memory wethToFraxPath = new address[](2);
-        wethToFraxPath[0] = AddressBook.WETH;
-        wethToFraxPath[1] = AddressBook.FRAX;
+        wethToFraxPath[0] = WETH;
+        wethToFraxPath[1] = FRAX;
         veSdtFeePendleProxy = new VeSDTFeePendleProxy(wethToFraxPath);
 
         // Setters
@@ -189,6 +189,19 @@ contract PendleIntegrationTest is Test {
         assertEq(proxyWethBalance, 0);
         assertEq(proxyFraxBalance, 0);
         assertEq(proxySdFrax3CrvBalance, 0);
+    }
+
+    function testSetPath() public {
+        address[] memory wethToFraxPath = new address[](3);
+        wethToFraxPath[0] = WETH;
+        wethToFraxPath[1] = AddressBook.ANGLE;
+        wethToFraxPath[2] = FRAX;
+        veSdtFeePendleProxy.setwethToFraxPath(wethToFraxPath);
+        wethToFraxPath[0] = WETH;
+        wethToFraxPath[1] = AddressBook.ANGLE;
+        wethToFraxPath[2] = WETH;
+        vm.expectRevert(0x2cabd5a3); // WRONG_SWAP_PATH()
+        veSdtFeePendleProxy.setwethToFraxPath(wethToFraxPath);
     }
 
     // function testAccumulatorRewards() public {
