@@ -16,14 +16,16 @@ import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
 import {ILiquidityGauge} from "contracts/interfaces/ILiquidityGauge.sol";
 import {PendleAccumulator} from "contracts/accumulators/PendleAccumulator.sol";
 import {TransparentUpgradeableProxy} from "contracts/external/TransparentUpgradeableProxy.sol";
+import {VeSDTFeePendleProxy} from "contracts/accumulators/VeSDTFeePendleProxy.sol";
 
 contract PendleIntegrationTest is Test {
     ////////////////////////////////////////////////////////////////
     /// --- TEST STORAGE
     ///////////////////////////////////////////////////////////////
 
+     address public constant SD_FRAX_3CRV = 0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7;
+
     // External Contracts
-    //IPendleFeeDistributor internal yieldDistributor = IPendleFeeDistributor(Constants.PENDLE_FEE_D);
     PendleLocker internal pendleLocker;
 
     // Liquid Lockers Contracts
@@ -34,6 +36,7 @@ contract PendleIntegrationTest is Test {
     PendleDepositor internal depositor;
     ILiquidityGauge internal liquidityGauge;
     PendleAccumulator internal pendleAccumulator;
+    VeSDTFeePendleProxy internal veSdtFeePendleProxy;
 
     address public daoRecipient = makeAddr("dao");
     address public bribeRecipient = makeAddr("bribe");
@@ -47,6 +50,7 @@ contract PendleIntegrationTest is Test {
     uint256 public YEAR = AddressBook.YEAR;
 
     address public WETH = AddressBook.WETH;
+    address public FRAX = AddressBook.FRAX;
 
     function setUp() public virtual {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
@@ -78,19 +82,27 @@ contract PendleIntegrationTest is Test {
         // Deploy and Intialize the PendleLocker contract
         pendleLocker = new PendleLocker(address(this), address(this));
 
-        //Deploy Depositor Contract
+        // Deploy Depositor Contract
         depositor = new PendleDepositor(address(PENDLE), address(pendleLocker), address(sdPendle));
         depositor.setGauge(address(liquidityGauge));
         sdPendle.setOperator(address(depositor));
         pendleLocker.setPendleDepositor(address(depositor));
 
-        // // Deploy Accumulator Contract
+        // Deploy Accumulator Contract
         pendleAccumulator = new PendleAccumulator( 
             address(liquidityGauge),
             daoRecipient,
             bribeRecipient,
             veSdtFeeProxy
             );
+
+        // Deploy veSdtFeePendleProxy
+        address[] memory wethToFraxPath = new address[](2);
+        wethToFraxPath[0] = AddressBook.WETH;
+        wethToFraxPath[1] = AddressBook.FRAX;
+        veSdtFeePendleProxy = new VeSDTFeePendleProxy(wethToFraxPath);
+
+        // Setters
         pendleAccumulator.setLocker(address(pendleLocker));
         pendleLocker.setAccumulator(address(pendleAccumulator));
 
@@ -108,6 +120,8 @@ contract PendleIntegrationTest is Test {
 
         // Mint PENDLE to the adresss(this)
         deal(address(PENDLE), address(this), amount);
+        // Add Weth to the fee proxy
+        deal(WETH, address(veSdtFeePendleProxy), 1e18);
     }
 
     function testInitialStateDepositor() public {
@@ -117,48 +131,65 @@ contract PendleIntegrationTest is Test {
         assertEq(end, depositor.unlockTime());
     }
 
-    // function testDepositThroughtDepositor() public {
-    //     // Deposit PENDLE to the pendleLocker through the Depositor
-    //     PENDLE.approve(address(depositor), amount);
-    //     depositor.deposit(amount, true, false, address(this));
+    function testDepositThroughtDepositor() public {
+        // Deposit PENDLE to the pendleLocker through the Depositor
+        PENDLE.approve(address(depositor), amount);
+        depositor.deposit(amount, true, false, address(this));
 
-    //     assertEq(sdPendle.balanceOf(address(this)), amount);
-    //     assertEq(liquidityGauge.balanceOf(address(this)), 0);
-    // }
+        assertEq(sdPendle.balanceOf(address(this)), amount);
+        assertEq(liquidityGauge.balanceOf(address(this)), 0);
+    }
 
-    // function testDepositThroughtDepositorWithStake() public {
-    //     // Deposit PENDLE to the pendleLocker through the Depositor
-    //     PENDLE.approve(address(depositor), amount);
-    //     depositor.deposit(amount, true, true, address(this));
+    function testDepositThroughtDepositorWithStake() public {
+        // Deposit PENDLE to the pendleLocker through the Depositor
+        PENDLE.approve(address(depositor), amount);
+        depositor.deposit(amount, true, true, address(this));
 
-    //     assertEq(liquidityGauge.balanceOf(address(this)), amount);
-    // }
+        assertEq(liquidityGauge.balanceOf(address(this)), amount);
+    }
 
-    // function testDepositorIncreaseTime() public {
-    //     // Deposit PENDLE to the pendleLocker through the Depositor
-    //     PENDLE.approve(address(depositor), amount);
-    //     depositor.deposit(amount, true, true, address(this));
+    function testDepositorIncreaseTime() public {
+        // Deposit PENDLE to the pendleLocker through the Depositor
+        PENDLE.approve(address(depositor), amount);
+        depositor.deposit(amount, true, true, address(this));
 
-    //     assertEq(liquidityGauge.balanceOf(address(this)), amount);
-    //     (, uint128 oldEnd) = vePENDLE.positionData(
-    //         address(pendleLocker)
-    //     );
-    //     // Increase Time
-    //     vm.warp(block.timestamp + 2 * WEEK);
-    //     uint256 newExpectedEnd = (block.timestamp + 104 * WEEK) / WEEK * WEEK;
+        assertEq(liquidityGauge.balanceOf(address(this)), amount);
+        (, uint128 oldEnd) = vePENDLE.positionData(
+            address(pendleLocker)
+        );
+        // Increase Time
+        vm.warp(block.timestamp + 2 * WEEK);
+        uint256 newExpectedEnd = (block.timestamp + 104 * WEEK) / WEEK * WEEK;
 
-    //     deal(address(PENDLE), address(this), amount);
-    //     PENDLE.approve(address(depositor), amount);
-    //     depositor.deposit(amount, true, true, address(this));
+        deal(address(PENDLE), address(this), amount);
+        PENDLE.approve(address(depositor), amount);
+        depositor.deposit(amount, true, true, address(this));
 
-    //     (, uint128 end) = vePENDLE.positionData(
-    //         address(pendleLocker)
-    //     );
+        (, uint128 end) = vePENDLE.positionData(
+            address(pendleLocker)
+        );
 
-    //     assertGt(end, oldEnd);
-    //     assertEq(end, newExpectedEnd);
-    //     assertEq(liquidityGauge.balanceOf(address(this)), 2 * amount);
-    // }
+        assertGt(end, oldEnd);
+        assertEq(end, newExpectedEnd);
+        assertEq(liquidityGauge.balanceOf(address(this)), 2 * amount);
+    }
+
+    function testVeSDTFeePendleProxy() public {
+        uint256 claimerFraxBalanceBefore = IERC20(FRAX).balanceOf(address(this));
+        uint256 feeDBalanceBefore = IERC20(SD_FRAX_3CRV).balanceOf(AddressBook.FEE_D_SD);
+        veSdtFeePendleProxy.sendRewards();
+        uint256 claimerFraxBalanceAfter = IERC20(FRAX).balanceOf(address(this));
+        uint256 feeDBalanceAfter = IERC20(SD_FRAX_3CRV).balanceOf(AddressBook.FEE_D_SD);
+        assertGt(claimerFraxBalanceAfter, claimerFraxBalanceBefore);
+        assertGt(feeDBalanceAfter, feeDBalanceBefore);
+
+        uint256 proxyWethBalance = IERC20(WETH).balanceOf(address(veSdtFeePendleProxy));
+        uint256 proxyFraxBalance = IERC20(FRAX).balanceOf(address(veSdtFeePendleProxy));
+        uint256 proxySdFrax3CrvBalance = IERC20(SD_FRAX_3CRV).balanceOf(address(veSdtFeePendleProxy));
+        assertEq(proxyWethBalance, 0);
+        assertEq(proxyFraxBalance, 0);
+        assertEq(proxySdFrax3CrvBalance, 0);
+    }
 
     // function testAccumulatorRewards() public {
     //     vm.warp(block.timestamp + 2 * DAY);
