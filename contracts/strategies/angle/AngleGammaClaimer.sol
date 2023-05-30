@@ -18,8 +18,7 @@ contract AngleGammaClaimer {
     error VAULT_NOT_ENABLED();
 
     address public governance;
-    address public constant MERKLE_DISTRIBUTOR = 0x5a93D504604fB57E15b0d73733DDc86301Dde2f1; 
-    address public constant ANGLE = 0x31429d1856aD1377A8A0079410B297e1a9e214c2;
+    address public merkleDistributor = 0x5a93D504604fB57E15b0d73733DDc86301Dde2f1; 
 
     // FEE
     uint256 public constant BASE_FEE = 10_000;
@@ -57,49 +56,52 @@ contract AngleGammaClaimer {
     /// @notice function to claim and notify the ANGLE reward via merkle
     /// @param _proofs merkle proofs
     /// @param _vault vault to claim the reward for 
+    /// @param _token reward token
     /// @param _amount amount to notify
     function claimAndNotify(
         bytes32[][] calldata _proofs,
-        address _vault, 
+        address _vault,
+        address _token,
         uint256 _amount
     ) external {
         if (vaultsWl[_vault] == 0) revert VAULT_NOT_ENABLED();
         address[] memory users = new address[](1);
         users[0] = _vault;
         address[] memory tokens = new address[](1);
-        tokens[0] = ANGLE;
+        tokens[0] = _token;
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = _amount;
-        // ANGLE reward will be send to the vault
-        IAngleMerkleDistributor(MERKLE_DISTRIBUTOR).claim(users, tokens, amounts, _proofs);
-        uint256 reward = ERC20(ANGLE).balanceOf(_vault);
+        // the reward will be send to the vault
+        IAngleMerkleDistributor(merkleDistributor).claim(users, tokens, amounts, _proofs);
+        uint256 reward = ERC20(_token).balanceOf(_vault);
         if (reward > 0) {
-            // transfer ANGLE from vault to here
-            ERC20(ANGLE).transferFrom(_vault, address(this), reward);
-            uint256 rewardToNotify = _chargeFees(reward);
+            // transfer reward from vault to here
+            ERC20(_token).transferFrom(_vault, address(this), reward);
+            uint256 rewardToNotify = _chargeFees(_token, reward);
             address liquidityGauge = IGammaVault(_vault).liquidityGauge();
-            ERC20(ANGLE).approve(liquidityGauge, rewardToNotify);
-            ILiquidityGaugeStrat(liquidityGauge).deposit_reward_token(ANGLE, rewardToNotify);
+            ERC20(_token).approve(liquidityGauge, rewardToNotify);
+            ILiquidityGaugeStrat(liquidityGauge).deposit_reward_token(_token, rewardToNotify);
         }
     }
 
     /// @notice internal function to calculate fees and sent them to recipients 
+    /// @param _token token to charge fees 
     /// @param _amount total amount to charge fees 
-    function _chargeFees(uint256 _amount) internal returns (uint256 amountToNotify) {
+    function _chargeFees(address _token, uint256 _amount) internal returns (uint256 amountToNotify) {
         uint256 daoPart;
         uint256 accPart;
         uint256 veSdtFeePart;
         if (daoFee > 0) {
             daoPart = (_amount * daoFee / BASE_FEE);
-            ERC20(ANGLE).safeTransfer(daoRecipient, daoPart);
+            ERC20(_token).safeTransfer(daoRecipient, daoPart);
         }
         if (accFee > 0) {
             accPart = (_amount * accFee / BASE_FEE);
-            ERC20(ANGLE).safeTransfer(accRecipient, accPart);
+            ERC20(_token).safeTransfer(accRecipient, accPart);
         }
         if (veSdtFeePart > 0) {
             veSdtFeePart = (_amount * veSdtFeeFee / BASE_FEE);
-            ERC20(ANGLE).safeTransfer(veSdtFeeRecipient, veSdtFeePart);
+            ERC20(_token).safeTransfer(veSdtFeeRecipient, veSdtFeePart);
         } 
         amountToNotify = _amount - daoPart - accPart - veSdtFeePart;
         emit Earn(amountToNotify, daoPart, accPart, veSdtFeePart);
@@ -167,19 +169,18 @@ contract AngleGammaClaimer {
         emit VeSdtFeeFeeSet(veSdtFeeFee, _veSdtFeeFee);
         veSdtFeeFee = _veSdtFeeFee;
     }
-    
-    /// @notice function to set the reward distributor for an sd gauge
-    /// @param _gauge gauge address
-    /// @param _distributor distributor address 
-    function setRewardDistributor(address _gauge, address _distributor) external {
-        if (msg.sender != governance) revert NOT_ALLOWED();
-        ILiquidityGaugeStrat(_gauge).set_reward_distributor(ANGLE, _distributor);
-    }
 
     /// @notice function to set the governance
     /// @param _governance governance address
     function setGovernance(address _governance) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
         governance = _governance;
+    }
+
+    /// @notice function to set a new merkle distributor
+    /// @param _merkleDistributor distributor address 
+    function setMerkleDistributor(address _merkleDistributor) external {
+        if (msg.sender != governance) revert NOT_ALLOWED();
+        merkleDistributor = _merkleDistributor;
     }
 }
