@@ -16,7 +16,9 @@ contract AngleVaultGamma is ERC20 {
     ERC20 public token;
     address public governance;
     address public liquidityGauge;
-    address public merkleDistributor = 0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae; 
+    IAngleMerkleDistributor public merkleDistributor = IAngleMerkleDistributor(
+        0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae
+    ); 
 
     event Deposit(address indexed _depositor, uint256 _amount);
     event Withdraw(address indexed _depositor, uint256 _amount);
@@ -82,13 +84,13 @@ contract AngleVaultGamma is ERC20 {
     /// @param _operator operator address 
     function toggleOperator(address _operator) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        IAngleMerkleDistributor(merkleDistributor).toggleOperator(address(this), _operator);
+        merkleDistributor.toggleOperator(address(this), _operator);
     }
 
     /// @notice function to allow only an operator to claim the vault's reward
     function toggleOnlyOperatorCanClaim() external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        IAngleMerkleDistributor(merkleDistributor).toggleOnlyOperatorCanClaim(address(this));
+        merkleDistributor.toggleOnlyOperatorCanClaim(address(this));
     }
 
     /// @notice function to give the approve to transfer token for a claimer
@@ -103,6 +105,6 @@ contract AngleVaultGamma is ERC20 {
     /// @param _merkleDistributor distributor address 
     function setMerkleDistributor(address _merkleDistributor) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        merkleDistributor = _merkleDistributor;
+        merkleDistributor = IAngleMerkleDistributor(_merkleDistributor);
     }
 }

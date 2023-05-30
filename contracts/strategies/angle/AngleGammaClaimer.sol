@@ -18,7 +18,9 @@ contract AngleGammaClaimer {
     error VAULT_NOT_ENABLED();
 
     address public governance;
-    address public merkleDistributor = 0x5a93D504604fB57E15b0d73733DDc86301Dde2f1; 
+    IAngleMerkleDistributor public merkleDistributor = IAngleMerkleDistributor(
+        0x5a93D504604fB57E15b0d73733DDc86301Dde2f1
+    ); 
 
     // FEE
     uint256 public constant BASE_FEE = 10_000;
@@ -72,7 +74,7 @@ contract AngleGammaClaimer {
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = _amount;
         // the reward will be send to the vault
-        IAngleMerkleDistributor(merkleDistributor).claim(users, tokens, amounts, _proofs);
+        merkleDistributor.claim(users, tokens, amounts, _proofs);
         uint256 reward = ERC20(_token).balanceOf(_vault);
         if (reward > 0) {
             // transfer reward from vault to here
@@ -181,6 +183,6 @@ contract AngleGammaClaimer {
     /// @param _merkleDistributor distributor address 
     function setMerkleDistributor(address _merkleDistributor) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        merkleDistributor = _merkleDistributor;
+        merkleDistributor = IAngleMerkleDistributor(_merkleDistributor);
     }
 }
