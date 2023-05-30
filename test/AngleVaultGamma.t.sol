@@ -17,7 +17,7 @@ contract AngleVaultGammaTest is BaseTest {
     address public constant CLAIMER_USER = 0x5Be876Ed0a9655133226BE302ca6f5503E3DA569;
     address public constant GAMMA_AGEUR_ETH_LP = 0xE8f20fD90161de1d5B4cF7e2B5D92932CA06D5f4;
     address public constant GAMMA_AGEUR_USDC_LP = 0xF56Abca39c27D5C74F94c901b8C137fDf53B3E80;
-    address public constant MERKLE_DISTRIBUTOR = 0x5a93D504604fB57E15b0d73733DDc86301Dde2f1;
+    address public constant MERKLE_DISTRIBUTOR = 0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
 
     uint256 public constant AMOUNT = 1e18;
 
@@ -97,19 +97,19 @@ contract AngleVaultGammaTest is BaseTest {
         agEurUsdcGauge.add_reward(AddressBook.ANGLE, address(claimer));
 
         // whitelist the claimer to claim ANGLE via the merkle
-        agEurEthVault.toggleWhitelist();
-        agEurUsdcVault.toggleWhitelist();
+        agEurEthVault.toggleOnlyOperatorCanClaim();
+        agEurUsdcVault.toggleOnlyOperatorCanClaim();
         agEurEthVault.toggleOperator(address(claimer));
         agEurUsdcVault.toggleOperator(address(claimer));
-        agEurEthVault.approveClaimer(address(claimer));
-        agEurUsdcVault.approveClaimer(address(claimer));
+        agEurEthVault.approveClaimer(AddressBook.ANGLE, address(claimer));
+        agEurUsdcVault.approveClaimer(AddressBook.ANGLE, address(claimer));
 
         // Whitelist the user to claim for itself using the claimer 
         claimer.toggleVault(CLAIMER_USER);
 
         vm.startPrank(CLAIMER_USER);
         // Angle merkle distributor 
-        IAngleMerkleDistributor(MERKLE_DISTRIBUTOR).toggleWhitelist(CLAIMER_USER);
+        IAngleMerkleDistributor(MERKLE_DISTRIBUTOR).toggleOnlyOperatorCanClaim(CLAIMER_USER);
         IAngleMerkleDistributor(MERKLE_DISTRIBUTOR).toggleOperator(CLAIMER_USER, address(claimer));
         IERC20(AddressBook.ANGLE).approve(address(claimer), type(uint256).max);
         vm.stopPrank();

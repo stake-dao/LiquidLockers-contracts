@@ -16,10 +16,8 @@ contract AngleVaultGamma is ERC20 {
     ERC20 public token;
     address public governance;
     address public liquidityGauge;
-    address public constant MERKLE_DISTRIBUTOR = 0x5a93D504604fB57E15b0d73733DDc86301Dde2f1; 
-    address public constant ANGLE = 0x31429d1856aD1377A8A0079410B297e1a9e214c2;
+    address public constant MERKLE_DISTRIBUTOR = 0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae; 
 
-    event Earn(address _token, uint256 _amount);
     event Deposit(address indexed _depositor, uint256 _amount);
     event Withdraw(address indexed _depositor, uint256 _amount);
 
@@ -87,16 +85,17 @@ contract AngleVaultGamma is ERC20 {
         IAngleMerkleDistributor(MERKLE_DISTRIBUTOR).toggleOperator(address(this), _operator);
     }
 
-    /// @notice function to whitelist (allow) the contract to set an operator
-    function toggleWhitelist() external {
+    /// @notice function to allow only an operator to claim the vault's reward
+    function toggleOnlyOperatorCanClaim() external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        IAngleMerkleDistributor(MERKLE_DISTRIBUTOR).toggleWhitelist(address(this));
+        IAngleMerkleDistributor(MERKLE_DISTRIBUTOR).toggleOnlyOperatorCanClaim(address(this));
     }
 
-    /// @notice function to give the approve to transfer ANGLE for a claimer
+    /// @notice function to give the approve to transfer token for a claimer
+    /// @param _token token address 
     /// @param _claimer claimer address  
-    function approveClaimer(address _claimer) external {
+    function approveClaimer(address _token, address _claimer) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        ERC20(ANGLE).approve(_claimer, type(uint256).max);
+        ERC20(_token).approve(_claimer, type(uint256).max);
     }
 }
