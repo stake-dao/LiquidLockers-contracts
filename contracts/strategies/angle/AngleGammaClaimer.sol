@@ -19,7 +19,7 @@ contract AngleGammaClaimer {
 
     address public governance;
     IAngleMerkleDistributor public merkleDistributor = IAngleMerkleDistributor(
-        0x5a93D504604fB57E15b0d73733DDc86301Dde2f1
+        0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae
     ); 
 
     // FEE

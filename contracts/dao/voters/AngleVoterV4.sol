@@ -18,7 +18,7 @@ contract AngleVoterV4 {
     address public angleStrategy = 0x22635427C72e8b0028FeAE1B5e1957508d9D7CAF;
     address public constant ANGLE_LOCKER = 0xD13F8C25CceD32cdfA79EB5eD654Ce3e484dCAF5;
     address public constant ANGLE_GC = 0x9aD7e7b0877582E14c17702EecF49018DD6f2367;
-    IAngleMerkleDistributor public merkleDistributor = IAngleMerkleDistributor(0x5a93D504604fB57E15b0d73733DDc86301Dde2f1);
+    IAngleMerkleDistributor public merkleDistributor = IAngleMerkleDistributor(0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae);
     ISDTDistributor public constant SDT_DISTRIBUTOR = ISDTDistributor(0x9C99dffC1De1AfF7E7C1F36fCdD49063A281e18C);
 
     struct Claim {
