@@ -15,7 +15,6 @@ interface IFraxLP {
 contract VeSDTFeePendleProxy is Ownable {
     using SafeERC20 for IERC20;
 
-    error WRONG_SWAP_PATH();
     error FEE_TOO_HIGH();
 
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -37,6 +36,7 @@ contract VeSDTFeePendleProxy is Ownable {
     }
 
     /// @notice function to send reward
+    /// @param _amountOutMin min amount to receive
     function sendRewards(uint256 _amountOutMin) external {
         uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
         if (wethBalance != 0) {
@@ -60,6 +60,7 @@ contract VeSDTFeePendleProxy is Ownable {
 
     /// @notice internal function to swap Weth to Frax on frax swap
     /// @param _amount amount to swap
+    /// @param _amountOutMin min amount to receive
     function _swapOnFrax(uint256 _amount, uint256 _amountOutMin) internal {
         // swap weth to frax
         IFraxSwapRouter(FRAX_SWAP_ROUTER).swapExactTokensForTokens(

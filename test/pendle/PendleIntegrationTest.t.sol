@@ -181,6 +181,8 @@ contract PendleIntegrationTest is Test {
     function testVeSDTFeePendleProxy() public {
         uint256 claimerFraxBalanceBefore = IERC20(FRAX).balanceOf(address(this));
         uint256 feeDBalanceBefore = IERC20(SD_FRAX_3CRV).balanceOf(AddressBook.FEE_D_SD);
+        // calculate claimer amount
+        uint256 claimerAmount = veSdtFeePendleProxy.claimableByKeeper();
         // calculate min amount out directly on WETH/FRAX LP contract
         uint256 amountOutMin = IFraxLP(WETH_FRAX_LP).getAmountOut(
             IERC20(WETH).balanceOf(address(veSdtFeePendleProxy)),
@@ -189,7 +191,7 @@ contract PendleIntegrationTest is Test {
         veSdtFeePendleProxy.sendRewards(amountOutMin);
         uint256 claimerFraxBalanceAfter = IERC20(FRAX).balanceOf(address(this));
         uint256 feeDBalanceAfter = IERC20(SD_FRAX_3CRV).balanceOf(AddressBook.FEE_D_SD);
-        assertGt(claimerFraxBalanceAfter, claimerFraxBalanceBefore);
+        assertEq(claimerFraxBalanceAfter - claimerFraxBalanceBefore, claimerAmount);
         assertGt(feeDBalanceAfter, feeDBalanceBefore);
 
         uint256 proxyWethBalance = IERC20(WETH).balanceOf(address(veSdtFeePendleProxy));
