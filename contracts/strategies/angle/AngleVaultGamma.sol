@@ -12,6 +12,7 @@ contract AngleVaultGamma is ERC20 {
     error GAUGE_NOT_SET();
     error NOT_ENOUGH_STAKED();
     error NOT_ALLOWED();
+    error TOKEN_NOT_ALLOWED();
 
     ERC20 public token;
     address public governance;
@@ -98,6 +99,7 @@ contract AngleVaultGamma is ERC20 {
     /// @param _claimer claimer address  
     function approveClaimer(address _token, address _claimer) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
+        if (_token == address(token)) revert TOKEN_NOT_ALLOWED();
         ERC20(_token).approve(_claimer, type(uint256).max);
     }
     

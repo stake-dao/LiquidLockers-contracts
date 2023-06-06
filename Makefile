@@ -80,3 +80,4 @@ deploy-FpisLL-part1:; @forge script scripts/DeployFpisLLPart1.sol --rpc-url ${MA
 deploy-FpisLL-part2:; @forge script scripts/DeployFpisLLPart2.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_KEY}
 deploy-PendleLL-part1:; @forge script scripts/DeployPendleLLPart1.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_KEY}
 deploy-PendleLL-part2:; @forge script scripts/DeployPendleLLPart2.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_KEY}
+deploy-angle-gamma:; @forge script scripts/DeployAngleGamma.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_KEY} 
