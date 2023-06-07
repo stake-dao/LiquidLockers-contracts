@@ -128,7 +128,7 @@ contract BlackpoolTest is BaseTest {
         ////////////////////////////////////////////////////////////////
         /// --- SETTERS
         ///////////////////////////////////////////////////////////////
-        vm.prank(IVeToken(AddressBook.VE_SDT).admin());
+        vm.prank(0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063);
         ISmartWalletChecker(AddressBook.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
         // White list locker
         //address BPT_DAO = IVeToken(veToken).admin();

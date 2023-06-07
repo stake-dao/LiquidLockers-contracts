@@ -122,10 +122,10 @@ contract CurveVaultTest is BaseTest {
         deal(AddressBook.CRV3, AddressBook.CURVE_FEE_DISTRIBUTOR, AMOUNT);
         deal(address(crv), ALICE, AMOUNT);
 
-        vm.prank(IVeToken(AddressBook.VE_SDT).admin());
+        vm.prank(0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063);
         ISmartWalletChecker(AddressBook.SDT_SMART_WALLET_CHECKER).approveWallet(ALICE);
         lockSDTCustom(ALICE, AddressBook.SDT, AddressBook.VE_SDT, AMOUNT, block.timestamp + 365 days);
-        vm.prank(IVeToken(AddressBook.VE_SDT).admin());
+        vm.prank(0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063);
         ISmartWalletChecker(AddressBook.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
         lockSDTCustom(LOCAL_DEPLOYER, AddressBook.SDT, AddressBook.VE_SDT, AMOUNT, block.timestamp + (4 * 365 days));
     }

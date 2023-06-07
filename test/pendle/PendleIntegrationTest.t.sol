@@ -9,7 +9,7 @@ import {AddressBook} from "addressBook/AddressBook.sol";
 import {Constants} from "test/fixtures/Constants.sol";
 import {sdToken} from "contracts/tokens/sdToken.sol";
 import {PendleLocker} from "contracts/lockers/PendleLocker.sol";
-import {IVePendle} from "contracts/interfaces/IVePENDLE.sol";
+import {IVePendle} from "contracts/interfaces/IVePendle.sol";
 import {PendleDepositor} from "contracts/depositors/PendleDepositor.sol";
 import {IPendleFeeDistributor} from "contracts/interfaces/IPendleFeeDistributor.sol";
 import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
