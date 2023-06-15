@@ -91,10 +91,6 @@ contract DeployAngleGamma is Script, Test {
         agEurEthVault.approveClaimer(AddressBook.ANGLE, address(rewardClaimer));
         agEurUsdcVault.approveClaimer(AddressBook.ANGLE, address(rewardClaimer));
 
-        // Whitelist the vaults to claim reward for
-        rewardClaimer.toggleVault(address(agEurEthVault));
-        rewardClaimer.toggleVault(address(agEurUsdcVault));
-
         vm.stopBroadcast();
     }
 }
