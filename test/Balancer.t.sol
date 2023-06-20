@@ -126,7 +126,7 @@ contract BalancerTest is BaseTest {
         /// --- END DEPLOYEMENT
         ///////////////////////////////////////////////////////////////
         vm.stopPrank();
-        vm.prank(IVeToken(AddressBook.VE_SDT).admin());
+        vm.prank(0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063);
         ISmartWalletChecker(AddressBook.SDT_SMART_WALLET_CHECKER).approveWallet(LOCAL_DEPLOYER);
         vm.prank(AddressBook.BALANCER_MULTI_SIG);
         ISmartWalletChecker(AddressBook.BALANCER_SMART_WALLET_CHECKER).allowlistAddress(address(locker));

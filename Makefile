@@ -16,6 +16,9 @@ test-angle-vault:; @forge test --match-contract AngleVaultTest
 test-angle-locker:; @forge test --match-contract AngleTest
 test-angle-merkleclaim:; @forge test --match-contract AngleMerkleClaimTest
 test-angle-veSdtFeeProxy:; @forge test --match-contract VeSDTFeeAngleProxyV2
+test-angle-vault-gamma:; @forge test --match-contract AngleVaultGammaTest
+test-angle-voter:; @forge test --match-contract AngleVoterTest
+test-angle-vault-guni:; @forge test --match-contract AngleVaultGUni
 
 # APWINE
 test-apwine:; @forge test --match-contract ApwineTest 
@@ -79,3 +82,5 @@ deploy-FpisLL-part1:; @forge script scripts/DeployFpisLLPart1.sol --rpc-url ${MA
 deploy-FpisLL-part2:; @forge script scripts/DeployFpisLLPart2.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_KEY}
 deploy-PendleLL-part1:; @forge script scripts/DeployPendleLLPart1.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_KEY}
 deploy-PendleLL-part2:; @forge script scripts/DeployPendleLLPart2.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_KEY}
+deploy-angle-gamma:; @forge script scripts/DeployAngleGamma.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_KEY} 
+deploy-angle-guni:; @forge script scripts/DeployAngleGUni.s.sol --rpc-url ${MAINNET_RPC_URL} -vvvv --private-key ${DEPLOYER_PKEY} --broadcast --verify --etherscan-api-key ${ETHERSCAN_KEY} 

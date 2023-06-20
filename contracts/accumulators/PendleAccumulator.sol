@@ -16,10 +16,14 @@ contract PendleAccumulator {
     error FEE_TOO_HIGH();
     error NOT_ALLOWED();
     error ZERO_ADDRESS();
-    error WRONG_CLAI();
+    error WRONG_CLAIM();
     error NO_REWARD();
+    error ONGOING_PERIOD();
 
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant VE_PENDLE = 0x4f30A9D41B80ecC5B94306AB4364951AE3170210;
+
+    // fee recipients
     address public bribeRecipient;
     address public daoRecipient;
     address public veSdtFeeProxy;
@@ -27,15 +31,13 @@ contract PendleAccumulator {
     uint256 public bribeFee;
     uint256 public daoFee;
     uint256 public veSdtFeeProxyFee;
-    address public vePendle = 0x4f30A9D41B80ecC5B94306AB4364951AE3170210;
+    
     address public governance;
     address public locker;
     address public gauge;
     address public sdtDistributor;
     uint256 public claimerFee;
     mapping (uint256 => uint256) rewards; // period -> reward amount
-    uint256 initialPeriod;
-    uint256 periodRewarded;
 
     event DaoRecipientSet(address _old, address _new);
     event BribeRecipientSet(address _old, address _new);
@@ -70,9 +72,10 @@ contract PendleAccumulator {
     /// @notice Claims rewards from the locker and notify all to the LGV4
     function claimAndNotifyAll() external {
         if (locker == address(0)) revert ZERO_ADDRESS();
+        uint256 currentWeek = block.timestamp * 1 weeks / 1 weeks;
         // reward for 1 months
         address[] memory pools = new address[](1);
-        pools[0] = vePendle;
+        pools[0] = VE_PENDLE;
         PendleLocker(locker).claimRewards(address(this), pools);
         if (address(this).balance == 0) revert NO_REWARD();
         // Wrap Eth to WETH
@@ -81,11 +84,11 @@ contract PendleAccumulator {
         // charge fees once from the whole month reward
         uint256 gaugeAmount = _chargeFee(WETH, address(this).balance);
         uint256 weekAmount = gaugeAmount / 4;
-        initialPeriod = block.timestamp;
-        rewards[initialPeriod + 1 weeks] = weekAmount;
-        rewards[initialPeriod + (2 weeks)] = weekAmount;
-        rewards[initialPeriod + (3 weeks)] = weekAmount;
-        _notifyReward(WETH, weekAmount);
+        rewards[currentWeek] += weekAmount;
+        rewards[currentWeek + 1 weeks] += weekAmount;
+        rewards[currentWeek + 2 weeks] += weekAmount;
+        rewards[currentWeek + 3 weeks] += weekAmount;
+        _notifyReward(WETH);
         _distributeSDT();
     }
 
@@ -93,7 +96,7 @@ contract PendleAccumulator {
     function claimForVoters(address[] calldata pools) external {
         if (locker == address(0)) revert ZERO_ADDRESS();
         for (uint256 i; i < pools.length;) {
-            if (pools[i] == vePendle) revert WRONG_CLAI();
+            if (pools[i] == VE_PENDLE) revert WRONG_CLAIM();
             unchecked {
                 ++i;
             }
@@ -108,14 +111,9 @@ contract PendleAccumulator {
     }
 
     /// @notice Notify the reward already claimed for the current period
-    function notifyReward() external {
-        uint256 currentPeriod = initialPeriod + (periodRewarded * 1 weeks);
-        // check if the current reward period is finished
-        if (rewards[currentPeriod] == 0) revert NO_REWARD();
-        _notifyReward(WETH, rewards[currentPeriod]);
+    function notifyReward(address _token) external {
+        _notifyReward(_token);
         _distributeSDT();
-        rewards[currentPeriod] = 0;
-        periodRewarded++;
     }
 
     /// @notice Reserve fees for dao, bribe and veSdtFeeProxy
@@ -157,25 +155,29 @@ contract PendleAccumulator {
 
     /// @notice Notify the new reward to the LGV4
     /// @param _tokenReward token to notify
-    /// @param _amount amount to notify
-    function _notifyReward(address _tokenReward, uint256 _amount) internal {
-        
-        if (_amount == 0) {
-            return;
+    function _notifyReward(address _tokenReward) internal {
+        uint256 amountToNotify;
+        if (_tokenReward == WETH) {
+            uint256 currentWeek = block.timestamp * 1 weeks / 1 weeks;
+            amountToNotify = rewards[currentWeek];
+            rewards[currentWeek] = 0;
+        } else {
+            amountToNotify = IERC20(_tokenReward).balanceOf(address(this));
         }
-        uint256 balanceBefore = IERC20(_tokenReward).balanceOf(address(this));
+        if (amountToNotify == 0) revert NO_REWARD();
         if (ILiquidityGauge(gauge).reward_data(_tokenReward).distributor == address(this)) {
-            uint256 claimerReward = (_amount * claimerFee) / 10_000;
+            uint256 balanceBefore = IERC20(_tokenReward).balanceOf(address(this));
+            uint256 claimerReward = (amountToNotify * claimerFee) / 10_000;
             IERC20(_tokenReward).transfer(msg.sender, claimerReward);
-            _amount -= claimerReward;
-            IERC20(_tokenReward).approve(gauge, _amount);
-            ILiquidityGauge(gauge).deposit_reward_token(_tokenReward, _amount);
+            amountToNotify -= claimerReward;
+            IERC20(_tokenReward).approve(gauge, amountToNotify);
+            ILiquidityGauge(gauge).deposit_reward_token(_tokenReward, amountToNotify);
 
             uint256 balanceAfter = IERC20(_tokenReward).balanceOf(address(this));
 
-            require(balanceBefore - balanceAfter == _amount + claimerReward, "wrong amount notified");
+            require(balanceBefore - balanceAfter == amountToNotify + claimerReward, "wrong amount notified");
 
-            emit RewardNotified(gauge, _tokenReward, _amount, claimerReward);
+            emit RewardNotified(gauge, _tokenReward, amountToNotify, claimerReward);
         }
     }
 
