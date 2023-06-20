@@ -15,7 +15,6 @@ contract AngleGammaClaimer {
 
     error NOT_ALLOWED();
     error FEE_TOO_HIGH();
-    error VAULT_NOT_ENABLED();
 
     address public governance;
     IAngleMerkleDistributor public merkleDistributor = IAngleMerkleDistributor(
@@ -66,7 +65,6 @@ contract AngleGammaClaimer {
         address _token,
         uint256 _amount
     ) external {
-        if (vaultsWl[_vault] == 0) revert VAULT_NOT_ENABLED();
         address[] memory users = new address[](1);
         users[0] = _vault;
         address[] memory tokens = new address[](1);
@@ -107,15 +105,6 @@ contract AngleGammaClaimer {
         } 
         amountToNotify = _amount - daoPart - accPart - veSdtFeePart;
         emit Earn(amountToNotify, daoPart, accPart, veSdtFeePart);
-    }
-
-    /// @notice function to toggle a vault
-    /// @param _vault vault address
-    function toggleVault(address _vault) external {
-        if (msg.sender != governance) revert NOT_ALLOWED();
-        // enable or disable a vault
-        vaultsWl[_vault] = 1 - vaultsWl[_vault];
-        emit ToggleVault(_vault, vaultsWl[_vault] == 1);
     }
 
     /// @notice function to set the dao fee recipient

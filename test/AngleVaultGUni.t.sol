@@ -10,13 +10,13 @@ import "contracts/strategies/angle/AngleGammaClaimer.sol";
 import "contracts/external/TransparentUpgradeableProxy.sol";
 import "contracts/interfaces/ILiquidityGaugeStrat.sol";
 
-contract AngleVaultGammaTest is BaseTest {
+contract AngleVaultGUniTest is BaseTest {
     address public constant BOB = address(0xB0B);
     address public constant ALICE = address(0xAA);
     address public constant LOCAL_DEPLOYER = address(0xDE);
     address public constant CLAIMER_USER = 0x5Be876Ed0a9655133226BE302ca6f5503E3DA569;
-    address public constant GAMMA_AGEUR_ETH_LP = 0xE8f20fD90161de1d5B4cF7e2B5D92932CA06D5f4;
-    address public constant GAMMA_AGEUR_USDC_LP = 0xF56Abca39c27D5C74F94c901b8C137fDf53B3E80;
+    address public constant GUNI_AGEUR_ETH_LP = 0x857E0B2eD0E82D5cDEB015E77ebB873C47F99575;
+    address public constant GUNI_AGEUR_USDC_LP = 0xEDECB43233549c51CC3268b5dE840239787AD56c;
     address public constant MERKLE_DISTRIBUTOR = 0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
 
     uint256 public constant AMOUNT = 1e18;
@@ -40,8 +40,8 @@ contract AngleVaultGammaTest is BaseTest {
         vm.startPrank(LOCAL_DEPLOYER);
 
         // Deploy Vaults
-        agEurEthVault = new AngleVaultGamma(GAMMA_AGEUR_ETH_LP, LOCAL_DEPLOYER, "stake dao AgEurEthGamma", "sdAgEurEthGamma");
-        agEurUsdcVault = new AngleVaultGamma(GAMMA_AGEUR_USDC_LP, LOCAL_DEPLOYER, "stake dao AgEurUsdcGamma", "sdAgEurUsdcGamma");
+        agEurEthVault = new AngleVaultGamma(GUNI_AGEUR_ETH_LP, LOCAL_DEPLOYER, "stake dao AgEurEthGUni", "sdAgEurEthGUni");
+        agEurUsdcVault = new AngleVaultGamma(GUNI_AGEUR_USDC_LP, LOCAL_DEPLOYER, "stake dao AgEurUsdcGUni", "sdAgEurUsdcGUni");
 
         // LGV4 strategy impl
         liquidityGaugeStratImpl = ILiquidityGaugeStrat(
@@ -59,7 +59,7 @@ contract AngleVaultGammaTest is BaseTest {
             AddressBook.VE_SDT_BOOST_PROXY,
             LOCAL_DEPLOYER,
             address(agEurEthVault),
-            "agEur/ETH Gamma"
+            "agEur/ETH GUni"
         );
         agEurEthGaugeProxy = new TransparentUpgradeableProxy(address(liquidityGaugeStratImpl), address(proxyAdmin), AgEurEthGaugeData);
         agEurEthGauge = ILiquidityGaugeStrat(address(agEurEthGaugeProxy));
@@ -75,14 +75,14 @@ contract AngleVaultGammaTest is BaseTest {
             AddressBook.VE_SDT_BOOST_PROXY,
             LOCAL_DEPLOYER,
             address(agEurUsdcVault),
-            "agEur/USDC Gamma"
+            "agEur/USDC GUni"
         );
         agEurUsdcGaugeProxy = new TransparentUpgradeableProxy(address(liquidityGaugeStratImpl), address(proxyAdmin), AgEurUsdcGaugeData);
         agEurUsdcGauge = ILiquidityGaugeStrat(address(agEurUsdcGaugeProxy));
         agEurUsdcVault.setLiquidityGauge(address(agEurUsdcGauge));
         
-        deal(GAMMA_AGEUR_ETH_LP, LOCAL_DEPLOYER, AMOUNT);
-        deal(GAMMA_AGEUR_USDC_LP, LOCAL_DEPLOYER, AMOUNT);
+        deal(GUNI_AGEUR_ETH_LP, LOCAL_DEPLOYER, AMOUNT);
+        deal(GUNI_AGEUR_USDC_LP, LOCAL_DEPLOYER, AMOUNT);
 
         // Deploy Claimer
         claimer = new AngleGammaClaimer(
@@ -113,56 +113,38 @@ contract AngleVaultGammaTest is BaseTest {
     }
 
     function test01LGSettings() public {
-        assertEq(agEurEthGauge.name(), "Stake DAO agEur/ETH Gamma Gauge");
-        assertEq(agEurEthGauge.symbol(), "sdagEur/ETH Gamma-gauge");
+        assertEq(agEurEthGauge.name(), "Stake DAO agEur/ETH GUni Gauge");
+        assertEq(agEurEthGauge.symbol(), "sdagEur/ETH GUni-gauge");
     }
 
     function test02DepositToVault() public {
         vm.startPrank(LOCAL_DEPLOYER);
-        IERC20(GAMMA_AGEUR_ETH_LP).approve(address(agEurEthVault), AMOUNT);
+        IERC20(GUNI_AGEUR_ETH_LP).approve(address(agEurEthVault), AMOUNT);
         agEurEthVault.deposit(LOCAL_DEPLOYER, AMOUNT);
-        assertEq(IERC20(GAMMA_AGEUR_ETH_LP).balanceOf(address(agEurEthVault)), AMOUNT);
+        assertEq(IERC20(GUNI_AGEUR_ETH_LP).balanceOf(address(agEurEthVault)), AMOUNT);
         assertEq(agEurEthGauge.balanceOf(LOCAL_DEPLOYER), AMOUNT);
     }
 
     function test03WithdrawFromVault() public {
         vm.startPrank(LOCAL_DEPLOYER);
-        IERC20(GAMMA_AGEUR_USDC_LP).approve(address(agEurUsdcVault), AMOUNT);
+        IERC20(GUNI_AGEUR_USDC_LP).approve(address(agEurUsdcVault), AMOUNT);
         agEurUsdcVault.deposit(LOCAL_DEPLOYER, AMOUNT);
         agEurUsdcVault.withdraw(AMOUNT);
         vm.stopPrank();
-        assertEq(IERC20(GAMMA_AGEUR_USDC_LP).balanceOf(address(agEurUsdcVault)), 0);
+        assertEq(IERC20(GUNI_AGEUR_USDC_LP).balanceOf(address(agEurUsdcVault)), 0);
         assertEq(agEurUsdcGauge.balanceOf(LOCAL_DEPLOYER), 0);
     }
 
     function test04WithdrawRevert() public {
         vm.startPrank(LOCAL_DEPLOYER);
-        IERC20(GAMMA_AGEUR_USDC_LP).approve(address(agEurUsdcVault), AMOUNT);
+        IERC20(GUNI_AGEUR_USDC_LP).approve(address(agEurUsdcVault), AMOUNT);
         agEurUsdcVault.deposit(ALICE, AMOUNT);
         vm.expectRevert(0xb1a6e9be); // NOT_ENOUGH_STAKED()
         agEurUsdcVault.withdraw(AMOUNT);
         vm.stopPrank();
         vm.prank(ALICE);
         agEurUsdcVault.withdraw(AMOUNT);
-        assertEq(IERC20(GAMMA_AGEUR_USDC_LP).balanceOf(address(agEurUsdcVault)), 0);
+        assertEq(IERC20(GUNI_AGEUR_USDC_LP).balanceOf(address(agEurUsdcVault)), 0);
         assertEq(agEurUsdcGauge.balanceOf(LOCAL_DEPLOYER), 0);
     }
-
-    // function test05ClaimAndNotifyReward() public {
-    //     bytes32[][] memory proofs = new bytes32[][](1);
-    //     proofs[0] = new bytes32[](8);
-    //     proofs[0][0] = bytes32(0x7a4659e72dfaf8a9f3d7503d67f61b46b246903abde724b3d9c9b3256ee319eb);
-    //     proofs[0][1] = bytes32(0x7ad53b3544ed045ce681b2f68a4ed172da8c9aba26c53d51c816d220ccf20c0b);
-    //     proofs[0][2] = bytes32(0x4269069e07f148dd79acaf4e38b0ff83676ed2382954fc96ffea716691500f46);
-    //     proofs[0][3] = bytes32(0x0402e84c73bc4cef6df7daedc6e74453e1908f0f54c19dee694e05febc65969d);
-    //     proofs[0][4] = bytes32(0x56c650aa62bf9432161dbd07cd1d4d8c8ebf847ea64678cca3e0dc70485db7e9);
-    //     proofs[0][5] = bytes32(0x9f90a863073ff9c53724f2db726e8b377f775573d95d343ba3ff6ae24c54eaf1);
-    //     proofs[0][6] = bytes32(0x61e662533a3bcbd97485576669e9b5d6900eb7cfad4a5b30a997a64eb1a74b72);
-    //     proofs[0][7] = bytes32(0x7cd0579c204c2f58c729a5b38f96b5eff8e83439bf3b4f7769891a39274ed864);
-    //     vm.prank(LOCAL_DEPLOYER);
-    //     claimer.claimAndNotify(proofs, CLAIMER_USER, 2184207418023393600000000);
-    //     uint256 userBalance = IERC20(AddressBook.ANGLE).balanceOf(CLAIMER_USER);
-    //     assertEq(userBalance, 0);
-    //     uint256 claimerBalance = IERC20(AddressBook.ANGLE).balanceOf(address(claimer));
-    // }
 }
