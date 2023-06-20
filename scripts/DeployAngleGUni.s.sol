@@ -10,23 +10,23 @@ import {AngleVaultGamma} from "contracts/strategies/angle/AngleVaultGamma.sol";
 import {AngleGammaClaimer} from "contracts/strategies/angle/AngleGammaClaimer.sol";
 import {TransparentUpgradeableProxy} from "contracts/external/TransparentUpgradeableProxy.sol";
 
-contract DeployAngleGamma is Script, Test {
+contract DeployAngleGUni is Script, Test {
     AngleVaultGamma public agEurEthVault;
     AngleVaultGamma public agEurUsdcVault;
-    AngleGammaClaimer public rewardClaimer;
+    AngleGammaClaimer public rewardClaimer; // hardcode the address after deploy 
     address public liquidityGaugeStratImpl = 0x3Dc56D46F0Bd13655EfB29594a2e44534c453BF9;
     ILiquidityGaugeStrat public agEurEthGauge;
     ILiquidityGaugeStrat public agEurUsdcGauge;
     address public deployer = 0x000755Fbe4A24d7478bfcFC1E561AfCE82d1ff62;
-    address public constant GAMMA_AGEUR_ETH_LP = 0xE8f20fD90161de1d5B4cF7e2B5D92932CA06D5f4;
-    address public constant GAMMA_AGEUR_USDC_LP = 0xF56Abca39c27D5C74F94c901b8C137fDf53B3E80;
+    address public constant GUNI_AGEUR_ETH_LP = 0x857E0B2eD0E82D5cDEB015E77ebB873C47F99575;
+    address public constant GUNI_AGEUR_USDC_LP = 0xEDECB43233549c51CC3268b5dE840239787AD56c;
 
     function run() public {
         vm.startBroadcast(deployer);
 
         // Deploy Vaults Contract
-        agEurEthVault = new AngleVaultGamma(GAMMA_AGEUR_ETH_LP, deployer, "stake dao AgEurEthGamma", "sdAgEurEthGamma");
-        agEurUsdcVault = new AngleVaultGamma(GAMMA_AGEUR_USDC_LP, deployer, "stake dao AgEurUsdcGamma", "sdAgEurUsdcGamma");
+        agEurEthVault = new AngleVaultGamma(GUNI_AGEUR_ETH_LP, deployer, "stake dao AgEurEthGUni", "sdAgEurEthGUni");
+        agEurUsdcVault = new AngleVaultGamma(GUNI_AGEUR_USDC_LP, deployer, "stake dao AgEurUsdcGUni", "sdAgEurUsdcGUni");
 
         // Deploy LiquidityGauge
         agEurEthGauge = ILiquidityGaugeStrat(
@@ -43,7 +43,7 @@ contract DeployAngleGamma is Script, Test {
                     AddressBook.VE_SDT_BOOST_PROXY,
                     AddressBook.SDT_DISTRIBUTOR_STRAT,
                     address(agEurEthVault),
-                    "agEur/ETH Gamma"
+                    "agEur/ETH GUni"
                 )
                 )
             )
@@ -64,20 +64,12 @@ contract DeployAngleGamma is Script, Test {
                     AddressBook.VE_SDT_BOOST_PROXY,
                     AddressBook.SDT_DISTRIBUTOR_STRAT,
                     address(agEurUsdcVault),
-                    "agEur/USDC Gamma"
+                    "agEur/USDC GUni"
                 )
                 )
             )
         );
         agEurUsdcVault.setLiquidityGauge(address(agEurUsdcGauge));
-
-        // Deploy Claimer
-        rewardClaimer = new AngleGammaClaimer(
-            deployer, 
-            deployer, 
-            deployer, 
-            deployer
-        );
 
         // add ANGLE extra reward
         agEurEthGauge.add_reward(AddressBook.ANGLE, address(rewardClaimer));
