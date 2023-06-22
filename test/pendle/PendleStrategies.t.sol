@@ -17,7 +17,7 @@ import {PendleVault} from "contracts/strategies/pendle/PendleVault.sol";
 
 contract PendleStrategiesTest is Test {
     IERC20 internal PENDLE;
-    ILocker public locker = ILocker(0xD8fa8dC5aDeC503AcC5e026a98F32Ca5C1Fa289A);
+    //ILocker public locker = ILocker(0xD8fa8dC5aDeC503AcC5e026a98F32Ca5C1Fa289A);
     PendleVaultFactory public factory;
     PendleStrategy public strategy;
 
@@ -32,7 +32,6 @@ contract PendleStrategiesTest is Test {
 
         // deploy pendle strategy 
         strategy = new PendleStrategy(
-            locker, 
             address(this), 
             address(this), 
             address(this), 

@@ -33,6 +33,7 @@ contract PendleVault is ERC20Upgradeable {
         token = _token;
         governance = _governance;
         pendleStrategy = _pendleStrategy;
+        locker = 0xD8fa8dC5aDeC503AcC5e026a98F32Ca5C1Fa289A;
     }
 
     function deposit(address _staker, uint256 _amount) public {

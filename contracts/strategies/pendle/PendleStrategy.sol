@@ -11,7 +11,7 @@ import "../../sdtDistributor/SdtDistributorV2.sol";
 contract PendleStrategy {
     using SafeERC20 for IERC20;
 
-    ILocker public locker;
+    ILocker public locker = ILocker(0xD8fa8dC5aDeC503AcC5e026a98F32Ca5C1Fa289A);
     address public governance;
     address public rewardsReceiver;
     address public veSDTFeeProxy;
@@ -54,14 +54,12 @@ contract PendleStrategy {
 
     /* ========== CONSTRUCTOR ========== */
     constructor(
-        ILocker _locker,
         address _governance,
         address _receiver,
         address _accumulator,
         address _veSDTFeeProxy,
         address _sdtDistributor
     ) {
-        locker = _locker;
         governance = _governance;
         rewardsReceiver = _receiver;
         accumulator = _accumulator;
