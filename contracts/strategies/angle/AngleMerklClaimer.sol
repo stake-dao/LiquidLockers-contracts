@@ -39,7 +39,6 @@ contract AngleMerklClaimer {
     event AccFeeSet(uint256 _oldF, uint256 _newF);
     event VeSdtFeeFeeSet(uint256 _oldF, uint256 _newF);
     event ClaimerFeeSet(uint256 _oldF, uint256 _newF);
-    event ToggleVault(address _vault, bool _status);
 
     constructor(
         address _governance, 
