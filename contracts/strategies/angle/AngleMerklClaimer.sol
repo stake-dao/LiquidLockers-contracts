@@ -31,7 +31,7 @@ contract AngleMerklClaimer {
     uint256 public veSdtFeeFee = 500; // 5%
     uint256 public claimerFee = 50; // 0.5%
 
-    event Earn(uint256 _gaugeAmount, uint256 _daoPart, uint256 _accPart, uint256 _veSdtFeePart);
+    event Earn(uint256 _gaugeAmount, uint256 _daoPart, uint256 _accPart, uint256 _veSdtFeePart, uint256 _claimerPart);
     event DaoRecipientSet(address _oldR, address _newR);
     event AccRecipientSet(address _oldR, address _newR);
     event VeSdtFeeRecipientSet(address _oldR, address _newR);
@@ -108,7 +108,7 @@ contract AngleMerklClaimer {
             ERC20(_token).safeTransfer(msg.sender, claimerPart);
         }
         amountToNotify = _amount - daoPart - accPart - veSdtFeePart - claimerPart;
-        emit Earn(amountToNotify, daoPart, accPart, veSdtFeePart);
+        emit Earn(amountToNotify, daoPart, accPart, veSdtFeePart, claimerPart);
     }
 
     /// @notice function to set the dao fee recipient

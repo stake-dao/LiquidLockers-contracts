@@ -129,7 +129,7 @@ contract AngleMerkleClaimTest is Test {
         address[] memory feeRecipients = new address[](3);
         feeRecipients[0] = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063; // ms
         feeRecipients[1] = 0x8cc02F4f383A11b989708437DbA6BB0628d7eE78; // accumulator
-        feeRecipients[2] = 0xE92Aa77c3D8c7347950B2a8d4B2A0AdBF0c31054; // veSDTFeeProxy
+        feeRecipients[2] = 0x059F78859a152e42dd590a49bE44F2ebE9FcD1aC; // veSDTFeeProxy
 
         // define Claim structure
         AngleVoterV2.Claim memory claim = AngleVoterV2.Claim(gauges, amountsToNotify, feeAmounts, feeRecipients);

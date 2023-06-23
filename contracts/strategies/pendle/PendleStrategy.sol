@@ -11,20 +11,6 @@ import "../../sdtDistributor/SdtDistributorV2.sol";
 contract PendleStrategy {
     using SafeERC20 for IERC20;
 
-    ILocker public locker = ILocker(0xD8fa8dC5aDeC503AcC5e026a98F32Ca5C1Fa289A);
-    address public governance;
-    address public rewardsReceiver;
-    address public veSDTFeeProxy;
-    address public vaultGaugeFactory;
-    uint256 public constant BASE_FEE = 10_000;
-    mapping(address => address) public gauges;
-    mapping(address => bool) public vaults;
-    mapping(address => uint256) public perfFee;
-    mapping(address => address) public multiGauges;
-    mapping(address => uint256) public accumulatorFee; // gauge -> fee
-    mapping(address => uint256) public claimerRewardFee; // gauge -> fee
-    mapping(address => uint256) public veSDTFee; // gauge -> fee
-
     error CALL_FAILED();
     error FEE_TOO_HIGH();
     error NOT_ALLOWED();
@@ -32,42 +18,58 @@ contract PendleStrategy {
     error VAULT_NOT_APPROVED();
     error ZERO_ADDRESS();
 
-    address public accumulator;
+    ILocker public locker = ILocker(0xD8fa8dC5aDeC503AcC5e026a98F32Ca5C1Fa289A);
+    address public governance;
+    //address public veSDTFeeProxy;
+    address public vaultGaugeFactory;
+
+    uint256 public constant BASE_FEE = 10_000;
+    address public daoRecipient;
+    uint256 public daoFee = 500; // 5%
+    address public accRecipient;
+    uint256 public accFee = 500; // 5%
+    address public veSdtFeeRecipient;
+    uint256 public veSdtFeeFee = 500; // 5%
+    uint256 public claimerFee = 50; // 0.5%
+
+    mapping(address => bool) public vaults;
+    mapping(address => address) public sdGauges;
+    
     address public sdtDistributor;
     address public pendle;
 
-    struct ClaimerReward {
-        address rewardToken;
-        uint256 amount;
-    }
-
     enum MANAGEFEE {
-        PERFFEE,
+        DAOFEE,
         VESDTFEE,
         ACCUMULATORFEE,
-        CLAIMERREWARD
+        CLAIMERFEE
     }
 
     event Claimed(address _token, uint256 _amount);
     event VaultToggled(address _vault, bool _newState);
     event Withdrawn(address _token, uint256 _amount);
+    event DaoRecipientSet(address _oldR, address _newR);
+    event AccRecipientSet(address _oldR, address _newR);
+    event VeSdtFeeRecipientSet(address _oldR, address _newR);
 
     /* ========== CONSTRUCTOR ========== */
     constructor(
         address _governance,
-        address _receiver,
-        address _accumulator,
-        address _veSDTFeeProxy,
+        address _daoRecipient,
+        address _accRecipient,
+        address _veSdtFeeRecipient,
         address _sdtDistributor
     ) {
         governance = _governance;
-        rewardsReceiver = _receiver;
-        accumulator = _accumulator;
-        veSDTFeeProxy = _veSDTFeeProxy;
+        daoRecipient = _daoRecipient;
+        accRecipient = _accRecipient;
+        veSdtFeeRecipient = _veSdtFeeRecipient;
         sdtDistributor = _sdtDistributor;
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
+    /// @notice function to withdraw the lpt token from the locker
+    /// @param _token LPT token to claim the reward
     function withdraw(address _token, uint256 _amount) external {
         if (!vaults[msg.sender]) revert VAULT_NOT_APPROVED();
         uint256 _before = IERC20(_token).balanceOf(address(locker));
@@ -78,50 +80,95 @@ contract PendleStrategy {
         emit Withdrawn(_token, _amount);
     }
 
+    /// @notice function to claim the reward for the pendle market token 
+    /// @param _token LPT token to claim the reward
     function claim(address _token) external {
         address[] memory rewardTokens = IPendleMarket(_token).getRewardTokens();
         uint256[] memory balancesBefore = new uint256[](rewardTokens.length);
-        for (uint256 i; i < rewardTokens.length;) {
+        for (uint8 i; i < rewardTokens.length;) {
             balancesBefore[i] = IERC20(rewardTokens[i]).balanceOf(address(locker));
+            unchecked {
+                ++i;
+            }
         }
+        // redeem rewards
         (bool success,) = locker.execute(address(locker), 0, abi.encodeWithSignature("redeemRewards(address)", _token));
         if (!success) revert CALL_FAILED();
         uint256 reward;
-        for (uint8 i = 0; i < rewardTokens.length; i++) {
-            reward = IERC20(rewardTokens[i]).balanceOf(address(this)) - balancesBefore[i];
-            if (reward == 0) continue;
-            uint256 multisigFee = (reward * perfFee[_token]) / BASE_FEE;
-            uint256 accumulatorPart = (reward * accumulatorFee[_token]) / BASE_FEE;
-            uint256 veSDTPart = (reward * veSDTFee[_token]) / BASE_FEE;
-            uint256 claimerPart = (reward * claimerRewardFee[_token]) / BASE_FEE;
-            IERC20(rewardTokens[i]).transfer(address(accumulator), accumulatorPart);
-            IERC20(rewardTokens[i]).transfer(rewardsReceiver, multisigFee);
-            IERC20(rewardTokens[i]).transfer(veSDTFeeProxy, veSDTPart);
-            IERC20(rewardTokens[i]).transfer(msg.sender, claimerPart);
-            uint256 netRewards = reward - multisigFee - accumulatorPart - veSDTPart - claimerPart;
-            IERC20(rewardTokens[i]).approve(multiGauges[_token], netRewards);
-            ILiquidityGauge(multiGauges[_token]).deposit_reward_token(rewardTokens[i], netRewards);
-            emit Claimed(rewardTokens[i], reward);
+        for (uint8 i; i < rewardTokens.length;) {
+            reward = IERC20(rewardTokens[i]).balanceOf(address(locker)) - balancesBefore[i];
+            if (reward == 0) {
+                continue;
+            }
+            // tranfer here only reward claimed
+            (success,) = locker.execute(
+                rewardTokens[i], 
+                0, 
+                abi.encodeWithSignature(
+                    "transfer(address,uint256)", 
+                    address(this), 
+                    reward
+                )
+            );
+            // charge fee
+            uint256 rewardToNotify = _chargeFees(rewardTokens[i], reward);
+            IERC20(rewardTokens[i]).approve(sdGauges[_token], rewardToNotify);
+            ILiquidityGauge(sdGauges[_token]).deposit_reward_token(rewardTokens[i], rewardToNotify);
+            emit Claimed(rewardTokens[i], rewardToNotify);
+            unchecked {
+                ++i;
+            }
         }
         // Distribute SDT
-        SdtDistributorV2(sdtDistributor).distribute(multiGauges[_token]);
+        SdtDistributorV2(sdtDistributor).distribute(sdGauges[_token]);
     }
 
-    // function claimerPendingRewards(address _token) external view returns (ClaimerReward[] memory) {
-    //     ClaimerReward[] memory pendings = new ClaimerReward[](8);
-    //     address gauge = gauges[_token];
-    //     for (uint8 i = 0; i < 8; i++) {
-    //         address rewardToken = ILiquidityGauge(gauge).reward_tokens(i);
-    //         if (rewardToken == address(0)) {
-    //             break;
-    //         }
-    //         uint256 rewardsBalance = ILiquidityGauge(gauge).claimable_reward(address(locker), rewardToken);
-    //         uint256 pendingAmount = (rewardsBalance * claimerRewardFee[gauge]) / BASE_FEE;
-    //         ClaimerReward memory pendingReward = ClaimerReward(rewardToken, pendingAmount);
-    //         pendings[i] = pendingReward;
-    //     }
-    //     return pendings;
-    // }
+    /// @notice internal function to calculate fees and sent them to recipients 
+    /// @param _token token to charge fees 
+    /// @param _amount total amount to charge fees 
+    function _chargeFees(address _token, uint256 _amount) internal returns (uint256 amountToNotify) {
+        uint256 daoPart;
+        uint256 accPart;
+        uint256 veSdtFeePart;
+        uint256 claimerPart;
+        if (daoFee > 0) {
+            daoPart = (_amount * daoFee) / BASE_FEE;
+            IERC20(_token).safeTransfer(daoRecipient, daoPart);
+        }
+        if (accFee > 0) {
+            accPart = (_amount * accFee) / BASE_FEE;
+            IERC20(_token).safeTransfer(accRecipient, accPart);
+        }
+        if (veSdtFeeFee > 0) {
+            veSdtFeePart = (_amount * veSdtFeeFee) / BASE_FEE;
+            IERC20(_token).safeTransfer(veSdtFeeRecipient, veSdtFeePart);
+        } 
+        if (claimerFee > 0) {
+            claimerPart = (_amount * claimerFee) / BASE_FEE;
+            IERC20(_token).safeTransfer(msg.sender, claimerPart);
+        }
+        amountToNotify = _amount - daoPart - accPart - veSdtFeePart - claimerPart;
+    }
+
+    /// @notice function to set new fees
+    /// @param _manageFee manageFee
+    /// @param _newFee new fee to set
+    function manageFee(MANAGEFEE _manageFee, uint256 _newFee) external {
+        if (msg.sender != governance && msg.sender != vaultGaugeFactory) revert NOT_ALLOWED();
+        if (_manageFee == MANAGEFEE.DAOFEE) {
+            // 0
+            daoFee = _newFee;
+        } else if (_manageFee == MANAGEFEE.VESDTFEE) {
+            // 1
+            veSdtFeeFee = _newFee;
+        } else if (_manageFee == MANAGEFEE.ACCUMULATORFEE) {
+            //2
+            accFee = _newFee;
+        } else if (_manageFee == MANAGEFEE.CLAIMERFEE) {
+            // 3
+            claimerFee = _newFee;
+        }
+    }
 
     function toggleVault(address _vault) external {
         if (msg.sender != governance && msg.sender != vaultGaugeFactory) revert NOT_ALLOWED();
@@ -129,68 +176,58 @@ contract PendleStrategy {
         emit VaultToggled(_vault, vaults[_vault]);
     }
 
-    // function setGauge(address _token, address _gauge) external override onlyGovernanceOrFactory {
-    //     gauges[_token] = _gauge;
-    //     emit GaugeSet(_gauge, _token);
-    // }
-
-    function setMultiGauge(address _gauge, address _multiGauge) external {
+    /// @notice function to set the sd gauge related to the LPT token
+    /// @param _token pendle LPT token address
+    /// @param _sdGauge stake dao gauge address
+    function setSdGauge(address _token, address _sdGauge) external {
         if (msg.sender != governance && msg.sender != vaultGaugeFactory) revert NOT_ALLOWED();
-        multiGauges[_gauge] = _multiGauge;
+        sdGauges[_token] = _sdGauge;
     }
 
-    function setVeSDTProxy(address _newVeSDTProxy) external {
+    /// @notice function to set the dao fee recipient
+    /// @param _daoRecipient recipient address
+    function setDaoRecipient(address _daoRecipient) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        veSDTFeeProxy = _newVeSDTProxy;
+        emit DaoRecipientSet(daoRecipient, _daoRecipient);
+        daoRecipient = _daoRecipient;
     }
 
-    function setAccumulator(address _newAccumulator) external {
+    /// @notice function to set the accumulator fee recipient
+    /// @param _accRecipient recipient address
+    function setAccRecipient(address _accRecipient) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        accumulator = _newAccumulator;
+        emit AccRecipientSet(accRecipient, _accRecipient);
+        accRecipient = _accRecipient;
     }
 
-    function setRewardsReceiver(address _newRewardsReceiver) external {
+    /// @notice function to set the veSdtFee fee recipient
+    /// @param _veSdtFeeRecipient recipient address
+    function setVeSdtFeeRecipient(address _veSdtFeeRecipient) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        rewardsReceiver = _newRewardsReceiver;
+        emit VeSdtFeeRecipientSet(veSdtFeeRecipient, _veSdtFeeRecipient);
+        veSdtFeeRecipient = _veSdtFeeRecipient;
     }
 
-    function setGovernance(address _newGovernance) external {
+    /// @notice function to set the governance
+    /// @param _governance governance address
+    function setGovernance(address _governance) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        if (_newGovernance == address(0)) revert ZERO_ADDRESS();
-        governance = _newGovernance;
+        if (_governance == address(0)) revert ZERO_ADDRESS();
+        governance = _governance;
     }
 
-    function setSdtDistributor(address _newSdtDistributor) external {
+    /// @notice function to set the sdt Distributor
+    /// @param _sdtDistributor governance address
+    function setSdtDistributor(address _sdtDistributor) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        sdtDistributor = _newSdtDistributor;
+        sdtDistributor = _sdtDistributor;
     }
 
-    function setVaultGaugeFactory(address _newVaultGaugeFactory) external {
+    /// @notice function to set the vault gauge factory
+    /// @param _vaultGaugeFactory vault gauge factory address
+    function setVaultGaugeFactory(address _vaultGaugeFactory) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
-        vaultGaugeFactory = _newVaultGaugeFactory;
-    }
-
-    /// @notice function to set new fees
-    /// @param _manageFee manageFee
-    /// @param _token token address
-    /// @param _newFee new fee to set
-    function manageFee(MANAGEFEE _manageFee, address _token, uint256 _newFee) external {
-        if (msg.sender != governance && msg.sender != vaultGaugeFactory) revert NOT_ALLOWED();
-        if (_token == address(0)) revert ZERO_ADDRESS();
-        if (_newFee > BASE_FEE) revert FEE_TOO_HIGH();
-        if (_manageFee == MANAGEFEE.PERFFEE) {
-            // 0
-            perfFee[_token] = _newFee;
-        } else if (_manageFee == MANAGEFEE.VESDTFEE) {
-            // 1
-            veSDTFee[_token] = _newFee;
-        } else if (_manageFee == MANAGEFEE.ACCUMULATORFEE) {
-            //2
-            accumulatorFee[_token] = _newFee;
-        } else if (_manageFee == MANAGEFEE.CLAIMERREWARD) {
-            // 3
-            claimerRewardFee[_token] = _newFee;
-        }
+        vaultGaugeFactory = _vaultGaugeFactory;
     }
 
     /// @notice execute a function

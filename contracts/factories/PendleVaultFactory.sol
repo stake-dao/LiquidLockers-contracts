@@ -58,11 +58,7 @@ contract PendleVaultFactory {
         PendleVault(vaultImplAddress).setLiquidityGauge(gaugeImplAddress);
         PendleVault(vaultImplAddress).setGovernance(GOVERNANCE);
         PendleStrategy(pendleStrategy).toggleVault(vaultImplAddress);
-        PendleStrategy(pendleStrategy).setMultiGauge(_pendleLpt, gaugeImplAddress);
-        PendleStrategy(pendleStrategy).manageFee(PendleStrategy.MANAGEFEE.PERFFEE, _pendleLpt, 200); //%2 default
-        PendleStrategy(pendleStrategy).manageFee(PendleStrategy.MANAGEFEE.VESDTFEE, _pendleLpt, 500); //%5 default
-        PendleStrategy(pendleStrategy).manageFee(PendleStrategy.MANAGEFEE.ACCUMULATORFEE, _pendleLpt, 800); //%8 default
-        PendleStrategy(pendleStrategy).manageFee(PendleStrategy.MANAGEFEE.CLAIMERREWARD, _pendleLpt, 50); //%0.5 default
+        PendleStrategy(pendleStrategy).setSdGauge(_pendleLpt, gaugeImplAddress);
         ILiquidityGaugeStrat(gaugeImplAddress).add_reward(PENDLE, pendleStrategy);
         ILiquidityGaugeStrat(gaugeImplAddress).commit_transfer_ownership(GOVERNANCE);
     }
