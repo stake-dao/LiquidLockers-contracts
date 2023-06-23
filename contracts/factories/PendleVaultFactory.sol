@@ -20,22 +20,21 @@ contract PendleVaultFactory {
     error NOT_MARKET();
 
     address public vaultImpl = address(new PendleVault());
-    address public gaugeImpl = 0x3Dc56D46F0Bd13655EfB29594a2e44534c453BF9;
+    address public constant GAUGE_IMPL = 0x3Dc56D46F0Bd13655EfB29594a2e44534c453BF9;
     address public constant GOVERNANCE = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063;
-    //address public constant gaugeController = 0x9aD7e7b0877582E14c17702EecF49018DD6f2367;
     address public constant PENDLE = 0x808507121B80c02388fAd14726482e061B8da827;
     address public constant VESDT = 0x0C30476f66034E11782938DF8e4384970B6c9e8a;
     address public constant SDT = 0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F;
     address public constant VEBOOST = 0xD67bdBefF01Fc492f1864E61756E5FBB3f173506;
     address public constant PENDLE_MARKET_FACTORY = 0x27b1dAcd74688aF24a64BD3C9C1B143118740784;
-    address public pendleStrategy;
+    address public strategy;
     address public sdtDistributor;
 
     event VaultDeployed(address proxy, address lptToken, address impl);
     event GaugeDeployed(address proxy, address stakeToken, address impl);
 
-    constructor(address _pendleStrategy, address _sdtDistributor) {
-        pendleStrategy = _pendleStrategy;
+    constructor(address _strategy, address _sdtDistributor) {
+        strategy = _strategy;
         sdtDistributor = _sdtDistributor;
     }
 
@@ -47,20 +46,20 @@ contract PendleVaultFactory {
         if (!IPendleMarketFactory(PENDLE_MARKET_FACTORY).isValidMarket(_pendleLpt)) revert NOT_MARKET();
         string memory tokenSymbol = ERC20Upgradeable(_pendleLpt).symbol();
         string memory tokenName = ERC20Upgradeable(_pendleLpt).name();
-        address vaultImplAddress = _cloneAndInitVault(
+        address vault = _cloneAndInitVault(
             vaultImpl,
             ERC20Upgradeable(_pendleLpt),
             GOVERNANCE,
             string(abi.encodePacked("sd", tokenName, " Vault")),
             string(abi.encodePacked("sd", tokenSymbol, "-vault"))
         );
-        address gaugeImplAddress = _cloneAndInitGauge(gaugeImpl, vaultImplAddress, GOVERNANCE, tokenSymbol);
-        PendleVault(vaultImplAddress).setLiquidityGauge(gaugeImplAddress);
-        PendleVault(vaultImplAddress).setGovernance(GOVERNANCE);
-        PendleStrategy(pendleStrategy).toggleVault(vaultImplAddress);
-        PendleStrategy(pendleStrategy).setSdGauge(_pendleLpt, gaugeImplAddress);
-        ILiquidityGaugeStrat(gaugeImplAddress).add_reward(PENDLE, pendleStrategy);
-        ILiquidityGaugeStrat(gaugeImplAddress).commit_transfer_ownership(GOVERNANCE);
+        address gauge = _cloneAndInitGauge(GAUGE_IMPL, vault, GOVERNANCE, tokenSymbol);
+        PendleVault(vault).setLiquidityGauge(gauge);
+        PendleVault(vault).setGovernance(GOVERNANCE);
+        PendleStrategy(strategy).toggleVault(vault);
+        PendleStrategy(strategy).setSdGauge(_pendleLpt, gauge);
+        ILiquidityGaugeStrat(gauge).add_reward(PENDLE, strategy);
+        ILiquidityGaugeStrat(gauge).commit_transfer_ownership(GOVERNANCE);
     }
 
     /**
@@ -79,8 +78,8 @@ contract PendleVaultFactory {
         string memory _symbol
     ) internal returns (address) {
         PendleVault deployed =
-            _cloneVault(_impl, _lpToken, keccak256(abi.encodePacked(_governance, _name, _symbol, pendleStrategy)));
-        deployed.init(_lpToken, address(this), _name, _symbol, PendleStrategy(pendleStrategy));
+            _cloneVault(_impl, _lpToken, keccak256(abi.encodePacked(_governance, _name, _symbol, strategy)));
+        deployed.init(_lpToken, address(this), _name, _symbol, PendleStrategy(strategy));
         return address(deployed);
     }
 

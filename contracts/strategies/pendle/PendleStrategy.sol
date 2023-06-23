@@ -18,11 +18,19 @@ contract PendleStrategy {
     error VAULT_NOT_APPROVED();
     error ZERO_ADDRESS();
 
-    ILocker public locker = ILocker(0xD8fa8dC5aDeC503AcC5e026a98F32Ca5C1Fa289A);
-    address public governance;
-    //address public veSDTFeeProxy;
-    address public vaultGaugeFactory;
+    enum MANAGEFEE {
+        DAOFEE,
+        VESDTFEE,
+        ACCUMULATORFEE,
+        CLAIMERFEE
+    }
 
+    address public constant LOCKER = 0xD8fa8dC5aDeC503AcC5e026a98F32Ca5C1Fa289A;
+    address public governance;
+    address public vaultGaugeFactory;
+    address public sdtDistributor;
+
+    // Fees
     uint256 public constant BASE_FEE = 10_000;
     address public daoRecipient;
     uint256 public daoFee = 500; // 5%
@@ -35,16 +43,6 @@ contract PendleStrategy {
     mapping(address => bool) public vaults;
     mapping(address => address) public sdGauges;
     
-    address public sdtDistributor;
-    address public pendle;
-
-    enum MANAGEFEE {
-        DAOFEE,
-        VESDTFEE,
-        ACCUMULATORFEE,
-        CLAIMERFEE
-    }
-
     event Claimed(address _token, uint256 _amount);
     event VaultToggled(address _vault, bool _newState);
     event Withdrawn(address _token, uint256 _amount);
@@ -72,9 +70,9 @@ contract PendleStrategy {
     /// @param _token LPT token to claim the reward
     function withdraw(address _token, uint256 _amount) external {
         if (!vaults[msg.sender]) revert VAULT_NOT_APPROVED();
-        uint256 _before = IERC20(_token).balanceOf(address(locker));
-        (bool success,) = locker.execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _amount));
-        uint256 _after = IERC20(_token).balanceOf(address(locker));
+        uint256 _before = IERC20(_token).balanceOf(LOCKER);
+        (bool success,) = ILocker(LOCKER).execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _amount));
+        uint256 _after = IERC20(_token).balanceOf(LOCKER);
         if (_before - _after != _amount) revert WRONG_TRANSFER();
         if (!success) revert CALL_FAILED();
         emit Withdrawn(_token, _amount);
@@ -86,22 +84,22 @@ contract PendleStrategy {
         address[] memory rewardTokens = IPendleMarket(_token).getRewardTokens();
         uint256[] memory balancesBefore = new uint256[](rewardTokens.length);
         for (uint8 i; i < rewardTokens.length;) {
-            balancesBefore[i] = IERC20(rewardTokens[i]).balanceOf(address(locker));
+            balancesBefore[i] = IERC20(rewardTokens[i]).balanceOf(LOCKER);
             unchecked {
                 ++i;
             }
         }
         // redeem rewards
-        (bool success,) = locker.execute(address(locker), 0, abi.encodeWithSignature("redeemRewards(address)", _token));
+        (bool success,) = ILocker(LOCKER).execute(LOCKER, 0, abi.encodeWithSignature("redeemRewards(address)", _token));
         if (!success) revert CALL_FAILED();
         uint256 reward;
         for (uint8 i; i < rewardTokens.length;) {
-            reward = IERC20(rewardTokens[i]).balanceOf(address(locker)) - balancesBefore[i];
+            reward = IERC20(rewardTokens[i]).balanceOf(LOCKER) - balancesBefore[i];
             if (reward == 0) {
                 continue;
             }
             // tranfer here only reward claimed
-            (success,) = locker.execute(
+            (success,) = ILocker(LOCKER).execute(
                 rewardTokens[i], 
                 0, 
                 abi.encodeWithSignature(
