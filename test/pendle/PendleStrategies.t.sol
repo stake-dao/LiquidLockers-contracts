@@ -17,7 +17,7 @@ import {PendleVault} from "contracts/strategies/pendle/PendleVault.sol";
 
 contract PendleStrategiesTest is Test {
     IERC20 internal PENDLE;
-    //ILocker public locker = ILocker(0xD8fa8dC5aDeC503AcC5e026a98F32Ca5C1Fa289A);
+    ILocker public constant LOCKER = ILocker(0xD8fa8dC5aDeC503AcC5e026a98F32Ca5C1Fa289A);
     PendleVaultFactory public factory;
     PendleStrategy public strategy;
 
@@ -25,7 +25,7 @@ contract PendleStrategiesTest is Test {
     PendleVault public stEth25Dec2025LptVault;
     address public stEth25Dec2025LptGauge;
 
-
+    address public ms = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063;
     function setUp() public virtual {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
         vm.selectFork(forkId);
@@ -43,11 +43,15 @@ contract PendleStrategiesTest is Test {
 
         strategy.setVaultGaugeFactory(address(factory));
 
+        // set strategy as governance into the locker
+        vm.prank(ms);
+        LOCKER.setGovernance(address(strategy));
+
         // clone a vault
         vm.recordLogs();
         factory.cloneAndInit(stEth25Dec2025Lpt);
         Vm.Log[] memory entries = vm.getRecordedLogs();
-        assertEq(entries.length, 5);
+        assertEq(entries.length, 6);
         (address vault,,) = abi.decode(entries[0].data, (address,address,address));
         (address gauge,,) = abi.decode(entries[2].data, (address,address,address));
         stEth25Dec2025LptVault = PendleVault(vault);
@@ -56,9 +60,20 @@ contract PendleStrategiesTest is Test {
         deal(stEth25Dec2025Lpt, address(this), 1e18);
     }
 
-    function testDeposit() public {
+    function testVaultCreation() public {}
+
+    function testDepositAndWithdraw() public {
         uint256 amountToDeposit = 1e18;
+        uint256 lockerBalanceBefore = IERC20(stEth25Dec2025Lpt).balanceOf(address(LOCKER));
         IERC20(stEth25Dec2025Lpt).approve(address(stEth25Dec2025LptVault), amountToDeposit);
         stEth25Dec2025LptVault.deposit(address(this), amountToDeposit);
+        uint256 lockerBalanceAfter = IERC20(stEth25Dec2025Lpt).balanceOf(address(LOCKER));
+        assertEq(amountToDeposit, lockerBalanceAfter - lockerBalanceBefore);
+        stEth25Dec2025LptVault.withdraw(amountToDeposit);
+        assertEq(lockerBalanceBefore, IERC20(stEth25Dec2025Lpt).balanceOf(address(LOCKER)));
     }
+
+    function testClaimReward() public {}
+
+    function testSetGovernance() public {}
 }

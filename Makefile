@@ -62,7 +62,7 @@ test-fpis-integration:; @forge test --match-contract FpisIntegrationTest
 # PENDLE #
 test-pendle-locker:; @forge test --match-contract PendleLockerTest
 test-pendle-integration:; @forge test --match-contract PendleIntegrationTest
-test-pendle-strategies:; @forge test --match-contract PendleStrategiesTest -vvvv
+test-pendle-strategies:; @forge test --match-contract PendleStrategiesTest
 # OTHERS #
 test-all:; @forge test
 

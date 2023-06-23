@@ -40,7 +40,7 @@ contract PendleVault is ERC20Upgradeable {
         token = _token;
         governance = _governance;
         strategy = _pendleStrategy;
-        locker = strategy.LOCKER();
+        locker = 0xD8fa8dC5aDeC503AcC5e026a98F32Ca5C1Fa289A;
     }
 
     /// @notice function to deposit pendle lpt tokens
@@ -91,7 +91,7 @@ contract PendleVault is ERC20Upgradeable {
     function setLiquidityGauge(address _liquidityGauge) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
         // it will do an infinite approve to deposit token from here 
-        ERC20Upgradeable(address(this)).approve(liquidityGauge, type(uint256).max);
+        ERC20Upgradeable(address(this)).approve(_liquidityGauge, type(uint256).max);
         liquidityGauge = _liquidityGauge;
     }
 
