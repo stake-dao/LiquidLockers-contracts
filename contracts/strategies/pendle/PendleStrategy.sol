@@ -110,7 +110,7 @@ contract PendleStrategy {
 
             // charge fee
             uint256 rewardToNotify = _chargeFees(rewardTokens[i], reward);
-            IERC20(rewardTokens[i]).approve(sdGauges[_token], rewardToNotify);
+            _approveTokenIfNeeded(rewardTokens[i], sdGauges[_token], rewardToNotify);
             ILiquidityGauge(sdGauges[_token]).deposit_reward_token(rewardTokens[i], rewardToNotify);
             emit Claimed(rewardTokens[i], rewardToNotify);
         }
@@ -133,7 +133,7 @@ contract PendleStrategy {
             uint256 rewardToNotify = _chargeFees(rewardTokens[i], amount[i]);
 
             // Notify the reward to the gauge
-            IERC20(rewardTokens[i]).approve(sdGauges[token], rewardToNotify);
+            _approveTokenIfNeeded(rewardTokens[i], sdGauges[token], rewardToNotify);
             ILiquidityGauge(sdGauges[token]).deposit_reward_token(rewardTokens[i], rewardToNotify);
 
             emit Claimed(rewardTokens[i], rewardToNotify);
@@ -259,5 +259,11 @@ contract PendleStrategy {
         if (msg.sender != governance) revert NOT_ALLOWED();
         (bool success, bytes memory result) = to.call{value: value}(data);
         return (success, result);
+    }
+
+    function _approveTokenIfNeeded(address _token, address _spender, uint256 _amount) internal {
+        if (IERC20(_token).allowance(address(this), _spender) < _amount) {
+            IERC20(_token).safeApprove(_spender, type(uint256).max);
+        }
     }
 }
