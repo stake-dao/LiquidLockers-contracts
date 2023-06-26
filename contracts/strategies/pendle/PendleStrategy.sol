@@ -42,7 +42,7 @@ contract PendleStrategy {
 
     mapping(address => bool) public vaults;
     mapping(address => address) public sdGauges;
-    
+
     event Claimed(address _token, uint256 _amount);
     event VaultToggled(address _vault, bool _newState);
     event Withdrawn(address _token, uint256 _amount);
@@ -71,14 +71,16 @@ contract PendleStrategy {
     function withdraw(address _token, uint256 _amount) external {
         if (!vaults[msg.sender]) revert VAULT_NOT_APPROVED();
         uint256 _before = IERC20(_token).balanceOf(LOCKER);
-        (bool success,) = ILocker(LOCKER).execute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _amount));
+        (bool success,) = ILocker(LOCKER).execute(
+            _token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _amount)
+        );
         uint256 _after = IERC20(_token).balanceOf(LOCKER);
         if (_before - _after != _amount) revert WRONG_TRANSFER();
         if (!success) revert CALL_FAILED();
         emit Withdrawn(_token, _amount);
     }
 
-    /// @notice function to claim the reward for the pendle market token 
+    /// @notice function to claim the reward for the pendle market token
     /// @param _token LPT token to claim the reward
     function claim(address _token) external {
         address[] memory rewardTokens = IPendleMarket(_token).getRewardTokens();
@@ -90,9 +92,10 @@ contract PendleStrategy {
             }
         }
         // redeem rewards
-        (bool success,) = ILocker(LOCKER).execute(_token, 0, abi.encodeWithSignature("redeemRewards(address)", LOCKER));
-        if (!success) revert CALL_FAILED();
+        IPendleMarket(_token).redeemRewards(LOCKER);
+
         uint256 reward;
+        bool success;
         for (uint8 i; i < rewardTokens.length; ++i) {
             reward = IERC20(rewardTokens[i]).balanceOf(LOCKER) - balancesBefore[i];
             if (reward == 0) {
@@ -100,14 +103,10 @@ contract PendleStrategy {
             }
             // tranfer here only reward claimed
             (success,) = ILocker(LOCKER).execute(
-                rewardTokens[i], 
-                0, 
-                abi.encodeWithSignature(
-                    "transfer(address,uint256)", 
-                    address(this), 
-                    reward
-                )
+                rewardTokens[i], 0, abi.encodeWithSignature("transfer(address,uint256)", address(this), reward)
             );
+            if (!success) revert CALL_FAILED();
+
             // charge fee
             uint256 rewardToNotify = _chargeFees(rewardTokens[i], reward);
             IERC20(rewardTokens[i]).approve(sdGauges[_token], rewardToNotify);
@@ -118,9 +117,9 @@ contract PendleStrategy {
         SdtDistributorV2(sdtDistributor).distribute(sdGauges[_token]);
     }
 
-    /// @notice internal function to calculate fees and sent them to recipients 
-    /// @param _token token to charge fees 
-    /// @param _amount total amount to charge fees 
+    /// @notice internal function to calculate fees and sent them to recipients
+    /// @param _token token to charge fees
+    /// @param _amount total amount to charge fees
     function _chargeFees(address _token, uint256 _amount) internal returns (uint256 amountToNotify) {
         uint256 daoPart;
         uint256 accPart;
@@ -137,7 +136,7 @@ contract PendleStrategy {
         if (veSdtFeeFee > 0) {
             veSdtFeePart = (_amount * veSdtFeeFee) / BASE_FEE;
             IERC20(_token).safeTransfer(veSdtFeeRecipient, veSdtFeePart);
-        } 
+        }
         if (claimerFee > 0) {
             claimerPart = (_amount * claimerFee) / BASE_FEE;
             IERC20(_token).safeTransfer(msg.sender, claimerPart);
@@ -229,10 +228,7 @@ contract PendleStrategy {
     /// @param to Address to sent the value to
     /// @param value Value to be sent
     /// @param data Call function data
-    function execute(address to, uint256 value, bytes calldata data)
-        external
-        returns (bool, bytes memory)
-    {
+    function execute(address to, uint256 value, bytes calldata data) external returns (bool, bytes memory) {
         if (msg.sender != governance) revert NOT_ALLOWED();
         (bool success, bytes memory result) = to.call{value: value}(data);
         return (success, result);

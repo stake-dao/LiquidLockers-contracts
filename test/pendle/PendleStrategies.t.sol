@@ -32,11 +32,12 @@ contract PendleStrategiesTest is Test {
     uint256 forkId;
 
     address public ms = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063;
+
     function setUp() public virtual {
         forkId = vm.createFork(vm.rpcUrl("mainnet"));
         vm.selectFork(forkId);
 
-        // deploy pendle strategy 
+        // deploy pendle strategy
         strategy = new PendleStrategy(
             address(this), 
             address(this), 
@@ -44,7 +45,7 @@ contract PendleStrategiesTest is Test {
             address(this), 
             AddressBook.SDT_DISTRIBUTOR_STRAT
         );
-        // deploy factory 
+        // deploy factory
         factory = new PendleVaultFactory(address(strategy), AddressBook.SDT_DISTRIBUTOR_STRAT);
 
         strategy.setVaultGaugeFactory(address(factory));
@@ -58,13 +59,12 @@ contract PendleStrategiesTest is Test {
         factory.cloneAndInit(stEth25Dec2025Lpt);
         Vm.Log[] memory entries = vm.getRecordedLogs();
         assertEq(entries.length, 6);
-        (address vault,,) = abi.decode(entries[0].data, (address,address,address));
-        (address gauge,,) = abi.decode(entries[2].data, (address,address,address));
+        (address vault,,) = abi.decode(entries[0].data, (address, address, address));
+        (address gauge,,) = abi.decode(entries[2].data, (address, address, address));
         stEth25Dec2025LptVault = PendleVault(vault);
         stEth25Dec2025LptGauge = ILiquidityGaugeStrat(gauge);
 
         deal(stEth25Dec2025Lpt, address(this), 1e18);
-        
     }
 
     function testVaultCreation() public {}
@@ -103,17 +103,17 @@ contract PendleStrategiesTest is Test {
     function testClaim() public {
         address lptHolder = 0x63f6D9E7d3953106bCaf98832BD9C88A54AfCc9D;
         uint256 pendleBefore = IERC20(PENDLE).balanceOf(lptHolder);
-        address eqLocker = 0x64627901dAdb46eD7f275fD4FC87d086cfF1e6E3;
-        vm.startPrank(lptHolder);
+
+        vm.prank(lptHolder);
         IERC20(stEth25Dec2025Lpt).transfer(address(LOCKER), IERC20(stEth25Dec2025Lpt).balanceOf(lptHolder));
-        vm.stopPrank();
+
         uint256 pendleAfter = IERC20(PENDLE).balanceOf(lptHolder);
+
         ILpt(stEth25Dec2025Lpt).redeemRewards(lptHolder);
         uint256 pendleAfterReward = IERC20(PENDLE).balanceOf(lptHolder);
-        emit log_uint(pendleBefore);
-        emit log_uint(pendleAfter);
-        emit log_uint(pendleAfterReward);
 
+        assertEq(pendleBefore, pendleAfter);
+        assertGt(pendleAfterReward, pendleAfter);
     }
 
     function testSetGovernance() public {}
