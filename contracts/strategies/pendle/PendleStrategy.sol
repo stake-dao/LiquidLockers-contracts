@@ -90,10 +90,10 @@ contract PendleStrategy {
             }
         }
         // redeem rewards
-        (bool success,) = ILocker(LOCKER).execute(LOCKER, 0, abi.encodeWithSignature("redeemRewards(address)", _token));
+        (bool success,) = ILocker(LOCKER).execute(_token, 0, abi.encodeWithSignature("redeemRewards(address)", LOCKER));
         if (!success) revert CALL_FAILED();
         uint256 reward;
-        for (uint8 i; i < rewardTokens.length;) {
+        for (uint8 i; i < rewardTokens.length; ++i) {
             reward = IERC20(rewardTokens[i]).balanceOf(LOCKER) - balancesBefore[i];
             if (reward == 0) {
                 continue;
@@ -113,9 +113,6 @@ contract PendleStrategy {
             IERC20(rewardTokens[i]).approve(sdGauges[_token], rewardToNotify);
             ILiquidityGauge(sdGauges[_token]).deposit_reward_token(rewardTokens[i], rewardToNotify);
             emit Claimed(rewardTokens[i], rewardToNotify);
-            unchecked {
-                ++i;
-            }
         }
         // Distribute SDT
         SdtDistributorV2(sdtDistributor).distribute(sdGauges[_token]);
