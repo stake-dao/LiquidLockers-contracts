@@ -20,11 +20,8 @@ contract PendleVault is ERC20Upgradeable {
     ERC20Upgradeable public token;
     address public locker;
     address public governance;
-    uint256 public withdrawalFee;
     address public liquidityGauge;
     PendleStrategy public strategy;
-
-    uint256 public constant BASE_FEE = 10_000;
 
     event Deposit(address _depositor, uint256 _amount);
     event Withdraw(address _depositor, uint256 _amount);
@@ -64,14 +61,8 @@ contract PendleVault is ERC20Upgradeable {
         // withdraw the token and collect rewards
         ILiquidityGaugeStrat(liquidityGauge).withdraw(_amount, msg.sender, true);
         _burn(address(this), _amount);
-        strategy.withdraw(address(token), _amount);
-        uint256 withdrawFee;
-        if (withdrawalFee != 0) {
-            withdrawFee = (_amount * withdrawalFee) / BASE_FEE;
-            token.safeTransfer(governance, (_amount * withdrawalFee) / BASE_FEE);
-        }
-        token.safeTransfer(msg.sender, _amount - withdrawFee);
-        emit Withdraw(msg.sender, _amount - withdrawFee);
+        strategy.withdraw(address(token), _amount, msg.sender);
+        emit Withdraw(msg.sender, _amount);
     }
 
     /// @notice function to withdraw all user's pendle lpt tokens deposited 
@@ -100,14 +91,6 @@ contract PendleVault is ERC20Upgradeable {
     function setPendleStrategy(PendleStrategy _strategy) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
         strategy = _strategy;
-    }
-
-    /// @notice function to set the withdrawn fee 
-    /// @param _fee withdrawn fee (10000 = 100%)
-    function setWithdrawnFee(uint256 _fee) external {
-        if (msg.sender != governance) revert NOT_ALLOWED();
-        if (_fee > BASE_FEE) revert FEE_TOO_HIGH();
-        withdrawalFee = _fee;
     }
 
     /// @notice function to get the sdToken decimals

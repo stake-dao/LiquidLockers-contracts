@@ -68,11 +68,13 @@ contract PendleStrategy {
     /* ========== MUTATIVE FUNCTIONS ========== */
     /// @notice function to withdraw the lpt token from the locker
     /// @param _token LPT token to claim the reward
-    function withdraw(address _token, uint256 _amount) external {
+    /// @param _amount amount to withdraw
+    /// @param _user user that called the withdraw on vault
+    function withdraw(address _token, uint256 _amount, address _user) external {
         if (!vaults[msg.sender]) revert VAULT_NOT_APPROVED();
         uint256 _before = IERC20(_token).balanceOf(LOCKER);
         (bool success,) = ILocker(LOCKER).execute(
-            _token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, _amount)
+            _token, 0, abi.encodeWithSignature("transfer(address,uint256)", _user, _amount)
         );
         uint256 _after = IERC20(_token).balanceOf(LOCKER);
         if (_before - _after != _amount) revert WRONG_TRANSFER();
