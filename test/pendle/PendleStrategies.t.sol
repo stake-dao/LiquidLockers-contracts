@@ -34,7 +34,7 @@ contract PendleStrategiesTest is Test {
     address public ms = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063;
 
     function setUp() public virtual {
-        forkId = vm.createFork(vm.rpcUrl("mainnet"));
+        forkId = vm.createFork(vm.rpcUrl("mainnet"), 17564158);
         vm.selectFork(forkId);
 
         // deploy pendle strategy
@@ -80,25 +80,20 @@ contract PendleStrategiesTest is Test {
         assertEq(lockerBalanceBefore, IERC20(stEth25Dec2025Lpt).balanceOf(address(LOCKER)));
     }
 
-    // function testClaimReward() public {
-    //     uint256 amountToDeposit = 1e18;
-    //     uint256 lockerBalanceBefore = IERC20(stEth25Dec2025Lpt).balanceOf(address(LOCKER));
-    //     IERC20(stEth25Dec2025Lpt).approve(address(stEth25Dec2025LptVault), amountToDeposit);
-    //     //deal(address(PENDLE), stEth25Dec2025Lpt, 10_000e18);
-    //     stEth25Dec2025LptVault.deposit(address(this), amountToDeposit);
-    //     emit log_uint(block.number);
-    //     //deal(address(PENDLE), stEth25Dec2025Lpt, 10_000e18);
-    //     //deal(address(PENDLE), stEth25Dec2025Lpt, 10_000e18);
-    //     //deal(PENDLE, stEth25Dec2025Lpt, 10_000e18);
-    //     //skip(8 hours);
-    //     //vm.roll(17_554_578);
-    //     //vm.selectFork(forkId);
-    //     vm.roll(block.number + 4);
-    //     strategy.claim(stEth25Dec2025Lpt);
-    //     // emit log_uint(block.number);
-    //     uint gaugeBalance = IERC20(stEth25Dec2025Lpt).balanceOf(stEth25Dec2025Lpt);
-    //     emit log_uint(gaugeBalance);
-    // }
+    function testClaimReward() public {
+        uint256 amountToDeposit = 1e18;
+        uint256 lockerBalanceBefore = IERC20(stEth25Dec2025Lpt).balanceOf(address(LOCKER));
+        IERC20(stEth25Dec2025Lpt).approve(address(stEth25Dec2025LptVault), amountToDeposit);
+        stEth25Dec2025LptVault.deposit(address(this), amountToDeposit);
+        vm.roll(block.number + 4);
+        deal(address(PENDLE), address(this), 10_000e18);
+        IERC20(PENDLE).transfer(stEth25Dec2025Lpt, 1_000e18);
+        uint256 gaugeBalanceBefore = IERC20(PENDLE).balanceOf(address(stEth25Dec2025LptGauge));
+        strategy.claim(stEth25Dec2025Lpt);
+        uint gaugeBalanceAfter = IERC20(PENDLE).balanceOf(address(stEth25Dec2025LptGauge));
+        assertEq(gaugeBalanceBefore, 0);
+        assertGt(gaugeBalanceAfter, 0);
+    }
 
     function testClaim() public {
         address lptHolder = 0x63f6D9E7d3953106bCaf98832BD9C88A54AfCc9D;
