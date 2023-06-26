@@ -91,6 +91,7 @@ contract PendleStrategy {
                 ++i;
             }
         }
+
         // redeem rewards
         IPendleMarket(_token).redeemRewards(LOCKER);
 
@@ -115,6 +116,32 @@ contract PendleStrategy {
         }
         // Distribute SDT
         SdtDistributorV2(sdtDistributor).distribute(sdGauges[_token]);
+    }
+
+    /// @dev This function should not be used frequently, it is only used to claim the pending rewards in case of someone claims on behalf of the locker.
+    function claimPendingRewards(address token, address[] calldata rewardTokens, uint256[] calldata amount) external {
+        if (msg.sender != governance) revert NOT_ALLOWED();
+
+        uint256 _length = rewardTokens.length;
+        for (uint8 i; i < _length;) {
+            /// Tranfer here only reward claimed
+            ILocker(LOCKER).execute(
+                rewardTokens[i], 0, abi.encodeWithSignature("transfer(address,uint256)", address(this), amount[i])
+            );
+
+            // charge fee
+            uint256 rewardToNotify = _chargeFees(rewardTokens[i], amount[i]);
+
+            // Notify the reward to the gauge
+            IERC20(rewardTokens[i]).approve(sdGauges[token], rewardToNotify);
+            ILiquidityGauge(sdGauges[token]).deposit_reward_token(rewardTokens[i], rewardToNotify);
+
+            emit Claimed(rewardTokens[i], rewardToNotify);
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     /// @notice internal function to calculate fees and sent them to recipients
