@@ -104,8 +104,9 @@ contract PendleStrategiesTest is Test {
         address lptHolder = 0x63f6D9E7d3953106bCaf98832BD9C88A54AfCc9D;
         uint256 pendleBefore = IERC20(PENDLE).balanceOf(lptHolder);
 
-        vm.prank(lptHolder);
+        vm.startPrank(lptHolder);
         IERC20(stEth25Dec2025Lpt).transfer(address(LOCKER), IERC20(stEth25Dec2025Lpt).balanceOf(lptHolder));
+        vm.stopPrank();
 
         uint256 pendleAfter = IERC20(PENDLE).balanceOf(lptHolder);
 
