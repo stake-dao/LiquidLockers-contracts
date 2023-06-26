@@ -43,12 +43,16 @@ contract PendleStrategy {
     mapping(address => bool) public vaults;
     mapping(address => address) public sdGauges;
 
-    event Claimed(address _token, uint256 _amount);
-    event VaultToggled(address _vault, bool _newState);
-    event Withdrawn(address _token, uint256 _amount);
-    event DaoRecipientSet(address _oldR, address _newR);
     event AccRecipientSet(address _oldR, address _newR);
+    event Claimed(address _token, uint256 _amount);
+    event DaoRecipientSet(address _oldR, address _newR);
+    event GovernanceSet(address _oldG, address _newG);
+    event SdGaugeSet(address _oldG, address _newG);
+    event SdtDistributorSet(address _oldD, address _newD);
+    event VaultGaugeFactorySet(address _oldVgf, address _newVgf);
+    event VaultToggled(address _vault, bool _newState);
     event VeSdtFeeRecipientSet(address _oldR, address _newR);
+    event Withdrawn(address _token, uint256 _amount);
 
     /* ========== CONSTRUCTOR ========== */
     constructor(
@@ -204,6 +208,7 @@ contract PendleStrategy {
     /// @param _sdGauge stake dao gauge address
     function setSdGauge(address _token, address _sdGauge) external {
         if (msg.sender != governance && msg.sender != vaultGaugeFactory) revert NOT_ALLOWED();
+        emit SdGaugeSet(sdGauges[_token], _sdGauge);
         sdGauges[_token] = _sdGauge;
     }
 
@@ -236,6 +241,7 @@ contract PendleStrategy {
     function setGovernance(address _governance) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
         if (_governance == address(0)) revert ZERO_ADDRESS();
+        emit GovernanceSet(governance, _governance);
         governance = _governance;
     }
 
@@ -243,6 +249,7 @@ contract PendleStrategy {
     /// @param _sdtDistributor governance address
     function setSdtDistributor(address _sdtDistributor) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
+        emit SdtDistributorSet(sdtDistributor, _sdtDistributor);
         sdtDistributor = _sdtDistributor;
     }
 
@@ -250,6 +257,7 @@ contract PendleStrategy {
     /// @param _vaultGaugeFactory vault gauge factory address
     function setVaultGaugeFactory(address _vaultGaugeFactory) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
+        emit VaultGaugeFactorySet(vaultGaugeFactory, _vaultGaugeFactory);
         vaultGaugeFactory = _vaultGaugeFactory;
     }
 
@@ -263,6 +271,10 @@ contract PendleStrategy {
         return (success, result);
     }
 
+    /// @notice internal function to increase the allowance if needed 
+    /// @param _token token to approve
+    /// @param _spender address to give the allowance
+    /// @param _amount amount transferable by the spender 
     function _approveTokenIfNeeded(address _token, address _spender, uint256 _amount) internal {
         if (IERC20(_token).allowance(address(this), _spender) < _amount) {
             IERC20(_token).safeApprove(_spender, type(uint256).max);
