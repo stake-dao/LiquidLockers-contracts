@@ -58,7 +58,7 @@ contract PendleStrategiesTest is Test {
         vm.recordLogs();
         factory.cloneAndInit(stEth25Dec2025Lpt);
         Vm.Log[] memory entries = vm.getRecordedLogs();
-        assertEq(entries.length, 8);
+        assertEq(entries.length, 9);
         (address vault,,) = abi.decode(entries[0].data, (address, address, address));
         (address gauge,,) = abi.decode(entries[2].data, (address, address, address));
         stEth25Dec2025LptVault = PendleVault(vault);
