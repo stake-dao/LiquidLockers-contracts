@@ -6,7 +6,7 @@ import "./baseTest/Base.t.sol";
 
 import "contracts/external/ProxyAdmin.sol";
 import "contracts/strategies/angle/AngleVaultGamma.sol";
-import "contracts/strategies/angle/AngleGammaClaimer.sol";
+import "contracts/strategies/angle/AngleMerklClaimer.sol";
 import "contracts/external/TransparentUpgradeableProxy.sol";
 import "contracts/interfaces/ILiquidityGaugeStrat.sol";
 
@@ -29,7 +29,7 @@ contract AngleVaultGUniTest is BaseTest {
     ILiquidityGaugeStrat public agEurEthGauge;
     ILiquidityGaugeStrat public agEurUsdcGauge;
     ILiquidityGaugeStrat public liquidityGaugeStratImpl;
-    AngleGammaClaimer public claimer;
+    AngleMerklClaimer public claimer;
 
     function setUp() public {
         uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 17305960);
@@ -85,7 +85,7 @@ contract AngleVaultGUniTest is BaseTest {
         deal(GUNI_AGEUR_USDC_LP, LOCAL_DEPLOYER, AMOUNT);
 
         // Deploy Claimer
-        claimer = new AngleGammaClaimer(
+        claimer = new AngleMerklClaimer(
             LOCAL_DEPLOYER, 
             LOCAL_DEPLOYER, 
             LOCAL_DEPLOYER, 

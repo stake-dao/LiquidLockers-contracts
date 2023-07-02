@@ -19,6 +19,7 @@ test-angle-veSdtFeeProxy:; @forge test --match-contract VeSDTFeeAngleProxyV2
 test-angle-vault-gamma:; @forge test --match-contract AngleVaultGammaTest
 test-angle-voter:; @forge test --match-contract AngleVoterTest
 test-angle-vault-guni:; @forge test --match-contract AngleVaultGUni
+test-angle-merkl-claimer:; @forge test --match-contract AngleMerklClaimerTest
 
 # APWINE
 test-apwine:; @forge test --match-contract ApwineTest 
@@ -61,6 +62,7 @@ test-fpis-integration:; @forge test --match-contract FpisIntegrationTest
 # PENDLE #
 test-pendle-locker:; @forge test --match-contract PendleLockerTest
 test-pendle-integration:; @forge test --match-contract PendleIntegrationTest
+test-pendle-strategies:; @forge test --match-contract PendleStrategiesTest
 # OTHERS #
 test-all:; @forge test
 

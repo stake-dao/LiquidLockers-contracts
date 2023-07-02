@@ -7,13 +7,13 @@ import "forge-std/Script.sol";
 import {AddressBook} from "addressBook/AddressBook.sol";
 import {ILiquidityGaugeStrat} from "contracts/interfaces/ILiquidityGaugeStrat.sol";
 import {AngleVaultGamma} from "contracts/strategies/angle/AngleVaultGamma.sol";
-import {AngleGammaClaimer} from "contracts/strategies/angle/AngleGammaClaimer.sol";
+import {AngleMerklClaimer} from "contracts/strategies/angle/AngleMerklClaimer.sol";
 import {TransparentUpgradeableProxy} from "contracts/external/TransparentUpgradeableProxy.sol";
 
 contract DeployAngleGUni is Script, Test {
     AngleVaultGamma public agEurEthVault;
     AngleVaultGamma public agEurUsdcVault;
-    AngleGammaClaimer public rewardClaimer; // hardcode the address after deploy 
+    AngleMerklClaimer public rewardClaimer; // hardcode the address after deploy 
     address public liquidityGaugeStratImpl = 0x3Dc56D46F0Bd13655EfB29594a2e44534c453BF9;
     ILiquidityGaugeStrat public agEurEthGauge;
     ILiquidityGaugeStrat public agEurUsdcGauge;

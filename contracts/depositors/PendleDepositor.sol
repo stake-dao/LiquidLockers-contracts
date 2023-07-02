@@ -32,13 +32,7 @@ contract PendleDepositor {
     bool public relock = true;
 
     /* ========== EVENTS ========== */
-    event Deposited(
-        address indexed caller,
-        address indexed user,
-        uint256 amount,
-        bool lock,
-        bool stake
-    );
+    event Deposited(address indexed caller, address indexed user, uint256 amount, bool lock, bool stake);
     event IncentiveReceived(address indexed caller, uint256 amount);
     event TokenLocked(address indexed user, uint256 amount);
     event GovernanceChanged(address indexed newGovernance);
@@ -46,11 +40,7 @@ contract PendleDepositor {
     event FeesChanged(uint256 newFee);
 
     /* ========== CONSTRUCTOR ========== */
-    constructor(
-        address _token,
-        address _locker,
-        address _minter
-    ) {
+    constructor(address _token, address _locker, address _minter) {
         governance = msg.sender;
         token = _token;
         locker = _locker;
@@ -113,13 +103,7 @@ contract PendleDepositor {
             emit TokenLocked(msg.sender, tokenBalance);
         }
 
-        uint256 tokenBalanceStaker = IERC20(token).balanceOf(locker);
-        // If the locker has no tokens then return
-        if (tokenBalanceStaker == 0) {
-            return;
-        }
-
-        PendleLocker(locker).increaseAmount(uint128(tokenBalanceStaker));
+        PendleLocker(locker).increaseAmount(uint128(tokenBalance));
 
         if (relock) {
             uint128 unlockAt = uint128(block.timestamp + MAXTIME);
@@ -152,12 +136,7 @@ contract PendleDepositor {
     /// @param _lock Whether to lock the token
     /// @param _stake Whether to stake the token
     /// @param _user User to deposit for
-    function deposit(
-        uint256 _amount,
-        bool _lock,
-        bool _stake,
-        address _user
-    ) public {
+    function deposit(uint256 _amount, bool _lock, bool _stake, address _user) public {
         require(_amount > 0, "!>0");
         require(_user != address(0), "!user");
 
