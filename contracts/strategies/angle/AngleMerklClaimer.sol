@@ -6,11 +6,11 @@ import "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../interfaces/ILiquidityGaugeStrat.sol";
 import "../../interfaces/IAngleMerkleDistributor.sol";
 
-interface IGammaVault {
+interface IAngleVault {
     function liquidityGauge() external returns(address);
 }
 
-contract AngleGammaClaimer {
+contract AngleMerklClaimer {
     using SafeERC20 for ERC20;
 
     error NOT_ALLOWED();
@@ -24,23 +24,21 @@ contract AngleGammaClaimer {
     // FEE
     uint256 public constant BASE_FEE = 10_000;
     address public daoRecipient;
-    uint256 public daoFee;
+    uint256 public daoFee = 200; // 2%
     address public accRecipient;
-    uint256 public accFee;
+    uint256 public accFee = 800; // 8%
     address public veSdtFeeRecipient;
-    uint256 public veSdtFeeFee;
+    uint256 public veSdtFeeFee = 500; // 5%
+    uint256 public claimerFee = 50; // 0.5%
 
-    // Whitelist of vaults enabled to claim for 
-    mapping(address => uint256) public vaultsWl;
-
-    event Earn(uint256 _gaugeAmount, uint256 _daoPart, uint256 _accPart, uint256 _veSdtFeePart);
+    event Earn(uint256 _gaugeAmount, uint256 _daoPart, uint256 _accPart, uint256 _veSdtFeePart, uint256 _claimerPart);
     event DaoRecipientSet(address _oldR, address _newR);
     event AccRecipientSet(address _oldR, address _newR);
     event VeSdtFeeRecipientSet(address _oldR, address _newR);
     event DaoFeeSet(uint256 _oldF, uint256 _newF);
     event AccFeeSet(uint256 _oldF, uint256 _newF);
     event VeSdtFeeFeeSet(uint256 _oldF, uint256 _newF);
-    event ToggleVault(address _vault, bool _status);
+    event ClaimerFeeSet(uint256 _oldF, uint256 _newF);
 
     constructor(
         address _governance, 
@@ -72,13 +70,14 @@ contract AngleGammaClaimer {
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = _amount;
         // the reward will be send to the vault
+        uint256 balanceBefore = ERC20(_token).balanceOf(_vault);
         merkleDistributor.claim(users, tokens, amounts, _proofs);
-        uint256 reward = ERC20(_token).balanceOf(_vault);
+        uint256 reward = ERC20(_token).balanceOf(_vault) - balanceBefore;
         if (reward > 0) {
             // transfer reward from vault to here
             ERC20(_token).transferFrom(_vault, address(this), reward);
             uint256 rewardToNotify = _chargeFees(_token, reward);
-            address liquidityGauge = IGammaVault(_vault).liquidityGauge();
+            address liquidityGauge = IAngleVault(_vault).liquidityGauge();
             ERC20(_token).approve(liquidityGauge, rewardToNotify);
             ILiquidityGaugeStrat(liquidityGauge).deposit_reward_token(_token, rewardToNotify);
         }
@@ -91,20 +90,25 @@ contract AngleGammaClaimer {
         uint256 daoPart;
         uint256 accPart;
         uint256 veSdtFeePart;
+        uint256 claimerPart;
         if (daoFee > 0) {
-            daoPart = (_amount * daoFee / BASE_FEE);
+            daoPart = (_amount * daoFee) / BASE_FEE;
             ERC20(_token).safeTransfer(daoRecipient, daoPart);
         }
         if (accFee > 0) {
-            accPart = (_amount * accFee / BASE_FEE);
+            accPart = (_amount * accFee) / BASE_FEE;
             ERC20(_token).safeTransfer(accRecipient, accPart);
         }
-        if (veSdtFeePart > 0) {
-            veSdtFeePart = (_amount * veSdtFeeFee / BASE_FEE);
+        if (veSdtFeeFee > 0) {
+            veSdtFeePart = (_amount * veSdtFeeFee) / BASE_FEE;
             ERC20(_token).safeTransfer(veSdtFeeRecipient, veSdtFeePart);
         } 
-        amountToNotify = _amount - daoPart - accPart - veSdtFeePart;
-        emit Earn(amountToNotify, daoPart, accPart, veSdtFeePart);
+        if (claimerFee > 0) {
+            claimerPart = (_amount * claimerFee) / BASE_FEE;
+            ERC20(_token).safeTransfer(msg.sender, claimerPart);
+        }
+        amountToNotify = _amount - daoPart - accPart - veSdtFeePart - claimerPart;
+        emit Earn(amountToNotify, daoPart, accPart, veSdtFeePart, claimerPart);
     }
 
     /// @notice function to set the dao fee recipient
@@ -136,7 +140,7 @@ contract AngleGammaClaimer {
     function setDaoFee(uint256 _daoFee) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
         if (_daoFee > BASE_FEE) revert FEE_TOO_HIGH();
-        if (_daoFee + accFee + veSdtFeeFee > BASE_FEE) revert FEE_TOO_HIGH();
+        if (_daoFee + accFee + veSdtFeeFee + claimerFee > BASE_FEE) revert FEE_TOO_HIGH();
         emit DaoFeeSet(daoFee, _daoFee);
         daoFee = _daoFee;
     }
@@ -146,7 +150,7 @@ contract AngleGammaClaimer {
     function setAccFee(uint256 _accFee) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
         if (_accFee > BASE_FEE) revert FEE_TOO_HIGH();
-        if (_accFee + veSdtFeeFee + daoFee > BASE_FEE) revert FEE_TOO_HIGH();
+        if (_accFee + veSdtFeeFee + daoFee + claimerFee > BASE_FEE) revert FEE_TOO_HIGH();
         emit AccFeeSet(accFee, _accFee);
         accFee = _accFee;
     }
@@ -156,9 +160,19 @@ contract AngleGammaClaimer {
     function setVeSdtFeeFee(uint256 _veSdtFeeFee) external {
         if (msg.sender != governance) revert NOT_ALLOWED();
         if (_veSdtFeeFee > BASE_FEE) revert FEE_TOO_HIGH();
-        if (_veSdtFeeFee + accFee + daoFee > BASE_FEE) revert FEE_TOO_HIGH();
+        if (_veSdtFeeFee + accFee + daoFee + claimerFee > BASE_FEE) revert FEE_TOO_HIGH();
         emit VeSdtFeeFeeSet(veSdtFeeFee, _veSdtFeeFee);
         veSdtFeeFee = _veSdtFeeFee;
+    }
+
+     /// @notice function to set the fees reserved for the claimer (msg.sender)
+    /// @param _claimerFee fee amount (10000 = 100%)
+    function setClaimerFee(uint256 _claimerFee) external {
+        if (msg.sender != governance) revert NOT_ALLOWED();
+        if (_claimerFee > BASE_FEE) revert FEE_TOO_HIGH();
+        if (_claimerFee + accFee + daoFee + veSdtFeeFee > BASE_FEE) revert FEE_TOO_HIGH();
+        emit ClaimerFeeSet(claimerFee, _claimerFee);
+        claimerFee = _claimerFee;
     }
 
     /// @notice function to set the governance

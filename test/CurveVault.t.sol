@@ -50,7 +50,7 @@ contract CurveVaultTest is BaseTest {
     ILiquidityGaugeStrat public gaugeSDTETH; // This one is deployed by Stake DAO
 
     function setUp() public {
-        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"), 17533506);
         vm.selectFork(forkId);
 
         address[] memory path = new address[](4);
