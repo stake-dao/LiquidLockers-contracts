@@ -20,6 +20,7 @@ contract PendleVaultFactory {
     error NOT_MARKET();
 
     address public vaultImpl = address(new PendleVault());
+    address public constant CLAIM_REWARDS = 0x633120100e108F03aCe79d6C78Aac9a56db1be0F; // v2
     address public constant GAUGE_IMPL = 0x3Dc56D46F0Bd13655EfB29594a2e44534c453BF9;
     address public constant GOVERNANCE = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063;
     address public constant PENDLE = 0x808507121B80c02388fAd14726482e061B8da827;
@@ -59,6 +60,7 @@ contract PendleVaultFactory {
         PendleStrategy(strategy).toggleVault(vault);
         PendleStrategy(strategy).setSdGauge(_pendleLpt, gauge);
         ILiquidityGaugeStrat(gauge).add_reward(PENDLE, strategy);
+        ILiquidityGaugeStrat(gauge).set_claimer(CLAIM_REWARDS);
         ILiquidityGaugeStrat(gauge).commit_transfer_ownership(GOVERNANCE);
     }
 
