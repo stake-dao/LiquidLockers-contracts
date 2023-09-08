@@ -10,6 +10,10 @@ import "../interfaces/ILiquidityGaugeStrat.sol";
 interface IPendleMarketFactory {
     function isValidMarket(address) external returns(bool);
 }
+
+interface IPendleLp {
+    function readTokens() view external returns(address,address,address);
+}
 /**
  * @title Factory contract usefull for creating new pendle LPT vaults
  * to the pendle platform, and the gauge multi rewards attached to it.
@@ -20,6 +24,7 @@ contract PendleVaultFactory {
     error NOT_MARKET();
 
     address public vaultImpl = address(new PendleVault());
+    address public constant CLAIM_REWARDS = 0x633120100e108F03aCe79d6C78Aac9a56db1be0F; // v2
     address public constant GAUGE_IMPL = 0x3Dc56D46F0Bd13655EfB29594a2e44534c453BF9;
     address public constant GOVERNANCE = 0xF930EBBd05eF8b25B1797b9b2109DDC9B0d43063;
     address public constant PENDLE = 0x808507121B80c02388fAd14726482e061B8da827;
@@ -44,21 +49,22 @@ contract PendleVaultFactory {
      */
     function cloneAndInit(address _pendleLpt) public {
         if (!IPendleMarketFactory(PENDLE_MARKET_FACTORY).isValidMarket(_pendleLpt)) revert NOT_MARKET();
-        string memory tokenSymbol = ERC20Upgradeable(_pendleLpt).symbol();
-        string memory tokenName = ERC20Upgradeable(_pendleLpt).name();
+        (,address ptToken,) = IPendleLp(_pendleLpt).readTokens();
+        string memory tokenName = string(abi.encodePacked("L", ERC20Upgradeable(ptToken).name()));
         address vault = _cloneAndInitVault(
             vaultImpl,
             ERC20Upgradeable(_pendleLpt),
             GOVERNANCE,
-            string(abi.encodePacked("sd", tokenName, " Vault")),
-            string(abi.encodePacked("sd", tokenSymbol, "-vault"))
+            string(abi.encodePacked("Stake DAO ", tokenName, " Vault")),
+            string(abi.encodePacked("sd", tokenName, "-vault"))
         );
-        address gauge = _cloneAndInitGauge(GAUGE_IMPL, vault, GOVERNANCE, tokenSymbol);
+        address gauge = _cloneAndInitGauge(GAUGE_IMPL, vault, GOVERNANCE, tokenName);
         PendleVault(vault).setLiquidityGauge(gauge);
         PendleVault(vault).setGovernance(GOVERNANCE);
         PendleStrategy(strategy).toggleVault(vault);
         PendleStrategy(strategy).setSdGauge(_pendleLpt, gauge);
         ILiquidityGaugeStrat(gauge).add_reward(PENDLE, strategy);
+        ILiquidityGaugeStrat(gauge).set_claimer(CLAIM_REWARDS);
         ILiquidityGaugeStrat(gauge).commit_transfer_ownership(GOVERNANCE);
     }
 

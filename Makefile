@@ -63,6 +63,11 @@ test-fpis-integration:; @forge test --match-contract FpisIntegrationTest
 test-pendle-locker:; @forge test --match-contract PendleLockerTest
 test-pendle-integration:; @forge test --match-contract PendleIntegrationTest
 test-pendle-strategies:; @forge test --match-contract PendleStrategiesTest
+test-pendle-factory:; @forge test --match-contract PendleVaultFactoryTest
+
+# YEAR #
+test-year-integration:; @forge test --match-contract YearnIntegrationTest
+test-year-locker:; @forge test --match-contract YearnLockerTest
 # OTHERS #
 test-all:; @forge test
 
