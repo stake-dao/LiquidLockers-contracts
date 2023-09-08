@@ -10,6 +10,10 @@ import "../interfaces/ILiquidityGaugeStrat.sol";
 interface IPendleMarketFactory {
     function isValidMarket(address) external returns(bool);
 }
+
+interface IPendleLp {
+    function readTokens() view external returns(address,address,address);
+}
 /**
  * @title Factory contract usefull for creating new pendle LPT vaults
  * to the pendle platform, and the gauge multi rewards attached to it.
@@ -45,16 +49,16 @@ contract PendleVaultFactory {
      */
     function cloneAndInit(address _pendleLpt) public {
         if (!IPendleMarketFactory(PENDLE_MARKET_FACTORY).isValidMarket(_pendleLpt)) revert NOT_MARKET();
-        string memory tokenSymbol = ERC20Upgradeable(_pendleLpt).symbol();
-        string memory tokenName = ERC20Upgradeable(_pendleLpt).name();
+        (,address ptToken,) = IPendleLp(_pendleLpt).readTokens();
+        string memory tokenName = string(abi.encodePacked("L", ERC20Upgradeable(ptToken).name()));
         address vault = _cloneAndInitVault(
             vaultImpl,
             ERC20Upgradeable(_pendleLpt),
             GOVERNANCE,
-            string(abi.encodePacked("sd", tokenName, " Vault")),
-            string(abi.encodePacked("sd", tokenSymbol, "-vault"))
+            string(abi.encodePacked("Stake DAO ", tokenName, " Vault")),
+            string(abi.encodePacked("sd", tokenName, "-vault"))
         );
-        address gauge = _cloneAndInitGauge(GAUGE_IMPL, vault, GOVERNANCE, tokenSymbol);
+        address gauge = _cloneAndInitGauge(GAUGE_IMPL, vault, GOVERNANCE, tokenName);
         PendleVault(vault).setLiquidityGauge(gauge);
         PendleVault(vault).setGovernance(GOVERNANCE);
         PendleStrategy(strategy).toggleVault(vault);
